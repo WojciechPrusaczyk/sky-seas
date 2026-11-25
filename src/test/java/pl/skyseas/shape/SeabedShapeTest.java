@@ -27,13 +27,17 @@ class SeabedShapeTest {
     }
 
     @Test
-    void reliefIsAsymmetricAndRegionallyModulated() {
+    void reliefIsSymmetricSaturatedAndRegionallyModulated() {
         double rough = 1.0;
         double calm = -1.0;
-        assertEquals(-5.0 + P.seabedReliefUp(), SeabedShape.height(P, 0.0, WARM, 1.0, rough, 0.0, OFF_LINE, OFF_LINE), 1e-9);
-        assertEquals(-5.0 - P.seabedReliefDown(), SeabedShape.height(P, 0.0, WARM, -1.0, rough, 0.0, OFF_LINE, OFF_LINE), 1e-9);
-        assertEquals(-5.0 - P.seabedReliefDown() * P.seabedReliefMinStrength(),
-                SeabedShape.height(P, 0.0, WARM, -1.0, calm, 0.0, OFF_LINE, OFF_LINE), 1e-9);
+        double up = SeabedShape.height(P, 0.0, WARM, 0.3, rough, 0.0, OFF_LINE, OFF_LINE) + 5.0;
+        double down = SeabedShape.height(P, 0.0, WARM, -0.3, rough, 0.0, OFF_LINE, OFF_LINE) + 5.0;
+        assertEquals(up, -down, 1e-9);
+        double limit = P.seabedReliefAmplitude() * P.seabedReliefSaturation();
+        double extreme = SeabedShape.height(P, 0.0, WARM, 10.0, rough, 0.0, OFF_LINE, OFF_LINE) + 5.0;
+        assertTrue(extreme <= limit && extreme > 0.99 * limit, "saturation: " + extreme);
+        double calmDown = SeabedShape.height(P, 0.0, WARM, -0.3, calm, 0.0, OFF_LINE, OFF_LINE) + 5.0;
+        assertEquals(down * P.seabedReliefMinStrength(), calmDown, 1e-9);
     }
 
     @Test

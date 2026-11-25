@@ -16,8 +16,9 @@ package pl.skyseas.config;
  * @param seabedBaseYNear         seabed base height at spawn
  * @param seabedBaseYFar          seabed base height at the zone plateau
  * @param seabedDuneAmplitude     height of gentle seabed dunes (blocks, +/-)
- * @param seabedReliefUp          large-scale relief: max rise above the base (blocks)
- * @param seabedReliefDown        large-scale relief: max drop below the base (blocks)
+ * @param seabedReliefAmplitude   multi-scale relief: blocks per unit of relief noise (+/-), before regional strength
+ * @param seabedReliefSaturation  relief noise is softly limited to +/- this value (tanh), so rare extremes
+ *                                stay within {@code amplitude * saturation} blocks
  * @param seabedReliefMinStrength relief strength in the calmest regions (0..1; 1 in the roughest)
  * @param seabedCanyonDepthNear   canyon depth below the surrounding seabed at spawn
  * @param seabedCanyonDepthFar    canyon depth at the zone plateau
@@ -46,8 +47,8 @@ public record WorldParams(
         double seabedBaseYNear,
         double seabedBaseYFar,
         double seabedDuneAmplitude,
-        double seabedReliefUp,
-        double seabedReliefDown,
+        double seabedReliefAmplitude,
+        double seabedReliefSaturation,
         double seabedReliefMinStrength,
         double seabedCanyonDepthNear,
         double seabedCanyonDepthFar,
@@ -69,7 +70,7 @@ public record WorldParams(
         double climateDepthScale) {
 
     /** Bumped whenever a code change alters generated chunks (see CLAUDE.md). */
-    public static final int GENERATOR_VERSION = 2;
+    public static final int GENERATOR_VERSION = 3;
 
     public static final WorldParams DEFAULTS = new WorldParams(
             -64,
@@ -78,10 +79,10 @@ public record WorldParams(
             400.0,
             -5.0,
             -20.0,
-            3.5,
-            3.0,
-            10.0,
-            0.3,
+            2.0,
+            30.0,
+            0.4,
+            0.6,
             8.0,
             14.0,
             0.1,

@@ -4,9 +4,9 @@ import pl.skyseas.config.WorldParams;
 import pl.skyseas.layout.ZoneField;
 
 /**
- * Seabed height (E1 forms): base depth growing with the zone factor, large-scale relief
- * (rolling hills and basins whose strength varies by region), dunes, canyons in
- * temperate oceans and trenches in cold ones.
+ * Seabed height (E1 forms): base depth growing with the zone factor, multi-scale relief
+ * (hills and basins from a multi-octave noise, strength varying by region), dunes,
+ * canyons in temperate oceans and trenches in cold ones.
  *
  * <p>Canyons and trenches follow the zero lines of ridge noises. Trenches exist only
  * beyond the Haven and get deeper with the zone, down to {@code seabedTrenchMinY}.
@@ -32,8 +32,8 @@ public final class SeabedShape {
         double h = ShapeMath.lerp(p.seabedBaseYNear(), p.seabedBaseYFar(), zone);
 
         double strength = ShapeMath.lerp(p.seabedReliefMinStrength(), 1.0, ShapeMath.smoothstep(-0.5, 0.5, roughness));
-        double r = ShapeMath.clamp(relief, -1.0, 1.0) * strength;
-        h += r >= 0.0 ? r * p.seabedReliefUp() : r * p.seabedReliefDown();
+        double sat = p.seabedReliefSaturation();
+        h += sat * Math.tanh(relief / sat) * strength * p.seabedReliefAmplitude();
         h += p.seabedDuneAmplitude() * ShapeMath.clamp(dunes, -1.0, 1.0);
 
         double canyonStrength = canyonStrength(p, temperature);
@@ -82,6 +82,7 @@ public final class SeabedShape {
 
     /** Highest possible seabed height for these parameters. */
     public static double maxHeight(WorldParams p) {
-        return Math.max(p.seabedBaseYNear(), p.seabedBaseYFar()) + p.seabedReliefUp() + p.seabedDuneAmplitude();
+        return Math.max(p.seabedBaseYNear(), p.seabedBaseYFar())
+                + p.seabedReliefSaturation() * p.seabedReliefAmplitude() + p.seabedDuneAmplitude();
     }
 }

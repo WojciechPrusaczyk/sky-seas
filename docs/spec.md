@@ -208,7 +208,7 @@ Każdy typ: `MapCodec` zarejestrowany w `Registries.DENSITY_FUNCTION_TYPE` przez
 - **Góry Alleluja.** Pionowe kapsuły 40–120 bloków, promień zwężający się ku dołowi + szum, lekkie pochylenie, płaski wierzch pod trawę.
 - **Łańcuchy.** Spłaszczone elipsoidy o promieniu 4–10 w `sky_details`, z gwarantowaną warstwą ziemi na wierzchu.
 - **Wyspy oceaniczne.** Kopuła nad Y 63 wg klasy wielkości i szelf do Y 35–60 dookoła; atol (pierścień z laguną) w ciepłych morzach.
-- **Dno.** Baza od Y −5 do −20 (głębiej z odległością); rzeźba w dużej skali (pagórki do +3 i niecki do −10 bloków względem bazy, siła zależna od regionu, więc są obszary spokojne i pofałdowane); wydmy ±3,5; kaniony w oceanach umiarkowanych (8–14 bloków poniżej otoczenia); rowy jako linie szumu grzbietowego do Y −40 w zimnych i głębokich oceanach (od Pogranicza); wulkany jako stożki z kraterem w zimnych; podwodne góry. Dno leży na ok. Y −2…−34 poza kanionami i rowami; kaniony i rowy schodzą najwyżej do Y −40 (nic nie jest głębsze od limitu rowów). Wulkany i podwodne góry w E3.
+- **Dno.** Baza od Y −5 do −20 (głębiej z odległością); wieloskalowa rzeźba (szum o 4 oktawach, fale od kilkuset do kilkudziesięciu bloków; typowo ±8–10, miękko ograniczona do ±12 bloków względem bazy; siła 0,6–1 zależna od regionu, więc są obszary spokojniejsze i bardziej pofałdowane); wydmy ±2; kaniony w oceanach umiarkowanych (8–14 bloków poniżej otoczenia); rowy jako linie szumu grzbietowego do Y −40 w zimnych i głębokich oceanach (od Pogranicza); wulkany jako stożki z kraterem w zimnych; podwodne góry. Dno leży na ok. Y +9…−34 poza kanionami i rowami (najwyższe pagórki zostawiają nad sobą ponad 50 bloków wody); kaniony i rowy schodzą najwyżej do Y −40 (nic nie jest głębsze od limitu rowów). Wulkany i podwodne góry w E3.
 - **Formy oceaniczne z designu** (sekcja „Oceany”): podwodne łuki i skalne iglice wystające nad wodę (lukewarm) w E3, razem z układem, bo iglice nad wodą podlegają regule czystego nieba; lodowe sufity z kieszeniami powietrza i góry lodowe z głęboko zanurzonymi korzeniami (frozen) w E5 jako featury.
 - **Jaskinie.** Vanillowe składniki overworld skopiowane z JSON. Maska: zero jaskiń w pasie stropu (domyślnie 12 bloków pod powierzchnią dna lub wyspy) poza zaprojektowanymi wejściami; próg komory (cheese) przesuwany wg `rock_thickness`, więc grubsza skała daje większe komory. W wyspach na niebie tylko korytarze (spaghetti, noodle) w partiach grubszych niż 30 bloków, bez komór.
 - **Szyby.** Cenota: cylinder o średnicy 6–14 bloków od wierzchu wyspy do sufitu komory, z jeziorkiem na dnie. Błękitna dziura: cylinder 8–20 od dna płycizny do zalanej komory. Każdy szyb kotwiczy w `cave_mask` wymuszoną komorę pod sobą, więc nigdy nie kończy się w litej skale.
@@ -330,8 +330,8 @@ Wszystkie liczby z dokumentu designowego są parametrami w configu COMMON (`conf
 | `zones.radii` | 1500, 4000, 8000 | Progi stref Przystań / Pogranicze / Dzicz |
 | `zones.maxIslandY` | 200, 240, 280, 305 | Najwyższe wyspy w strefach (pod udźwig statków) |
 | `seabed.baseY` | −5 … −20 | Baza dna od spawnu do Krańca |
-| `seabed.relief` | +3 / −10, min. siła 0,3 | Rzeźba dna w dużej skali względem bazy |
-| `seabed.duneAmplitude` | 3,5 | Wydmy (±) |
+| `seabed.relief` | ±12 (typowo ±8–10), min. siła 0,6 | Wieloskalowa rzeźba dna względem bazy |
+| `seabed.duneAmplitude` | 2 | Wydmy (±) |
 | `seabed.canyonDepth` | 8 … 14 | Głębokość kanionów (oceany umiarkowane) od spawnu do Krańca |
 | `seabed.trenchMinY` | −40 | Najgłębsze rowy (pod ciśnienie w Create Deep Seas) |
 | `continents.cellSize` | 3500 | Rozstaw kontynentów |
@@ -381,7 +381,7 @@ Wdrożenie idzie w dziesięciu etapach; każdy kończy się działającym świat
 1. **E0 — Szkielet.** Projekt z MDK, `@Mod`, rejestry, world preset `skyseas:sky_seas` z kopią vanillowych ustawień, zaląžk `/skyseas info`.
    - Akceptacja: serwer z `level-type=skyseas:sky_seas` startuje i generuje świat identyczny z vanillą; klient bez moda się łączy.
 2. **E1 — Ocean i dno.** `seabed_height`, `seabed`, `rock_thickness`, maska jaskiń i skalowanie komór, aquifery.
-   - Akceptacja: baza dna Y −5…−20 (z rzeźbą ok. −2…−34, kaniony najwyżej do −40), rowy do −40, brak dziur w dnie, strop 12 bloków; etap `noise` ≤ 1,2× vanilli.
+   - Akceptacja: baza dna Y −5…−20 (z rzeźbą ok. +9…−34, kaniony najwyżej do −40), rowy do −40, brak dziur w dnie, strop 12 bloków; etap `noise` ≤ 1,2× vanilli.
    - Zrealizowane dodatkowo: `skyseas:depth` (parametr biomu `depth` z E4: 0 w wodzie), dolna granica floodedness aquiferów przy dnie (bez suchych kieszeni nad dnem), `continents` stałe (głęboki ocean) do E4.
 3. **E2 — Układ i kontynenty.** `Layout`, cache, seed z szumu, poziom kontynentów, kształt kontynentu, `/skyseas map`.
    - Akceptacja: testy JUnit determinizmu; kontynent startowy na 0,0; spód ≥ 113; mapa PNG czytelna.

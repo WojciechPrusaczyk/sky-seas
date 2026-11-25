@@ -30,6 +30,12 @@ public final class SeabedTests {
     private static final int GRID = 7;
     private static final int STRIDE_CHUNKS = 250;
     private static final int SEA_LEVEL = 63;
+    /**
+     * p5..p95 seabed height spread expected from a relief of about +/-8..10 blocks. The upper
+     * bound leaves room for canyons and trenches, which pull p5 down in far areas.
+     */
+    private static final double MIN_RELIEF_SPREAD = 14.0;
+    private static final double MAX_RELIEF_SPREAD = 30.0;
 
     private SeabedTests() {
     }
@@ -94,6 +100,41 @@ public final class SeabedTests {
         if (min > p.seabedTrenchMinY() + 1.0) {
             helper.fail("deepest trench " + min + ", expected about " + p.seabedTrenchMinY());
             return;
+        }
+        helper.succeed();
+    }
+
+    /**
+     * The seabed must not be flat: the spread between the 5th and 95th percentile of
+     * seabed height in a 4x4 km area must match a relief of roughly +/-8..10 blocks.
+     */
+    @GameTest(template = "empty")
+    public static void seabedReliefSpread(GameTestHelper helper) {
+        StagedChunkGen gen = StagedChunkGen.create(helper.getLevel(), StagedChunkGen.SKY_SEAS, SEEDS[0]);
+        SeabedHeightFunction seabed = RouterLookup.find(gen.randomState().router().finalDensity(), SeabedHeightFunction.class);
+        int[][] areas = {{-2000, -2000}, {20_000, -14_000}};
+        for (int[] origin : areas) {
+            double[] samples = new double[250 * 250];
+            int n = 0;
+            for (int i = 0; i < 250; i++) {
+                for (int j = 0; j < 250; j++) {
+                    samples[n++] = seabed.compute(new DensityFunction.SinglePointContext(
+                            origin[0] + i * 16, 0, origin[1] + j * 16));
+                }
+            }
+            java.util.Arrays.sort(samples);
+            double p5 = samples[n * 5 / 100];
+            double p50 = samples[n / 2];
+            double p95 = samples[n * 95 / 100];
+            SkySeas.LOGGER.info("SeabedTests: area {},{}: min {} p5 {} p50 {} p95 {} max {}", origin[0], origin[1],
+                    String.format("%.1f", samples[0]), String.format("%.1f", p5), String.format("%.1f", p50),
+                    String.format("%.1f", p95), String.format("%.1f", samples[n - 1]));
+            double spread = p95 - p5;
+            if (spread < MIN_RELIEF_SPREAD || spread > MAX_RELIEF_SPREAD) {
+                helper.fail("seabed p5..p95 spread " + spread + " at " + origin[0] + "," + origin[1]
+                        + ", expected " + MIN_RELIEF_SPREAD + ".." + MAX_RELIEF_SPREAD);
+                return;
+            }
         }
         helper.succeed();
     }
