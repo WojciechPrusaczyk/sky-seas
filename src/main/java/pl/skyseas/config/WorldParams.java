@@ -16,6 +16,15 @@ package pl.skyseas.config;
  * @param seabedBaseYNear         seabed base height at spawn
  * @param seabedBaseYFar          seabed base height at the zone plateau
  * @param seabedDuneAmplitude     height of gentle seabed dunes (blocks, +/-)
+ * @param seabedReliefUp          large-scale relief: max rise above the base (blocks)
+ * @param seabedReliefDown        large-scale relief: max drop below the base (blocks)
+ * @param seabedReliefMinStrength relief strength in the calmest regions (0..1; 1 in the roughest)
+ * @param seabedCanyonDepthNear   canyon depth below the surrounding seabed at spawn
+ * @param seabedCanyonDepthFar    canyon depth at the zone plateau
+ * @param seabedCanyonWidth       ridge-noise band treated as canyon (noise units, larger = wider)
+ * @param seabedCanyonMinTemperature coldest climate temperature with canyons (temperate oceans)
+ * @param seabedCanyonMaxTemperature warmest climate temperature with canyons
+ * @param seabedCanyonTemperatureFade temperature range over which canyons fade at both bounds
  * @param seabedTrenchMinY        deepest trench floor
  * @param seabedTrenchWidth       ridge-noise band treated as trench (noise units, larger = wider)
  * @param seabedTrenchMaxTemperature warmest climate temperature with trenches (vanilla cold ocean bound)
@@ -37,6 +46,15 @@ public record WorldParams(
         double seabedBaseYNear,
         double seabedBaseYFar,
         double seabedDuneAmplitude,
+        double seabedReliefUp,
+        double seabedReliefDown,
+        double seabedReliefMinStrength,
+        double seabedCanyonDepthNear,
+        double seabedCanyonDepthFar,
+        double seabedCanyonWidth,
+        double seabedCanyonMinTemperature,
+        double seabedCanyonMaxTemperature,
+        double seabedCanyonTemperatureFade,
         double seabedTrenchMinY,
         double seabedTrenchWidth,
         double seabedTrenchMaxTemperature,
@@ -51,7 +69,7 @@ public record WorldParams(
         double climateDepthScale) {
 
     /** Bumped whenever a code change alters generated chunks (see CLAUDE.md). */
-    public static final int GENERATOR_VERSION = 1;
+    public static final int GENERATOR_VERSION = 2;
 
     public static final WorldParams DEFAULTS = new WorldParams(
             -64,
@@ -60,7 +78,16 @@ public record WorldParams(
             400.0,
             -5.0,
             -20.0,
-            2.5,
+            3.5,
+            3.0,
+            10.0,
+            0.3,
+            8.0,
+            14.0,
+            0.1,
+            -0.15,
+            0.2,
+            0.05,
             -40.0,
             0.08,
             -0.15,

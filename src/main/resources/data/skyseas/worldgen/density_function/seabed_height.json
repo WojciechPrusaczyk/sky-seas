@@ -4,9 +4,27 @@
     "type": "skyseas:seabed_height",
     "zone": "skyseas:zone_factor",
     "temperature": "skyseas:climate/temperature",
+    "relief": {
+      "type": "minecraft:noise",
+      "noise": "skyseas:seabed_relief",
+      "xz_scale": 1.0,
+      "y_scale": 0.0
+    },
+    "roughness": {
+      "type": "minecraft:noise",
+      "noise": "skyseas:seabed_roughness",
+      "xz_scale": 1.0,
+      "y_scale": 0.0
+    },
     "dunes": {
       "type": "minecraft:noise",
       "noise": "skyseas:seabed_dunes",
+      "xz_scale": 1.0,
+      "y_scale": 0.0
+    },
+    "canyon": {
+      "type": "minecraft:noise",
+      "noise": "skyseas:seabed_canyon",
       "xz_scale": 1.0,
       "y_scale": 0.0
     },

@@ -4,34 +4,63 @@ import pl.skyseas.config.WorldParams;
 import pl.skyseas.layout.ZoneField;
 
 /**
- * Seabed height (E1 forms): base depth growing with the zone factor, gentle dunes and
- * trenches. Trenches follow the zero line of a ridge noise, exist only in cold water
- * and only beyond the Haven, and get deeper with the zone, down to {@code seabedTrenchMinY}.
+ * Seabed height (E1 forms): base depth growing with the zone factor, large-scale relief
+ * (rolling hills and basins whose strength varies by region), dunes, canyons in
+ * temperate oceans and trenches in cold ones.
+ *
+ * <p>Canyons and trenches follow the zero lines of ridge noises. Trenches exist only
+ * beyond the Haven and get deeper with the zone, down to {@code seabedTrenchMinY}.
  */
 public final class SeabedShape {
     private SeabedShape() {
     }
 
     /**
+     * Noise inputs are roughly -1..1.
+     *
      * @param zone        zone factor 0..1
      * @param temperature climate temperature (vanilla scale, -1..1)
-     * @param dunes       dune noise, roughly -1..1
-     * @param trench      trench ridge noise, roughly -1..1; trenches run where it is near 0
+     * @param relief      large-scale relief noise
+     * @param roughness   regional noise: how strong the relief is
+     * @param dunes       dune noise
+     * @param canyon      canyon ridge noise; canyons run where it is near 0
+     * @param trench      trench ridge noise; trenches run where it is near 0
      * @return seabed surface height (blocks)
      */
-    public static double height(WorldParams p, double zone, double temperature, double dunes, double trench) {
-        double base = ShapeMath.lerp(p.seabedBaseYNear(), p.seabedBaseYFar(), zone);
-        double h = base + p.seabedDuneAmplitude() * ShapeMath.clamp(dunes, -1.0, 1.0);
+    public static double height(WorldParams p, double zone, double temperature, double relief, double roughness,
+                                double dunes, double canyon, double trench) {
+        double h = ShapeMath.lerp(p.seabedBaseYNear(), p.seabedBaseYFar(), zone);
 
-        double strength = trenchStrength(p, zone, temperature);
-        if (strength > 0.0) {
-            double ridge = 1.0 - Math.abs(trench) / p.seabedTrenchWidth();
-            if (ridge > 0.0) {
-                double profile = ShapeMath.smoothstep(ridge);
-                h -= (h - p.seabedTrenchMinY()) * profile * strength;
-            }
+        double strength = ShapeMath.lerp(p.seabedReliefMinStrength(), 1.0, ShapeMath.smoothstep(-0.5, 0.5, roughness));
+        double r = ShapeMath.clamp(relief, -1.0, 1.0) * strength;
+        h += r >= 0.0 ? r * p.seabedReliefUp() : r * p.seabedReliefDown();
+        h += p.seabedDuneAmplitude() * ShapeMath.clamp(dunes, -1.0, 1.0);
+
+        double canyonStrength = canyonStrength(p, temperature);
+        if (canyonStrength > 0.0) {
+            double profile = ridgeProfile(canyon, p.seabedCanyonWidth());
+            h -= ShapeMath.lerp(p.seabedCanyonDepthNear(), p.seabedCanyonDepthFar(), zone) * profile * canyonStrength;
+        }
+
+        double trenchStrength = trenchStrength(p, zone, temperature);
+        if (trenchStrength > 0.0) {
+            double profile = ridgeProfile(trench, p.seabedTrenchWidth());
+            h -= (h - p.seabedTrenchMinY()) * profile * trenchStrength;
         }
         return Math.max(h, p.seabedTrenchMinY());
+    }
+
+    /** 1 on the zero line of a ridge noise, falling smoothly to 0 at {@code width}. */
+    private static double ridgeProfile(double noise, double width) {
+        double ridge = 1.0 - Math.abs(noise) / width;
+        return ridge > 0.0 ? ShapeMath.smoothstep(ridge) : 0.0;
+    }
+
+    /** 0..1: canyons in temperate oceans, fading at both temperature bounds. */
+    static double canyonStrength(WorldParams p, double temperature) {
+        double fade = p.seabedCanyonTemperatureFade();
+        return ShapeMath.smoothstep(p.seabedCanyonMinTemperature(), p.seabedCanyonMinTemperature() + fade, temperature)
+                * ShapeMath.smoothstep(p.seabedCanyonMaxTemperature(), p.seabedCanyonMaxTemperature() - fade, temperature);
     }
 
     /** 0..1: how deep trenches may cut here (cold water and distance from spawn). */
@@ -53,6 +82,6 @@ public final class SeabedShape {
 
     /** Highest possible seabed height for these parameters. */
     public static double maxHeight(WorldParams p) {
-        return Math.max(p.seabedBaseYNear(), p.seabedBaseYFar()) + p.seabedDuneAmplitude();
+        return Math.max(p.seabedBaseYNear(), p.seabedBaseYFar()) + p.seabedReliefUp() + p.seabedDuneAmplitude();
     }
 }
