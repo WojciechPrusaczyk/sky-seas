@@ -1,0 +1,4 @@
+{
+  "type": "skyseas:aquifer_flood_floor",
+  "height": "skyseas:seabed_height"
+}

@@ -1,0 +1,4 @@
+{
+  "type": "skyseas:rock_thickness",
+  "height": "skyseas:seabed_height"
+}

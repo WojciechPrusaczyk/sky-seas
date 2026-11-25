@@ -1,0 +1,20 @@
+{
+  "type": "minecraft:cache_2d",
+  "argument": {
+    "type": "skyseas:seabed_height",
+    "zone": "skyseas:zone_factor",
+    "temperature": "skyseas:climate/temperature",
+    "dunes": {
+      "type": "minecraft:noise",
+      "noise": "skyseas:seabed_dunes",
+      "xz_scale": 1.0,
+      "y_scale": 0.0
+    },
+    "trench": {
+      "type": "minecraft:noise",
+      "noise": "skyseas:seabed_trench",
+      "xz_scale": 1.0,
+      "y_scale": 0.0
+    }
+  }
+}
