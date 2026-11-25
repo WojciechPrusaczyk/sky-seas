@@ -49,9 +49,11 @@ neoForge {
             systemProperty 'neoforge.enabledGameTestNamespaces', project.mod_id
         }
 
-        // Runs all registered GameTests, then exits.
+        // Runs all registered GameTests, then exits. Own directory: the GameTest server
+        // creates a flat "world" that runServer would otherwise load from run/.
         gameTestServer {
             type = "gameTestServer"
+            gameDirectory = project.file('run-gametest')
             systemProperty 'neoforge.enabledGameTestNamespaces', project.mod_id
         }
 
