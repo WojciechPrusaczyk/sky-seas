@@ -1,0 +1,29 @@
+modLoader="javafml"
+loaderVersion="${loader_version_range}"
+license="${mod_license}"
+
+[[mods]]
+modId="${mod_id}"
+version="${mod_version}"
+displayName="${mod_name}"
+authors="Wojciech Prusaczyk"
+description='''
+Server-side world generator: floating islands above a deep ocean.
+'''
+# Server-only mod: no network payloads and no entries in client-synced registries,
+# so clients without it can join (NeoForge 21.1 has no displayTest; compatibility
+# is decided by network channel negotiation).
+
+[[dependencies.${mod_id}]]
+    modId="neoforge"
+    type="required"
+    versionRange="[${neo_version},)"
+    ordering="NONE"
+    side="BOTH"
+
+[[dependencies.${mod_id}]]
+    modId="minecraft"
+    type="required"
+    versionRange="${minecraft_version_range}"
+    ordering="NONE"
+    side="BOTH"
