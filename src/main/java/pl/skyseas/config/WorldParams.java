@@ -38,6 +38,30 @@ package pl.skyseas.config;
  * @param caveMaxCheeseBias       density added to cheese caves under thin rock (fewer, smaller chambers)
  * @param caveThicknessScale      multiplier of that effect (config key caves.thicknessScale)
  * @param climateDepthScale       blocks below the seabed per unit of the biome "depth" parameter
+ * @param layoutRegionSize        side of a layout region (blocks)
+ * @param layoutBucketSize        side of a bucket of the region's island index (blocks)
+ * @param layoutCacheRegions      maximum number of cached layout regions
+ * @param continentCellSize       continent grid cell (blocks); one candidate per cell
+ * @param continentRadiusMin      smallest continent radius
+ * @param continentRadiusMax      largest continent radius
+ * @param continentOutlineNoise   outline radius varies by +/- this fraction (bays, peninsulas)
+ * @param continentWarp           domain warp of the outline, fraction of the radius
+ * @param continentBaseYMin       lowest flat terrain height of a continent
+ * @param continentBaseYMax       highest flat terrain height of a continent
+ * @param continentPeakMaxY       highest mountain peak
+ * @param continentCrustMin       thinnest crust under flat terrain
+ * @param continentCrustMax       thickest crust under flat terrain
+ * @param continentRootsMin       fewest cone roots under a continent
+ * @param continentRootsMax       most cone roots under a continent
+ * @param continentRootDepthMax   longest root below the crust
+ * @param continentEdgeBand       width of the band along the edge with 3D noise (overhangs, arches)
+ * @param continentEdgeNoise      strength of that 3D noise (blocks)
+ * @param continentMountainThreshold mountain mask noise level below which terrain is flat
+ * @param continentMinBottomY     nothing of a sky island below this Y (50 blocks over the sea)
+ * @param starterContinentRadius  radius of the starter continent at 0,0
+ * @param starterPlateauRadius    radius of the flat spawn plateau on the starter continent
+ * @param islandReachMargin       island reach = outline + this margin (land climate above it)
+ * @param skyDensityScale         blocks per density unit of sky islands
  */
 public record WorldParams(
         int worldMinY,
@@ -67,10 +91,34 @@ public record WorldParams(
         double caveThickRock,
         double caveMaxCheeseBias,
         double caveThicknessScale,
-        double climateDepthScale) {
+        double climateDepthScale,
+        int layoutRegionSize,
+        int layoutBucketSize,
+        int layoutCacheRegions,
+        int continentCellSize,
+        double continentRadiusMin,
+        double continentRadiusMax,
+        double continentOutlineNoise,
+        double continentWarp,
+        double continentBaseYMin,
+        double continentBaseYMax,
+        double continentPeakMaxY,
+        double continentCrustMin,
+        double continentCrustMax,
+        int continentRootsMin,
+        int continentRootsMax,
+        double continentRootDepthMax,
+        double continentEdgeBand,
+        double continentEdgeNoise,
+        double continentMountainThreshold,
+        double continentMinBottomY,
+        double starterContinentRadius,
+        double starterPlateauRadius,
+        double islandReachMargin,
+        double skyDensityScale) {
 
     /** Bumped whenever a code change alters generated chunks (see CLAUDE.md). */
-    public static final int GENERATOR_VERSION = 3;
+    public static final int GENERATOR_VERSION = 4;
 
     public static final WorldParams DEFAULTS = new WorldParams(
             -64,
@@ -100,7 +148,31 @@ public record WorldParams(
             120.0,
             0.5,
             1.0,
-            100.0);
+            100.0,
+            1024,
+            64,
+            512,
+            3500,
+            400.0,
+            1000.0,
+            0.25,
+            0.12,
+            135.0,
+            175.0,
+            250.0,
+            10.0,
+            25.0,
+            3,
+            8,
+            40.0,
+            24.0,
+            12.0,
+            0.05,
+            113.0,
+            600.0,
+            250.0,
+            16.0,
+            8.0);
 
     /** Distance at which the zone factor reaches 1 (start of the Edge). */
     public double zoneMaxRadius() {
