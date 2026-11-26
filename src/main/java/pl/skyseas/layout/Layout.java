@@ -94,10 +94,11 @@ public final class Layout {
             return edge;
         }
         double flat = ContinentShape.flatTop(r.params, off, s, x, z);
-        if (kind == BOTTOM) {
-            return ContinentShape.bottom(params, r.params, off, x, z, edge, flat);
-        }
         double mountain = ContinentShape.mountain(params, r.params, off, s, x, z, edge);
-        return kind == TOP ? ContinentShape.top(params, flat, mountain) : mountain;
+        return switch (kind) {
+            case BOTTOM -> ContinentShape.bottom(params, r.params, off, x, z, edge, flat, mountain);
+            case TOP -> ContinentShape.top(params, flat, mountain);
+            default -> mountain;
+        };
     }
 }

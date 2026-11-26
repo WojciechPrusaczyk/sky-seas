@@ -29,8 +29,7 @@ public final class LayoutGenerator {
         int size = p.layoutRegionSize();
         int cell = p.continentCellSize();
         double margin = indexMargin(p);
-        double jitter = cell / 2.0 - maxContinentExtent(p) - margin;
-        if (jitter < 0.0) {
+        if (cell / 2.0 - maxContinentExtent(p) - margin < 0.0) {
             throw new IllegalStateException("continent cell too small for the largest continent");
         }
         int x0 = rx * size;
@@ -59,10 +58,12 @@ public final class LayoutGenerator {
             for (int cj = cj0; cj <= cj1; cj++) {
                 long s = Hash.hash(seed ^ CONTINENT_SALT, ci, cj);
                 boolean starter = ci == 0 && cj == 0;
-                int x = starter ? 0 : (int) Math.round(ci * (double) cell + (2.0 * Hash.unit(Hash.hash(s, 1)) - 1.0) * jitter);
-                int z = starter ? 0 : (int) Math.round(cj * (double) cell + (2.0 * Hash.unit(Hash.hash(s, 2)) - 1.0) * jitter);
                 double r = starter ? p.starterContinentRadius()
                         : ShapeMath.lerp(p.continentRadiusMin(), p.continentRadiusMax(), Hash.unit(Hash.hash(s, 3)));
+                // Smaller continents may wander further from the cell centre: less grid-like, still no collisions.
+                double jitter = cell / 2.0 - ContinentShape.maxExtent(p, r) - margin;
+                int x = starter ? 0 : (int) Math.round(ci * (double) cell + (2.0 * Hash.unit(Hash.hash(s, 1)) - 1.0) * jitter);
+                int z = starter ? 0 : (int) Math.round(cj * (double) cell + (2.0 * Hash.unit(Hash.hash(s, 2)) - 1.0) * jitter);
                 int off = n * stride;
                 ContinentShape.place(p, s, x, z, r, starter, params, off);
                 double reach = params[off + ContinentShape.EXTENT] + margin;

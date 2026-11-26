@@ -22,14 +22,59 @@ public final class ContinentShape {
     public static final int EXTENT = 7;
     public static final int PLATEAU = 8;
     public static final int MAX_Y = 9;
-    public static final int BLOB_COUNT = 10;
+    /** Character of the continent ({@link #LOWLAND} .. {@link #CALDERA}) and the terrain weights it sets. */
+    public static final int CHARACTER = 10;
+    public static final int W_HILLS = 11;
+    public static final int W_HIGHLAND = 12;
+    public static final int W_MESA = 13;
+    public static final int W_SPIRE = 14;
+    public static final int W_RIDGE = 15;
+    /** Less plains: shifts the region threshold down. */
+    public static final int FLAT_SHIFT = 16;
+    /** Mountain range along the spine (core to satellites); 0 = none. */
+    public static final int SPINE_HEIGHT = 17;
+    /** Ring of mountains around the core with a basin inside; 0 = none. */
+    public static final int RING_HEIGHT = 18;
+    public static final int RING_RADIUS = 19;
+    public static final int BASIN_DEPTH = 20;
+    public static final int BLOB_COUNT = 21;
     /** Blobs (overlapping ellipses whose union is the continent): x, z, semi-axis a, semi-axis b, angle. */
-    public static final int BLOB0 = 11;
+    public static final int BLOB0 = 22;
     public static final int BLOB_STRIDE = 5;
     public static final int MAX_BLOBS = 6;
     /** Roots: x, z, radius, depth. */
     public static final int ROOT0 = BLOB0 + BLOB_STRIDE * MAX_BLOBS;
     public static final int ROOT_STRIDE = 4;
+
+    public static final int LOWLAND = 0;
+    public static final int MIXED = 1;
+    public static final int HIGHLAND = 2;
+    public static final int MOUNTAINOUS = 3;
+    public static final int CALDERA = 4;
+    /** Cumulative chances of the characters (lowland, mixed, highland, mountainous, caldera). */
+    private static final double[] CHARACTER_CHANCE = {0.2, 0.5, 0.65, 0.85, 1.0};
+    /** Terrain weights per character: hills, highland, mesa, spire, ridged mountains, flat shift. */
+    private static final double[][] CHARACTER_WEIGHTS = {
+            {1.0, 0.3, 0.2, 0.15, 0.2, 0.0},
+            {1.0, 0.7, 0.6, 0.4, 0.7, 0.0},
+            {1.0, 1.0, 1.0, 0.7, 0.5, 0.12},
+            {1.0, 0.5, 0.2, 0.4, 1.0, 0.2},
+            {0.8, 0.3, 0.2, 0.3, 0.3, 0.0}};
+    private static final double SPINE_MIN = 55.0;
+    private static final double SPINE_MAX = 90.0;
+    private static final double SPINE_WIDTH = 90.0;
+    private static final double RING_MIN = 40.0;
+    private static final double RING_MAX = 70.0;
+    private static final double RING_WIDTH = 45.0;
+    private static final double BASIN_MIN = 10.0;
+    private static final double BASIN_MAX = 18.0;
+    /** Caldera continents sit high, so the basin keeps a full crust. */
+    private static final double CALDERA_BASE_MIN = 155.0;
+    /** Small-scale relief everywhere (blocks): bumps that break up contour-like surfaces. */
+    private static final double MICRO_AMP = 2.0;
+    private static final double MICRO_FINE_AMP = 1.0;
+    /** Warp of step and mesa noises (blocks), so scarps and terraces wander instead of following isolines. */
+    private static final double STEP_WARP = 12.0;
 
     /** Mountain mask noise above the threshold by this much reaches full strength. */
     private static final double MOUNTAIN_RAMP = 0.35;
@@ -94,6 +139,7 @@ public final class ContinentShape {
         placeBlobs(seed, cx, cz, radius, starter, out, off);
         out[off + PLATEAU] = starter ? p.starterPlateauRadius() : 0.0;
         out[off + MAX_Y] = p.continentPeakMaxY();
+        placeCharacter(p, seed, starter, out, off);
 
         int span = p.continentRootsMax() - p.continentRootsMin() + 1;
         int roots = p.continentRootsMin() + (int) (u(seed, 3) * span);
@@ -129,6 +175,32 @@ public final class ContinentShape {
             double dist = core * ShapeMath.lerp(SATELLITE_DIST_MIN, SATELLITE_DIST_MAX, u(seed, i + 3));
             setBlob(out, off + BLOB0 + BLOB_STRIDE * k, cx + Math.cos(dir) * dist, cz + Math.sin(dir) * dist,
                     r, aspect, u(seed, i + 4) * Math.PI);
+        }
+    }
+
+    private static void placeCharacter(WorldParams p, long seed, boolean starter, double[] out, int off) {
+        int character = MIXED;
+        if (!starter) {
+            double roll = u(seed, 8);
+            character = 0;
+            while (roll >= CHARACTER_CHANCE[character]) {
+                character++;
+            }
+        }
+        out[off + CHARACTER] = character;
+        double[] w = CHARACTER_WEIGHTS[character];
+        out[off + W_HILLS] = w[0];
+        out[off + W_HIGHLAND] = w[1];
+        out[off + W_MESA] = w[2];
+        out[off + W_SPIRE] = w[3];
+        out[off + W_RIDGE] = w[4];
+        out[off + FLAT_SHIFT] = w[5];
+        out[off + SPINE_HEIGHT] = character == MOUNTAINOUS ? ShapeMath.lerp(SPINE_MIN, SPINE_MAX, u(seed, 30)) : 0.0;
+        if (character == CALDERA) {
+            out[off + BASE_Y] = ShapeMath.lerp(Math.max(CALDERA_BASE_MIN, p.continentBaseYMin()), p.continentBaseYMax(), u(seed, 0));
+            out[off + RING_HEIGHT] = ShapeMath.lerp(RING_MIN, RING_MAX, u(seed, 31));
+            out[off + RING_RADIUS] = 0.6 * Math.min(out[off + BLOB0 + 2], out[off + BLOB0 + 3]);
+            out[off + BASIN_DEPTH] = ShapeMath.lerp(BASIN_MIN, BASIN_MAX, u(seed, 32));
         }
     }
 
@@ -218,48 +290,127 @@ public final class ContinentShape {
     }
 
     /**
-     * Terrain above the flat base (negative on coastal slopes). Plains stay flat; elsewhere
-     * a region noise mixes rolling hills, stepped highlands with scarps, mesas with sheer
-     * walls, rock spires and terraced ridged mountains, so parts of a continent differ.
+     * Terrain above the flat base (negative on coastal slopes and in basins). The
+     * continent's character sets the weights; inside, a region noise mixes plains, rolling
+     * hills, stepped highlands, mesas with sheer walls, rare spire clusters and terraced
+     * mountains. Mountainous continents add a range along their spine, calderas a ring of
+     * mountains with passes around a basin. Small-scale relief breaks up every surface.
      */
     public static double mountain(WorldParams p, double[] prm, int off, long seed, double x, double z, double edge) {
         double inland = ShapeMath.smoothstep(0.0, 60.0, edge);
         double plateau = prm[off + PLATEAU];
+        double open = 1.0;
         if (plateau > 0.0) {
             double dx = x - prm[off + CX];
             double dz = z - prm[off + CZ];
-            inland *= ShapeMath.smoothstep(plateau, plateau + 120.0, Math.sqrt(dx * dx + dz * dz));
+            open = ShapeMath.smoothstep(plateau, plateau + 120.0, Math.sqrt(dx * dx + dz * dz));
         }
+        double micro = (MICRO_AMP * SimplexNoise.noise2(seed + 27, x / 22.0, z / 22.0)
+                + MICRO_FINE_AMP * SimplexNoise.noise2(seed + 28, x / 9.0, z / 9.0)) * ShapeMath.smoothstep(0.0, 12.0, edge);
         double coastDrop = COAST_DROP * ShapeMath.smoothstep(-0.1, 0.4, SimplexNoise.noise2(seed + 17, x / 200.0, z / 200.0))
-                * (1.0 - ShapeMath.smoothstep(0.0, COAST_DROP_WIDTH, edge));
-        if (plateau > 0.0) {
-            double dx = x - prm[off + CX];
-            double dz = z - prm[off + CZ];
-            coastDrop *= ShapeMath.smoothstep(plateau, plateau + 120.0, Math.sqrt(dx * dx + dz * dz));
+                * (1.0 - ShapeMath.smoothstep(0.0, COAST_DROP_WIDTH, edge)) * open;
+        inland *= open;
+        if (inland <= 0.0) {
+            return micro - coastDrop;
         }
-        // Plains where this noise is low: at least the flat share required by the design.
-        double featured = ShapeMath.smoothstep(p.continentMountainThreshold(), p.continentMountainThreshold() + 0.3,
+
+        double threshold = p.continentMountainThreshold() - prm[off + FLAT_SHIFT];
+        double featured = ShapeMath.smoothstep(threshold, threshold + 0.3,
                 SimplexNoise.noise2(seed + 9, x / REGION_SCALE, z / REGION_SCALE)) * inland;
-        if (featured <= 0.0) {
-            return -coastDrop;
+        // Step and mesa noises are read at warped positions, so their edges wander.
+        double sx = x + STEP_WARP * SimplexNoise.noise2(seed + 33, x / 28.0, z / 28.0);
+        double sz = z + STEP_WARP * SimplexNoise.noise2(seed + 34, x / 28.0, z / 28.0);
+
+        double terrain = 0.0;
+        if (featured > 0.0) {
+            double hills = ROLLING_HILLS * (0.5 + 0.5 * fbm(seed + 10, x, z, 160.0, 3));
+            double highlandRegion = ShapeMath.smoothstep(0.0, 0.3, SimplexNoise.noise2(seed + 11, x / REGION_SCALE, z / REGION_SCALE));
+            double steps = fbm(seed + 12, sx, sz, 150.0, 3);
+            double highland = highlandRegion * HIGHLAND_STEP
+                    * (ShapeMath.smoothstep(-0.05, 0.05, steps) + ShapeMath.smoothstep(0.3, 0.38, steps));
+            double mesaRegion = ShapeMath.smoothstep(0.1, 0.35, SimplexNoise.noise2(seed + 13, x / REGION_SCALE, z / REGION_SCALE));
+            double mesaShape = SimplexNoise.noise2(seed + 14, sx / 110.0, sz / 110.0) + 0.3 * SimplexNoise.noise2(seed + 15, sx / 30.0, sz / 30.0);
+            double mesaHeight = ShapeMath.lerp(MESA_MIN, MESA_MAX, 0.5 + 0.5 * SimplexNoise.noise2(seed + 18, x / 300.0, z / 300.0));
+            double mesa = mesaRegion * mesaHeight * ShapeMath.smoothstep(0.32, 0.38, mesaShape);
+            // Spires: rare clusters only.
+            double spireCluster = ShapeMath.smoothstep(0.35, 0.55, SimplexNoise.noise2(seed + 25, x / 220.0, z / 220.0));
+            double spireT = spireCluster > 0.0
+                    ? ShapeMath.clamp((SimplexNoise.noise2(seed + 16, x / 30.0, z / 30.0) - 0.72) / 0.22, 0.0, 1.0) : 0.0;
+            double spire = prm[off + W_SPIRE] * spireCluster * SPIRE_HEIGHT * spireT * spireT;
+            double ridged = prm[off + W_RIDGE] * ridgedMountains(p, prm, off, seed, x, z);
+            terrain = featured * (Math.max(ridged, prm[off + W_HILLS] * hills
+                    + Math.max(prm[off + W_HIGHLAND] * highland, prm[off + W_MESA] * mesa)) + spire);
         }
 
-        double hills = ROLLING_HILLS * (0.5 + 0.5 * fbm(seed + 10, x, z, 160.0, 3));
-        double highlandRegion = ShapeMath.smoothstep(0.0, 0.3, SimplexNoise.noise2(seed + 11, x / REGION_SCALE, z / REGION_SCALE));
-        double steps = fbm(seed + 12, x, z, 150.0, 3);
-        double highland = highlandRegion * HIGHLAND_STEP
-                * (ShapeMath.smoothstep(-0.05, 0.05, steps) + ShapeMath.smoothstep(0.3, 0.38, steps));
-        double mesaRegion = ShapeMath.smoothstep(0.1, 0.35, SimplexNoise.noise2(seed + 13, x / REGION_SCALE, z / REGION_SCALE));
-        double mesaShape = SimplexNoise.noise2(seed + 14, x / 110.0, z / 110.0) + 0.3 * SimplexNoise.noise2(seed + 15, x / 30.0, z / 30.0);
-        double mesaHeight = ShapeMath.lerp(MESA_MIN, MESA_MAX, 0.5 + 0.5 * SimplexNoise.noise2(seed + 18, x / 300.0, z / 300.0));
-        double mesa = mesaRegion * mesaHeight * ShapeMath.smoothstep(0.32, 0.38, mesaShape);
-        double spireN = SimplexNoise.noise2(seed + 16, x / 30.0, z / 30.0);
-        double spireT = ShapeMath.clamp((spireN - 0.6) / 0.3, 0.0, 1.0);
-        double spire = Math.max(mesaRegion, highlandRegion) * SPIRE_HEIGHT * spireT * spireT;
+        double big = Math.max(spine(prm, off, seed, x, z), ring(prm, off, seed, x, z)) * inland;
+        return Math.max(terrain, big) - basin(prm, off, seed, x, z) * inland + micro - coastDrop;
+    }
 
-        double ridged = ridgedMountains(p, prm, off, seed, x, z);
-        double terrain = Math.max(ridged, hills + Math.max(highland, mesa)) + spire;
-        return featured * terrain - coastDrop;
+    /** Mountain range along the segments from the core to each satellite blob (meandering). */
+    private static double spine(double[] prm, int off, long seed, double x, double z) {
+        double height = prm[off + SPINE_HEIGHT];
+        if (height <= 0.0) {
+            return 0.0;
+        }
+        double wx = x + 40.0 * SimplexNoise.noise2(seed + 35, x / 160.0, z / 160.0);
+        double wz = z + 40.0 * SimplexNoise.noise2(seed + 36, x / 160.0, z / 160.0);
+        double ax = prm[off + BLOB0];
+        double az = prm[off + BLOB0 + 1];
+        double best = Double.MAX_VALUE;
+        int count = (int) prm[off + BLOB_COUNT];
+        for (int k = 1; k < count; k++) {
+            int o = off + BLOB0 + BLOB_STRIDE * k;
+            best = Math.min(best, segmentDistance(wx, wz, ax, az, prm[o], prm[o + 1]));
+        }
+        double profile = 1.0 - ShapeMath.smoothstep(0.0, SPINE_WIDTH, best);
+        if (profile <= 0.0) {
+            return 0.0;
+        }
+        double r1 = 1.0 - Math.abs(SimplexNoise.noise2(seed + 37, x / 90.0, z / 90.0));
+        double r2 = 1.0 - Math.abs(SimplexNoise.noise2(seed + 38, x / 35.0, z / 35.0));
+        return height * Math.pow(profile, 1.5) * (0.45 + 0.4 * r1 * r1 + 0.15 * r2);
+    }
+
+    /** Ring of mountains around the core centre, with passes. */
+    private static double ring(double[] prm, int off, long seed, double x, double z) {
+        double height = prm[off + RING_HEIGHT];
+        if (height <= 0.0) {
+            return 0.0;
+        }
+        double d = ringDistance(prm, off, seed, x, z);
+        double profile = 1.0 - ShapeMath.smoothstep(0.0, RING_WIDTH, Math.abs(d - prm[off + RING_RADIUS]));
+        if (profile <= 0.0) {
+            return 0.0;
+        }
+        double passes = ShapeMath.smoothstep(-0.55, -0.15, SimplexNoise.noise2(seed + 39, x / 110.0, z / 110.0));
+        double r1 = 1.0 - Math.abs(SimplexNoise.noise2(seed + 40, x / 60.0, z / 60.0));
+        return height * Math.pow(profile, 1.3) * (0.6 + 0.4 * r1 * r1) * passes;
+    }
+
+    /** Depth of the caldera basin inside the ring. */
+    private static double basin(double[] prm, int off, long seed, double x, double z) {
+        double depth = prm[off + BASIN_DEPTH];
+        if (depth <= 0.0) {
+            return 0.0;
+        }
+        double inner = prm[off + RING_RADIUS] - RING_WIDTH;
+        return depth * (1.0 - ShapeMath.smoothstep(inner - 40.0, inner + 20.0, ringDistance(prm, off, seed, x, z)));
+    }
+
+    private static double ringDistance(double[] prm, int off, long seed, double x, double z) {
+        double wx = x + 25.0 * SimplexNoise.noise2(seed + 41, x / 120.0, z / 120.0) - prm[off + BLOB0];
+        double wz = z + 25.0 * SimplexNoise.noise2(seed + 42, x / 120.0, z / 120.0) - prm[off + BLOB0 + 1];
+        return Math.sqrt(wx * wx + wz * wz);
+    }
+
+    private static double segmentDistance(double px, double pz, double ax, double az, double bx, double bz) {
+        double vx = bx - ax;
+        double vz = bz - az;
+        double len2 = vx * vx + vz * vz;
+        double t = len2 > 0.0 ? ShapeMath.clamp(((px - ax) * vx + (pz - az) * vz) / len2, 0.0, 1.0) : 0.0;
+        double dx = px - ax - t * vx;
+        double dz = pz - az - t * vz;
+        return Math.sqrt(dx * dx + dz * dz);
     }
 
     /** Terraced ridged mountains where their own mask allows them. */
@@ -274,7 +425,8 @@ public final class ContinentShape {
         double ridge = 0.65 * r1 * r1 + 0.25 * r2 * r2 + 0.1 * r3;
         double h = mask * prm[off + MOUNTAINS] * ridge * (p.continentPeakMaxY() - prm[off + BASE_Y]);
         // Irregular terraces: the step boundary wanders, so terraces are not contour lines.
-        double steps = (h + 3.0 * SimplexNoise.noise2(seed + 30, x / 50.0, z / 50.0)) / TERRACE_STEP;
+        double steps = (h + 4.0 * SimplexNoise.noise2(seed + 30, x / 50.0, z / 50.0)
+                + 2.0 * SimplexNoise.noise2(seed + 29, x / 17.0, z / 17.0)) / TERRACE_STEP;
         double k = Math.floor(steps);
         double terraced = TERRACE_STEP * (k + ShapeMath.smoothstep(0.3, 0.7, steps - k));
         return Math.max(0.0, ShapeMath.lerp(h, terraced, TERRACE_BLEND));
@@ -299,9 +451,13 @@ public final class ContinentShape {
         return Math.min(flatTop + mountain, p.continentPeakMaxY());
     }
 
-    /** Underside height: crust under the flat terrain (thinning to the edge) and cone roots; never below minBottomY. */
-    public static double bottom(WorldParams p, double[] prm, int off, double x, double z, double edge, double flatTop) {
-        double b = flatTop - prm[off + CRUST] * ShapeMath.smoothstep(0.0, 40.0, edge);
+    /**
+     * Underside height: crust under the flat terrain, or under the lowered surface in
+     * basins and coastal slopes (thinning to the edge), and cone roots; never below minBottomY.
+     */
+    public static double bottom(WorldParams p, double[] prm, int off, double x, double z, double edge, double flatTop,
+                                double mountain) {
+        double b = flatTop + Math.min(0.0, mountain) - prm[off + CRUST] * ShapeMath.smoothstep(0.0, 40.0, edge);
         double root = 0.0;
         int roots = (int) prm[off + ROOT_COUNT];
         for (int k = 0; k < roots; k++) {

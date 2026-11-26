@@ -118,7 +118,7 @@ public record WorldParams(
         double skyDensityScale) {
 
     /** Bumped whenever a code change alters generated chunks (see CLAUDE.md). */
-    public static final int GENERATOR_VERSION = 5;
+    public static final int GENERATOR_VERSION = 6;
 
     public static final WorldParams DEFAULTS = new WorldParams(
             -64,
@@ -152,7 +152,7 @@ public record WorldParams(
             1024,
             64,
             512,
-            3000,
+            2000,
             200.0,
             600.0,
             0.12,

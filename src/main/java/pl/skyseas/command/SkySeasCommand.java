@@ -19,6 +19,7 @@ import pl.skyseas.density.SeabedHeightFunction;
 import pl.skyseas.density.ZoneFactorFunction;
 import pl.skyseas.layout.Layout;
 import pl.skyseas.layout.RegionLayout;
+import pl.skyseas.shape.ContinentShape;
 import pl.skyseas.shape.SeabedColumn;
 
 /**
@@ -86,8 +87,10 @@ public final class SkySeasCommand {
             sb.append("\n  layout region: ").append(r.rx).append(',').append(r.rz)
                     .append(" (").append(r.count).append(" islands)");
             if (i >= 0) {
-                sb.append(String.format(Locale.ROOT, "\n  island: continent %016x%s, centre %d,%d, edge %.0f, top %.1f, bottom %.1f",
-                        r.id[i], (r.flags[i] & RegionLayout.FLAG_STARTER) != 0 ? " (starter)" : "", r.cx[i], r.cz[i],
+                String[] characters = {"lowland", "mixed", "highland", "mountainous", "caldera"};
+                String character = characters[(int) r.params[i * r.paramStride + ContinentShape.CHARACTER]];
+                sb.append(String.format(Locale.ROOT, "\n  island: %s continent %016x%s, centre %d,%d, edge %.0f, top %.1f, bottom %.1f",
+                        character, r.id[i], (r.flags[i] & RegionLayout.FLAG_STARTER) != 0 ? " (starter)" : "", r.cx[i], r.cz[i],
                         layout.column(pos.getX(), pos.getZ(), Layout.EDGE), layout.column(pos.getX(), pos.getZ(), Layout.TOP),
                         layout.column(pos.getX(), pos.getZ(), Layout.BOTTOM)));
             } else {
