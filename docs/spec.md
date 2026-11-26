@@ -365,7 +365,7 @@ Testowanie opiera się na trzech filarach: komendach, które pokazują układ be
 | `/skyseas locate <typ>` | Najbliższa wyspa danego typu, cenota, błękitna dziura, rów lub wulkan; z układu, bez generacji |
 | `/skyseas map <promień> [skala]` | PNG z góry liczony z samego układu (typy wysp, strefy, czyste niebo, zacienienie) do `skyseas/maps/`; sekundy zamiast godzin latania |
 | `/skyseas audit <promień>` | Na wygenerowanych chunkach: procent zacienienia morza, wyspy nad lądem w oceanie (ma być 0), grubość stropów, objętość jaskiń względem grubości skały, rudy per strefa, położenie struktur; wynik w CSV |
-| `/skyseas bench <chunki> [vanilla]` | Generuje N chunków w odległym obszarze, mierzy czasy etapów (biomes, noise, surface, features), zapisuje CSV do porównań między commitami |
+| `/skyseas bench <chunki> [here] [vanilla]` | Generuje N chunków w odległym obszarze (z `here`: wokół pozycji), mierzy czasy etapów (biomes, noise, surface, features), zapisuje CSV do porównań między commitami |
 
 **Testy automatyczne**
 
@@ -385,6 +385,8 @@ Wdrożenie idzie w dziesięciu etapach; każdy kończy się działającym świat
    - Zrealizowane dodatkowo: `skyseas:depth` (parametr biomu `depth` z E4: 0 w wodzie), dolna granica floodedness aquiferów przy dnie (bez suchych kieszeni nad dnem), `continents` stałe (głęboki ocean) do E4.
 3. **E2 — Układ i kontynenty.** `Layout`, cache, seed z szumu, poziom kontynentów, kształt kontynentu, `/skyseas map`.
    - Akceptacja: testy JUnit determinizmu; kontynent startowy na 0,0; spód ≥ 113; mapa PNG czytelna.
+   - Zrealizowane: `continents` = 0,5 w zasięgu wyspy (obrys + 16) od spodu wyspy do sufitu świata, poza nim −0,6 (pełny klimat w E4); noodle tylko poniżej Y 63 (nie przewierca wysp); obrys kontynentu gwiaździsty (szum próbkowany na okręgu w kierunku punktu, potem lekki warp), więc bez oderwanych kawałków (test JUnit: < 1% powierzchni odłączonej); `/skyseas info cache`; `/skyseas bench <n> here [vanilla]` mierzy obszar wokół pozycji (np. nad kontynentem).
+   - Odstępstwa: szum kształtów to klasyczny simplex 2D/3D z gradientami z tablic indeksowanymi hashem pozycyjnym zamiast OpenSimplex2S; parametry wysp jako `double[]` (precyzja współrzędnych > 2^24); router liczy `max(interpolated(sky), interpolated(oceanic))` zamiast `interpolated(max(...))`, co zostawia ocean bit w bit jak w E1.1; skale szumów kształtu kontynentu są nazwanymi stałymi w `ContinentShape`, liczby z designu w `WorldParams`.
 4. **E3 — Pozostałe formy i reguły.** Wyspy oceaniczne, archipelagi, góry Alleluja, łańcuchy, szyby, strefy, gwarancje startowe; podwodne góry, wulkany (kształt), podwodne łuki i skalne iglice.
    - Akceptacja: audyt pokazuje 0 wysp nad lądem w oceanie, zacienienie ≤ 30%, łańcuchy w limitach kroku; szyby kończą się w komorach.
 5. **E4 — Klimat i biomy 3D.** Wszystkie funkcje klimatu, chłodzenie z wysokością, klastry tematyczne, biomy jaskiniowe.

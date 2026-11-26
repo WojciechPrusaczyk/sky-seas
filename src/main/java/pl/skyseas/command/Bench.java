@@ -30,8 +30,8 @@ import pl.skyseas.config.WorldParams;
 public final class Bench {
     static final int WARMUP_ROUNDS = 3;
     static final int MEASURED_ROUNDS = 7;
-    /** Bench area origin (chunk coordinates): far beyond the zone plateau, away from spawn. */
-    private static final int ORIGIN_CHUNK = 1250;
+    /** Default bench area origin (chunk coordinates): open ocean beyond the zone plateau. */
+    static final int ORIGIN_CHUNK = 1250;
 
     private static final AtomicBoolean RUNNING = new AtomicBoolean();
 
@@ -39,13 +39,14 @@ public final class Bench {
     }
 
     /** Starts a bench run in the background. Returns false if one is already running. */
-    static boolean start(ServerLevel level, int chunks, boolean withVanilla, Consumer<String> reply) {
+    static boolean start(ServerLevel level, int chunks, boolean withVanilla, int originX, int originZ,
+                         Consumer<String> reply) {
         if (!RUNNING.compareAndSet(false, true)) {
             return false;
         }
         Thread thread = new Thread(() -> {
             try {
-                String summary = run(level, chunks, withVanilla);
+                String summary = run(level, chunks, withVanilla, originX, originZ);
                 level.getServer().execute(() -> reply.accept(summary));
             } catch (RuntimeException | IOException e) {
                 SkySeas.LOGGER.error("Bench failed", e);
@@ -59,7 +60,8 @@ public final class Bench {
         return true;
     }
 
-    private static String run(ServerLevel level, int chunks, boolean withVanilla) throws IOException {
+    private static String run(ServerLevel level, int chunks, boolean withVanilla, int originX, int originZ)
+            throws IOException {
         long seed = level.getSeed();
         List<String> names = new ArrayList<>();
         List<StagedChunkGen> gens = new ArrayList<>();
@@ -70,7 +72,7 @@ public final class Bench {
             gens.add(StagedChunkGen.create(level, NoiseGeneratorSettings.OVERWORLD, seed));
         }
 
-        ChunkPos[] positions = positions(chunks);
+        ChunkPos[] positions = positions(chunks, originX, originZ);
         int rounds = WARMUP_ROUNDS + MEASURED_ROUNDS;
         // [generator][round][stage] total nanoseconds
         long[][][] totals = new long[gens.size()][rounds][StagedChunkGen.STAGE_NAMES.length];
@@ -92,11 +94,11 @@ public final class Bench {
         return summary(names, totals, chunks, seed, csv);
     }
 
-    private static ChunkPos[] positions(int chunks) {
+    private static ChunkPos[] positions(int chunks, int originX, int originZ) {
         int side = (int) Math.ceil(Math.sqrt(chunks));
         ChunkPos[] out = new ChunkPos[chunks];
         for (int i = 0; i < chunks; i++) {
-            out[i] = new ChunkPos(ORIGIN_CHUNK + i % side, ORIGIN_CHUNK + i / side);
+            out[i] = new ChunkPos(originX + i % side, originZ + i / side);
         }
         return out;
     }
