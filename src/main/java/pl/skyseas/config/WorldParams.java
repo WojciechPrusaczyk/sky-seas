@@ -124,6 +124,7 @@ package pl.skyseas.config;
  * @param seaSpireRadiusMax       thickest spire
  * @param seaSpireTopMin          lowest spire top above sea level
  * @param seaSpireTopMax          highest spire top above sea level
+ * @param skyForms                towers, sky islands and clusters between continents (round 2 of E3)
  */
 public record WorldParams(
         int worldMinY,
@@ -235,10 +236,11 @@ public record WorldParams(
         double seaSpireRadiusMin,
         double seaSpireRadiusMax,
         double seaSpireTopMin,
-        double seaSpireTopMax) {
+        double seaSpireTopMax,
+        SkyForms skyForms) {
 
     /** Bumped whenever a code change alters generated chunks (see CLAUDE.md). */
-    public static final int GENERATOR_VERSION = 11;
+    public static final int GENERATOR_VERSION = 12;
 
     public static final WorldParams DEFAULTS = new WorldParams(
             -64,
@@ -350,10 +352,144 @@ public record WorldParams(
             3.0,
             8.0,
             8.0,
-            35.0);
+            35.0,
+            new SkyForms(
+                new int[]{200, 240, 280, 305},
+                110.0,
+                90.0,
+                192,
+                0.86,
+                0.25,
+                0.5,
+                5.0,
+                15.0,
+                15.0,
+                40.0,
+                120.0,
+                7.5,
+                20.0,
+                50.0,
+                150.0,
+                0.35,
+                0.25,
+                220.0,
+                420.0,
+                650.0,
+                230.0,
+                10,
+                40,
+                7.5,
+                75.0,
+                120.0,
+                240.0,
+                3,
+                15,
+                40,
+                10.0,
+                25.0,
+                40.0,
+                120.0,
+                110.0,
+                305.0,
+                32.0,
+                16.0));
+
+    /** Highest sky form top at a distance from spawn (zone borders without jitter). */
+    public double maxIslandY(double distance) {
+        int k = 0;
+        while (k < zoneRadii.length && distance >= zoneRadii[k]) {
+            k++;
+        }
+        return skyForms.zoneMaxIslandY()[k];
+    }
 
     /** Distance at which the zone factor reaches 1 (start of the Edge). */
     public double zoneMaxRadius() {
         return zoneRadii[zoneRadii.length - 1];
+    }
+
+    /**
+     * Sky forms between continents.
+     *
+     * @param zoneMaxIslandY          highest sky form top per zone (Haven, Borderlands, Wilds, Edge); continents excepted
+     * @param skyFormMinY             lowest underside of towers, sky islands and cluster forms (spires hang lower)
+     * @param skySpireMinY            lowest tip of a spire under a tower or sky island
+     * @param skyCellSize             grid cell of single sky forms (towers, small and medium islands); one per cell
+     * @param skyCellChance           chance of a candidate per cell (before rejections)
+     * @param towerShare              share of single forms that are towers
+     * @param smallIslandShare        share of the remaining single forms that are small islands
+     * @param smallIslandRadiusMin    small sky island radius (10-30 blocks across)
+     * @param smallIslandRadiusMax
+     * @param mediumIslandRadiusMin   medium sky island radius (30-80 blocks across)
+     * @param mediumIslandRadiusMax
+     * @param skyIslandYMin           lowest underside of a small or medium island
+     * @param towerRadiusMin          tower radius (15-40 blocks across)
+     * @param towerRadiusMax
+     * @param towerHeightMin          tower height from flat top to underside
+     * @param towerHeightMax
+     * @param archipelagoChance       chance of an archipelago at a corner of the continent grid
+     * @param hallelujahChance        share of corners with a Hallelujah cluster (corners hold at most one cluster)
+     * @param clusterRadiusMin        radius of the disc holding a cluster's island centres
+     * @param clusterRadiusMax
+     * @param guaranteeDistance       distance from spawn of the guaranteed archipelago and Hallelujah cluster
+     * @param guaranteeClusterRadius  disc radius of the guaranteed clusters (they fit between the starter and its neighbours)
+     * @param archipelagoCountMin     islands of an archipelago (before rejections)
+     * @param archipelagoCountMax
+     * @param archipelagoRadiusMin    archipelago island radius (15-150 blocks across)
+     * @param archipelagoRadiusMax
+     * @param archipelagoYMin         lowest underside in an archipelago
+     * @param archipelagoYMax         highest top in an archipelago
+     * @param archipelagoBridgesMax   most rock bridges or arches in an archipelago
+     * @param hallelujahCountMin      bodies of a Hallelujah cluster (before rejections)
+     * @param hallelujahCountMax
+     * @param hallelujahRadiusMin     body radius (20-50 blocks across)
+     * @param hallelujahRadiusMax
+     * @param hallelujahHeightMin     body height
+     * @param hallelujahHeightMax
+     * @param hallelujahYMin          lowest underside of a Hallelujah body
+     * @param hallelujahYMax          highest top of a Hallelujah body
+     * @param clusterCorridor         width of the straight flight corridor kept free through every cluster
+     * @param skyFormGap              least horizontal gap between the footprints of two sky forms
+     */
+    public record SkyForms(
+            int[] zoneMaxIslandY,
+            double skyFormMinY,
+            double skySpireMinY,
+            int skyCellSize,
+            double skyCellChance,
+            double towerShare,
+            double smallIslandShare,
+            double smallIslandRadiusMin,
+            double smallIslandRadiusMax,
+            double mediumIslandRadiusMin,
+            double mediumIslandRadiusMax,
+            double skyIslandYMin,
+            double towerRadiusMin,
+            double towerRadiusMax,
+            double towerHeightMin,
+            double towerHeightMax,
+            double archipelagoChance,
+            double hallelujahChance,
+            double clusterRadiusMin,
+            double clusterRadiusMax,
+            double guaranteeDistance,
+            double guaranteeClusterRadius,
+            int archipelagoCountMin,
+            int archipelagoCountMax,
+            double archipelagoRadiusMin,
+            double archipelagoRadiusMax,
+            double archipelagoYMin,
+            double archipelagoYMax,
+            int archipelagoBridgesMax,
+            int hallelujahCountMin,
+            int hallelujahCountMax,
+            double hallelujahRadiusMin,
+            double hallelujahRadiusMax,
+            double hallelujahHeightMin,
+            double hallelujahHeightMax,
+            double hallelujahYMin,
+            double hallelujahYMax,
+            double clusterCorridor,
+            double skyFormGap) {
     }
 }

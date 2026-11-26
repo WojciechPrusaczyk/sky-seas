@@ -21,8 +21,9 @@ import pl.skyseas.layout.ZoneField;
 
 /**
  * {@code /skyseas map}: top-down PNG computed from the layout alone (no chunk
- * generation). Ocean shaded by zone, ocean islands and shallows from the seabed height, continents coloured by top height (green, brown,
- * white peaks), island reach outlined, region grid and spawn marked. Runs on its own thread.
+ * generation). Ocean shaded by zone, ocean islands and shallows from the seabed height, sky islands coloured by top height (green, brown,
+ * white peaks), small islands and bridges light green, island reach outlined, region grid and spawn marked; magenta
+ * points (every 50 blocks) fail the sky visibility rule. Runs on its own thread.
  */
 final class LayoutMap {
     static final int MAX_PIXELS = 4096;
@@ -33,6 +34,11 @@ final class LayoutMap {
     private static final int GRID = 0x5F7F9F;
     private static final int SPAWN = 0xE03030;
     private static final int SAND = 0xE2D49A;
+    /** Small islands and bridges (per-block forms). */
+    private static final int DETAIL = 0xB8E07A;
+    /** Grid point that fails the sky visibility rule. */
+    private static final int BLIND = 0xFF30C0;
+    private static final int VISIBILITY_STEP = 50;
 
     private LayoutMap() {
     }
@@ -77,6 +83,8 @@ final class LayoutMap {
         long t0 = System.nanoTime();
         BufferedImage img = new BufferedImage(size, size, BufferedImage.TYPE_INT_RGB);
         int land = 0;
+        int points = 0;
+        int blind = 0;
         for (int py = 0; py < size; py++) {
             int z = z0 + py * scale;
             for (int px = 0; px < size; px++) {
@@ -87,6 +95,8 @@ final class LayoutMap {
                 if (edge > 0.0) {
                     rgb = landColor(p, layout.column(x, z, Layout.TOP));
                     land++;
+                } else if (layout.detailFloor(x & ~3, z & ~3) < Layout.NO_SPIRE) {
+                    rgb = DETAIL;
                 } else if (edge > -p.islandReachMargin()) {
                     rgb = REACH;
                 } else if (seabed != null && (h = seabed.compute(new DensityFunction.SinglePointContext(x, 0, z))) > 30.0) {
@@ -106,6 +116,13 @@ final class LayoutMap {
                 if (Math.floorMod(x, p.layoutRegionSize()) < scale || Math.floorMod(z, p.layoutRegionSize()) < scale) {
                     rgb = blend(rgb, GRID);
                 }
+                if (Math.floorMod(x, VISIBILITY_STEP) < scale && Math.floorMod(z, VISIBILITY_STEP) < scale) {
+                    points++;
+                    if (!layout.skyVisible(x, z, 250.0, 500.0)) {
+                        blind++;
+                        rgb = BLIND;
+                    }
+                }
                 if ((Math.abs(x) < 3 * scale && Math.abs(z) < 24 * scale) || (Math.abs(z) < 3 * scale && Math.abs(x) < 24 * scale)) {
                     rgb = SPAWN;
                 }
@@ -119,8 +136,10 @@ final class LayoutMap {
         Path file = dir.resolve("map-" + LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMdd-HHmmss")) + ".png");
         ImageIO.write(img, "png", file.toFile());
         return String.format(java.util.Locale.ROOT,
-                "[Sky Seas] map: %dx%d px, %d blocks/px, centre %d,%d, land %.1f%%, %d ms, layout regions cached %d\n  png: %s",
-                size, size, scale, centerX, centerZ, 100.0 * land / ((double) size * size), ms,
+                "[Sky Seas] map: %dx%d px, %d blocks/px, centre %d,%d, land %.1f%%, sky visibility %.2f%% of %d points, "
+                        + "%d ms, layout regions cached %d\n  png: %s",
+                size, size, scale, centerX, centerZ, 100.0 * land / ((double) size * size),
+                points == 0 ? 100.0 : 100.0 * (points - blind) / points, points, ms,
                 layout.cache().size(), file.toAbsolutePath());
     }
 

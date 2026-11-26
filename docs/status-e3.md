@@ -10,13 +10,45 @@ Stan na 2026-11-26, po decyzjach z `docs/decisions/2026-11-26-e3-rework.md`. Dec
 | E1: ocean i dno (+ E1.1: wieloskalowa rzeźba dna) | zamknięty | `e1-done` |
 | E2: układ, kontynenty, `/skyseas map` | zamknięty po czterech rundach poprawek w grze | `e2-done` (lokalnie; push zablokował filtr uprawnień, do wypchnięcia ręcznie) |
 | E3 runda 0 (dawne E3a): wyspy oceaniczne, szelfy, atole, podwodne góry, wulkany, iglice morskie | zrobiona, na gałęzi `e3-wip` (commit `5fa7482`), oceniona w grze negatywnie | – |
-| E3 runda 1: kontynenty | zrobiona, na `e3-wip`, czeka na Twój test w grze (wyniki niżej) | – |
-| E3 rundy 2–4 (plan w sekcji 5) | czekają | – |
+| E3 runda 1: kontynenty | zrobiona i przyjęta, na `e3-wip` | – |
+| E3 runda 2: wypełnienie nieba | zrobiona, na `e3-wip`, czeka na Twój test w grze (wyniki niżej) | – |
+| E3 rundy 3–4 (plan w sekcji 5) | czekają | – |
 | E4–E9 | nie rozpoczęte | – |
 
 Proces od teraz: praca na gałęzi `e3-wip` z commitami po drodze; merge na `main`, tag `e3-done` i push dopiero po akceptacji całego etapu.
 
-**Ostatnie pomiary (runda 1, `generatorVersion` 10, `/skyseas bench 64`, względem vanilli na tym samym seedzie):**
+**Pomiary rundy 2 (`generatorVersion` 12, względem vanilli na tym samym seedzie):**
+
+| Obszar | biomes | noise | surface |
+| --- | --- | --- | --- |
+| Spawn (0,0), 64 chunki | 1,25× | 1,00× | 0,49× |
+| Gwarantowany klaster Alleluja (−600,0), 256 chunków | 1,33× | 0,97× | 0,61× |
+| Gwarantowany archipelag (600,0), 256 chunków | 1,31× | 1,00× | 0,65× |
+| −3400, −3400 (góry), 64 chunki | 1,42× | 1,14× | 2,08× |
+
+Korytarze w grubych bryłach kosztują w górach ok. 0,2× (w rundzie 1 to samo miejsce miało 0,93×). Wszystko poniżej celu 1,3×.
+
+**Testy rundy 2:**
+- **JUnit 38/38.** Nowe testy:
+  - reguła widoczności nieba (1 forma w 250, 3 w 500) na siatce co 50 bloków, 16×16 km, dwa seedy: 98,97% i 99,24% punktów (próg 98%); mapa 16×16 km na seedzie serwera: 99,32%;
+  - żadna forma nie wisi nad inną (najwyżej jeden obrys na kolumnę);
+  - czyste niebo nad lądem w oceanie, także dla małych wysp i mostów;
+  - limity stref i dolne granice;
+  - gwarancja przy spawnie: w promieniu 1000 bloków 18–31 wysp archipelagu i 13–29 brył Alleluja (trzy seedy);
+  - spójność 3D z interpolacją gry wokół 207 form: 0 luźnych kawałków.
+- **GameTesty 7/7.** Nowy: okna wokół wieży, wyspy średniej i małej, wyspy archipelagu, bryły Alleluja i mostu (dwa seedy) bez luźnych bloków; korytarze w grubych bryłach istnieją.
+- **Liczby na region** (średnio): wieże 3,2; wyspy pojedyncze 10,0; wyspy archipelagów 3,2; bryły Alleluja 1,6; mosty i łuki 0,17. Klastry leżą co ok. 2,8 regionu, więc w regionie z klastrem jest go znacznie więcej.
+
+**Zacienienie (do decyzji, punkt 3 w sekcji 6).** Udział powierzchni morza pod formami na niebie, 8×8 regionów wokół spawnu:
+
+| | Całość | Najgorszy region |
+| --- | --- | --- |
+| Wszystkie formy | 22,3% | 65,8% |
+| Same kontynenty | 18,7% | 65,2% |
+
+Nowe formy dokładają ok. 3,6 punktu procentowego. Limit 30% na region łamią już same kontynenty (region w całości pod dużym kontynentem), których nie przycinamy. Budżetu nie egzekwuję; propozycje w sekcji 6.
+
+**Ostatnie pomiary rundy 1 (`generatorVersion` 10, `generatorVersion` 10, `/skyseas bench 64`, względem vanilli na tym samym seedzie):**
 
 | Obszar | biomes | noise | surface |
 | --- | --- | --- | --- |
@@ -25,7 +57,7 @@ Proces od teraz: praca na gałęzi `e3-wip` z commitami po drodze; merge na `mai
 
 Cel ze spec to noise ≤ 1,3×. Surface 2,07× w drugim obszarze wynika z większej powierzchni odsłoniętej skały (grube klify, masywy). Kryterium go nie obejmuje, a reguły powierzchni przepisujemy w E5.
 
-**Testy (runda 1):**
+**Testy rundy 1:**
 - **JUnit 32/32.** Nowe testy:
   - przerwy brzeg–brzeg: 109 ze 114 kontynentów ma najbliższego sąsiada w 400–800, zakres 431–855;
   - udziały: złożone 29%, wyniesione 13,5% poza Przystanią, masywy 22%, średnio 5,1 iglicy, wszystkie sylwetki obecne;
@@ -279,11 +311,14 @@ Każda runda kończy się JUnit, GameTestami, mapą, benchem (`noise` ≤ 1,3× 
 
 ## 6. Otwarte punkty
 
-1. **Próg reguł widoczności:** proponuję 100% jako cel i ≥ 98% punktów do akceptacji, z listą wyjątków na mapie. Do Twojej decyzji.
+1. **Próg reguł widoczności:** przyjęte 100% jako cel i ≥ 98% punktów do akceptacji; wyjątki widać na mapie (magenta). Runda 2: 98,97–99,32%.
 2. **Współrzędne „latających bloków”:** podasz osobno. Runda 1 usuwa obie znalezione przyczyny (sekcja 1); test w grze pokaże, czy coś zostało.
 4. **Łuki na krawędziach kontynentów:** przy interpolacji 4×8×4 szum, który je rzeźbił, odcinał kawałki. Teraz krawędź ma wnęki i nawisy, ale nie łuki. Jeśli łuki są potrzebne, zrobię je jako osobne formy per blok w `sky_details`, tak jak mosty skalne.
 5. **Krawędź 16 i skorupa 16–28** (design mówił 10–25): to minimum, przy którym interpolacja nie rozbija płyty.
-3. **Limit zacienienia 30%:** liczby z rundy 2 pokażą, czy koliduje z gęstością nieba. Jeśli tak, przyjdę z propozycją korekty.
+3. **Limit zacienienia 30%:** koliduje (liczby w sekcji 1): w najgorszym regionie same kontynenty zasłaniają 65%. Propozycje:
+   - (a) limit 30% liczony w oknie 3×3 regionów (ok. 3 km), a nie w jednym regionie; dziś najgorsze okno trzeba jeszcze zmierzyć, całość wynosi 22%;
+   - (b) limit dotyczy tylko tego, co dokładają formy poziomów 3–5, np. ≤ 10% powierzchni morza w regionie (dziś ok. 3,6% średnio).
+   Do Twojej decyzji; do tego czasu formy nie są usuwane z powodu zacienienia.
 
 ## 7. Bieżące parametry (`WorldParams.DEFAULTS`, wybór)
 
@@ -297,5 +332,8 @@ Każda runda kończy się JUnit, GameTestami, mapą, benchem (`noise` ≤ 1,3× 
 | Góry podwodne | siatka 900, szansa 0,5, promień 60–150, szczyt Y 40–58 (woda umiarkowana) |
 | Wulkany | siatka 800, szansa 0,7, promień 70–140, krawędź Y 15–50, krater 8–18 (woda zimna) |
 | Iglice morskie | siatka 450, szansa 0,6, 1–4 w grupie, promień 3–8, 8–35 nad wodą (woda letnia) |
+| Formy na niebie | siatka pojedynczych 192, szansa 0,86, wieże 25% (promień 7,5–20, wysokość 50–150), z reszty połowa małych (promień 5–15, per blok) i średnich (15–40); spód ≥ 110 (wyspy ≥ 120), iglice do Y 90; limity stref 200/240/280/305 |
+| Klastry | narożniki siatki kontynentów: archipelag 35% (10–40 wysp, promień 7,5–75, Y 120–240, 0–3 mosty lub łuki), Alleluja 25% (15–40 brył, promień 10–25, wysokość 40–120, Y 110–305); dysk 220–420; korytarz 32; odstęp form 16; gwarantowane 650 od spawnu (dysk 230) |
+| Korytarze w bryłach na niebie | spaghetti 3D + noodle, bryła > 30, strop 12, spąg 6 |
 | Czyste niebo | margines 16 + 12 (szum nawisów) |
-| `generatorVersion` | 11 |
+| `generatorVersion` | 12 |

@@ -21,8 +21,8 @@ public record SkyDetailsFunction(DensityFunction root, DensityFunction floor, La
             DensityFunction.HOLDER_HELPER_CODEC.fieldOf("floor").forGetter(SkyDetailsFunction::floor)
     ).apply(i, SkyDetailsFunction::of));
     private static final KeyDispatchDataCodec<SkyDetailsFunction> CODEC = KeyDispatchDataCodec.of(DATA_CODEC);
-    /** Tallest detail above its floor: spire length plus embedding into the crust; bridges are thinner. */
-    private static final double SPAN = 48.0;
+    /** Tallest detail above its floor. */
+    private static final double SPAN = Layout.DETAIL_SPAN;
 
     static SkyDetailsFunction of(DensityFunction root, DensityFunction floor) {
         return new SkyDetailsFunction(root, floor, LayoutRootFunction.layoutOf(root));

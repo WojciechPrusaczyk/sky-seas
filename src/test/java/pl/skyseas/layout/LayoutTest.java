@@ -17,6 +17,7 @@ import pl.skyseas.shape.ContinentShape;
 import pl.skyseas.shape.OceanShape;
 import pl.skyseas.shape.SimplexNoise;
 import pl.skyseas.shape.SkyColumn;
+import pl.skyseas.shape.SkyFormShape;
 
 class LayoutTest {
     private static final WorldParams P = WorldParams.DEFAULTS;
@@ -146,8 +147,10 @@ class LayoutTest {
                         if (SkyColumn.density(P, noiseSeed, x, y, z, edge, top, bottom, detail) > 0.0
                                 || layout.detailDensity(x, y, z) > 0.0) {
                             solid++;
-                            assertTrue(y >= P.continentMinBottomY(), "solid at " + x + "," + y + "," + z);
-                            assertTrue(i >= 0 && y >= r.minY[i] && y <= r.maxY[i],
+                            boolean continent = i >= 0 && r.type[i] == RegionLayout.CONTINENT && edge > -8.0;
+                            assertTrue(y >= (continent ? P.continentMinBottomY() : P.skyForms().skySpireMinY()),
+                                    "solid at " + x + "," + y + "," + z);
+                            assertTrue(i >= 0 && y >= r.minY[i] && y <= r.maxY[i] || layout.detailDensity(x, y, z) > 0.0,
                                     "solid outside descriptor Y range at " + x + "," + y + "," + z);
                         }
                     }
@@ -185,7 +188,9 @@ class LayoutTest {
         Layout layout = new Layout(SEEDS[2], P);
         for (int x = -5000; x <= 5000; x += 25) {
             for (int z = -5000; z <= 5000; z += 25) {
-                if (layout.column(x, z, Layout.EDGE) > 0.0) {
+                RegionLayout r = layout.regionAt(x, z);
+                int i = layout.islandAt(r, x, z);
+                if (i >= 0 && r.type[i] == RegionLayout.CONTINENT) {
                     double top = layout.column(x, z, Layout.TOP);
                     double bottom = layout.column(x, z, Layout.BOTTOM);
                     assertTrue(top <= P.continentMassifPeakYMax() && top >= P.continentMinBottomY(), "top " + top);
@@ -339,6 +344,7 @@ class LayoutTest {
                         land++;
                         double edge = layout.column(x, z, Layout.EDGE);
                         assertTrue(edge <= -P.clearSkyMargin(), "sky island " + edge + " over ocean land at " + x + "," + z);
+                        assertTrue(layout.detailFloor(x & ~3, z & ~3) >= Layout.NO_SPIRE, "small sky form over ocean land at " + x + "," + z);
                     }
                 }
             }
@@ -349,7 +355,7 @@ class LayoutTest {
     /** Every ocean form type appears; size classes roughly as designed; no large islands in the Haven. */
     @Test
     void oceanFormsAndClasses() {
-        int[] types = new int[8];
+        int[] types = new int[RegionLayout.TYPE_NAMES.length];
         int[] classes = new int[3];
         int atolls = 0;
         Layout layout = new Layout(SEEDS[0], P, CLIMATE);
@@ -585,11 +591,15 @@ class LayoutTest {
      * half-size h, as the game builds it: sky islands interpolated from cell corners
      * (4 x 8 x 4, column values flat-cached at the corners), spires per block.
      */
+    /** Bounding box of the largest detached piece of the last {@link #detachedBlocks} call. */
+    private static String lastPiece = "";
+
     private static int detachedBlocks(Layout layout, int cx, int cz, int h) {
+        lastPiece = "";
         int x0 = ((cx - h) & ~3);
         int z0 = ((cz - h) & ~3);
         int n = ((2 * h) & ~3) + 1;
-        int y0 = 104;
+        int y0 = 88;
         int ny = 320 - y0;
         int cn = (n - 1) / 4 + 1;
         int cy = (ny - 1) / 8 + 1;
@@ -632,7 +642,20 @@ class LayoutTest {
                         }
                     }
                     solid[(a * n + b) * ny + (y - y0)] = v > 0.0
-                            || (y >= floor && y <= floor + 48 && layout.detailDensity(x, y, z) > 0.0);
+                            || (y >= floor && y <= floor + Layout.DETAIL_SPAN && layout.detailDensity(x, y, z) > 0.0);
+                }
+            }
+        }
+        // Centre columns of sky forms: a piece holding one is a whole form (small islands fit in a window).
+        boolean[] anchor = new boolean[n * n];
+        int[][] corners = {{x0, z0}, {x0 + n, z0}, {x0, z0 + n}, {x0 + n, z0 + n}};
+        for (int[] q : corners) {
+            RegionLayout r = layout.regionAt(q[0], q[1]);
+            for (int i = 0; i < r.count; i++) {
+                int a = r.cx[i] - x0;
+                int b = r.cz[i] - z0;
+                if (!RegionLayout.isOcean(r.type[i]) && a >= 0 && b >= 0 && a < n && b < n) {
+                    anchor[a * n + b] = true;
                 }
             }
         }
@@ -645,6 +668,8 @@ class LayoutTest {
             }
             int head = 0;
             int tail = 0;
+            int minX = Integer.MAX_VALUE, maxX = Integer.MIN_VALUE, minY = Integer.MAX_VALUE, maxY = Integer.MIN_VALUE;
+            int minZ = Integer.MAX_VALUE, maxZ = Integer.MIN_VALUE;
             queue[tail++] = start;
             seen[start] = true;
             boolean border = false;
@@ -654,7 +679,9 @@ class LayoutTest {
                 int ab = v / ny;
                 int a = ab / n;
                 int b = ab % n;
-                if (a == 0 || b == 0 || a == n - 1 || b == n - 1) {
+                minX = Math.min(minX, a); maxX = Math.max(maxX, a); minY = Math.min(minY, y); maxY = Math.max(maxY, y);
+                minZ = Math.min(minZ, b); maxZ = Math.max(maxZ, b);
+                if (a == 0 || b == 0 || a == n - 1 || b == n - 1 || anchor[a * n + b]) {
                     border = true;
                 }
                 int[] next = {a > 0 ? v - n * ny : -1, a < n - 1 ? v + n * ny : -1, b > 0 ? v - ny : -1,
@@ -666,10 +693,203 @@ class LayoutTest {
                     }
                 }
             }
-            if (!border) {
-                worst = Math.max(worst, tail);
+            if (!border && tail > worst) {
+                worst = tail;
+                lastPiece = "piece x " + (x0 + minX) + ".." + (x0 + maxX) + " y " + (y0 + minY) + ".." + (y0 + maxY)
+                        + " z " + (z0 + minZ) + ".." + (z0 + maxZ);
             }
         }
         return worst;
     }
+
+    /** Sky forms between continents owned by regions -n..n: {rx, rz, index}. */
+    private static List<int[]> skyForms(Layout layout, int n) {
+        List<int[]> out = new ArrayList<>();
+        for (int rx = -n; rx <= n; rx++) {
+            for (int rz = -n; rz <= n; rz++) {
+                RegionLayout r = layout.region(rx, rz);
+                for (int i = 0; i < r.count; i++) {
+                    byte t = r.type[i];
+                    if (t != RegionLayout.CONTINENT && !RegionLayout.isOcean(t) && r.owns(i, P.layoutRegionSize())) {
+                        out.add(new int[]{rx, rz, i});
+                    }
+                }
+            }
+        }
+        return out;
+    }
+
+    /**
+     * Sky visibility rule: from every point (at Y 150) at least 1 sky form within 250
+     * blocks and 3 within 500, on a 50-block grid over 16 x 16 km; 98% to accept.
+     */
+    @Test
+    void skyVisibilityRule() {
+        for (long seed : new long[]{SEEDS[0], SEEDS[1]}) {
+            Layout layout = new Layout(seed, P, CLIMATE);
+            int points = 0;
+            int failing = 0;
+            StringBuilder where = new StringBuilder();
+            for (int x = -8000; x <= 8000; x += 50) {
+                for (int z = -8000; z <= 8000; z += 50) {
+                    points++;
+                    if (!layout.skyVisible(x, z, 250.0, 500.0)) {
+                        failing++;
+                        if (failing <= 5) {
+                            where.append(' ').append(x).append(',').append(z);
+                        }
+                    }
+                }
+            }
+            double share = 1.0 - (double) failing / points;
+            System.out.printf(java.util.Locale.ROOT, "LayoutTest: seed %d sky visibility %.2f%% of %d points (failing e.g.%s)%n",
+                    seed, 100.0 * share, points, where);
+            assertTrue(share >= 0.98, "sky visibility " + share);
+        }
+    }
+
+    /**
+     * No sky form hangs above another: at most one form's outline covers any column
+     * (bridges join two islands and are left out). Also counts forms per region.
+     */
+    @Test
+    void skyFormsDoNotOverlap() {
+        int[] types = new int[RegionLayout.TYPE_NAMES.length];
+        for (long seed : SEEDS) {
+            Layout layout = new Layout(seed, P, CLIMATE);
+            for (int[] f : skyForms(layout, 3)) {
+                types[layout.region(f[0], f[1]).type[f[2]]]++;
+            }
+            for (int x = -1600; x <= 1600; x += 4) {
+                for (int z = -1600; z <= 1600; z += 4) {
+                    RegionLayout r = layout.regionAt(x, z);
+                    int b = r.bucket(x, z);
+                    int covering = 0;
+                    for (int k = r.skyStart(b); k < r.skyEnd(b); k++) {
+                        int i = r.skyItem(k);
+                        if (r.type[i] != RegionLayout.SKY_BRIDGE && layout.edge(r, i, x, z) > 0.0) {
+                            covering++;
+                        }
+                    }
+                    assertTrue(covering <= 1, "forms overlap at " + x + "," + z + " seed " + seed);
+                }
+            }
+        }
+        double regions = 3.0 * 49;
+        System.out.printf(java.util.Locale.ROOT, "LayoutTest: per region: towers %.1f, sky islands %.1f, archipelago islands %.1f, "
+                        + "hallelujah bodies %.1f, bridges %.2f%n", types[RegionLayout.TOWER] / regions,
+                types[RegionLayout.SKY_ISLAND] / regions, types[RegionLayout.ARCHIPELAGO] / regions,
+                types[RegionLayout.HALLELUJAH] / regions, types[RegionLayout.SKY_BRIDGE] / regions);
+        assertTrue(types[RegionLayout.SKY_BRIDGE] > 0, "no bridges");
+    }
+
+    /** Sky forms stay under the zone's height limit and above their lowest Y. */
+    @Test
+    void skyFormsWithinZoneLimits() {
+        Layout layout = new Layout(SEEDS[0], P, CLIMATE);
+        int checked = 0;
+        for (int[] f : skyForms(layout, 10)) {
+            RegionLayout r = layout.region(f[0], f[1]);
+            int i = f[2];
+            double limit = P.maxIslandY(Math.hypot(r.cx[i], r.cz[i]));
+            // Bridges are centred between their islands: their limit is the one of the cluster's islands (same zone almost always).
+            assertTrue(r.maxY[i] <= limit + 2, RegionLayout.TYPE_NAMES[r.type[i]] + " top " + r.maxY[i] + " over " + limit);
+            assertTrue(r.minY[i] >= P.skyForms().skySpireMinY() - 1, "bottom " + r.minY[i]);
+            if (r.type[i] != RegionLayout.SKY_BRIDGE) {
+                double body = SkyFormShape.bodyBottom(r.params, r.paramOffset[i]);
+                assertTrue(body >= P.skyForms().skyFormMinY() - 4.0, RegionLayout.TYPE_NAMES[r.type[i]] + " body bottom " + body);
+            }
+            checked++;
+        }
+        assertTrue(checked > 1000, "too few forms " + checked);
+    }
+
+    /** An archipelago and a Hallelujah cluster within 1000 blocks of spawn, for every seed. */
+    @Test
+    void clustersGuaranteedNearSpawn() {
+        for (long seed : SEEDS) {
+            Layout layout = new Layout(seed, P, CLIMATE);
+            int arch = 0;
+            int hall = 0;
+            for (int[] f : skyForms(layout, 1)) {
+                RegionLayout r = layout.region(f[0], f[1]);
+                int i = f[2];
+                if (Math.hypot(r.cx[i], r.cz[i]) <= 1000.0) {
+                    arch += r.type[i] == RegionLayout.ARCHIPELAGO ? 1 : 0;
+                    hall += r.type[i] == RegionLayout.HALLELUJAH ? 1 : 0;
+                }
+            }
+            System.out.println("LayoutTest: seed " + seed + " near spawn: archipelago islands " + arch + ", hallelujah bodies " + hall);
+            assertTrue(arch >= 6 && hall >= 6, "seed " + seed + ": archipelago " + arch + ", hallelujah " + hall);
+        }
+    }
+
+    /** No loose pieces around towers, sky islands, cluster forms and bridges (3D, game interpolation). */
+    @Test
+    void noDetachedSkyForms() {
+        int windows = 0;
+        int worst = 0;
+        String where = "";
+        for (long seed : SEEDS) {
+            Layout layout = new Layout(seed, P, CLIMATE);
+            List<int[]> forms = skyForms(layout, 1);
+            for (int k = 0; k < forms.size(); k += 3) {
+                RegionLayout r = layout.region(forms.get(k)[0], forms.get(k)[1]);
+                int i = forms.get(k)[2];
+                int h = Math.min(64, (int) r.radius[i] + 8);
+                int detached = detachedBlocks(layout, r.cx[i], r.cz[i], h);
+                windows++;
+                if (detached > worst) {
+                    worst = detached;
+                    where = "seed " + seed + " " + RegionLayout.TYPE_NAMES[r.type[i]] + " at " + r.cx[i] + "," + r.cz[i] + " " + lastPiece;
+                }
+            }
+        }
+        System.out.println("LayoutTest: " + windows + " sky form windows, largest detached piece " + worst + " " + where);
+        assertTrue(windows > 30, "too few windows " + windows);
+        assertEquals(0, worst, "detached solid " + where);
+    }
+
+    /**
+     * Shading report (design: at most 30% of the sea surface under sky forms per region):
+     * share of columns under any sky form and under continents alone, overall and in the
+     * worst region. Reported, not asserted (decision 1.7: report numbers, propose a fix).
+     */
+    @Test
+    void shadingReport() {
+        Layout layout = new Layout(SEEDS[0], P, CLIMATE);
+        int size = P.layoutRegionSize();
+        int n = 8;
+        int step = 16;
+        int per = (size / step) * (size / step);
+        long all = 0;
+        long cont = 0;
+        double worstAll = 0.0;
+        double worstCont = 0.0;
+        for (int rx = -n / 2; rx < n / 2; rx++) {
+            for (int rz = -n / 2; rz < n / 2; rz++) {
+                int a = 0;
+                int c = 0;
+                for (int x = rx * size; x < (rx + 1) * size; x += step) {
+                    for (int z = rz * size; z < (rz + 1) * size; z += step) {
+                        RegionLayout r = layout.regionAt(x, z);
+                        int i = layout.islandAt(r, x, z);
+                        boolean small = i < 0 && layout.detailFloor(x, z) < Layout.NO_SPIRE;
+                        if (i >= 0 || small) {
+                            a++;
+                            c += i >= 0 && r.type[i] == RegionLayout.CONTINENT ? 1 : 0;
+                        }
+                    }
+                }
+                all += a;
+                cont += c;
+                worstAll = Math.max(worstAll, (double) a / per);
+                worstCont = Math.max(worstCont, (double) c / per);
+            }
+        }
+        double total = (double) per * n * n;
+        System.out.printf(java.util.Locale.ROOT, "LayoutTest: shading %.1f%% (continents %.1f%%), worst region %.1f%% "
+                + "(continents %.1f%%)%n", 100.0 * all / total, 100.0 * cont / total, 100.0 * worstAll, 100.0 * worstCont);
+    }
+
 }

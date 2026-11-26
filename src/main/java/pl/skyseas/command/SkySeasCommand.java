@@ -26,6 +26,7 @@ import pl.skyseas.layout.RegionLayout;
 import pl.skyseas.shape.ContinentShape;
 import pl.skyseas.shape.OceanShape;
 import pl.skyseas.shape.SeabedColumn;
+import pl.skyseas.shape.SkyFormShape;
 
 /**
  * {@code /skyseas} command tree (permission level 2). Uses only vanilla argument
@@ -62,7 +63,8 @@ public final class SkySeasCommand {
 
     /** Locate targets: item type, or -1 for any ocean island; extra filter in {@link #matches}. */
     private static final String[] LOCATE = {"continent", "elongated", "crescent", "hook", "branched", "composite",
-            "rock_bridge", "elevated", "massif", "hanging_spire", "ocean_island", "large_island", "atoll", "seamount",
+            "rock_bridge", "elevated", "massif", "hanging_spire", "archipelago", "hallelujah", "tower", "sky_island",
+            "sky_bridge", "ocean_island", "large_island", "atoll", "seamount",
             "volcano", "sea_spire"};
     private static final int LOCATE_MAX_RING = 12;
 
@@ -99,6 +101,11 @@ public final class SkySeasCommand {
         }
         return switch (target) {
             case "continent" -> r.type[i] == RegionLayout.CONTINENT;
+            case "archipelago" -> r.type[i] == RegionLayout.ARCHIPELAGO;
+            case "hallelujah" -> r.type[i] == RegionLayout.HALLELUJAH;
+            case "tower" -> r.type[i] == RegionLayout.TOWER;
+            case "sky_island" -> r.type[i] == RegionLayout.SKY_ISLAND;
+            case "sky_bridge" -> r.type[i] == RegionLayout.SKY_BRIDGE;
             case "ocean_island" -> r.type[i] == RegionLayout.OCEAN_ISLAND;
             case "large_island" -> r.type[i] == RegionLayout.OCEAN_ISLAND && r.params[off + OceanShape.SIZE_CLASS] == 2;
             case "atoll" -> r.type[i] == RegionLayout.OCEAN_ISLAND && r.params[off + OceanShape.RING] > 0.0;
@@ -268,7 +275,13 @@ public final class SkySeasCommand {
             int i = layout.islandAt(r, pos.getX(), pos.getZ());
             sb.append("\n  layout region: ").append(r.rx).append(',').append(r.rz)
                     .append(" (").append(r.count).append(" islands)");
-            if (i >= 0) {
+            if (i >= 0 && r.type[i] != RegionLayout.CONTINENT) {
+                int off = r.paramOffset[i];
+                sb.append(String.format(Locale.ROOT, "\n  island: %s%s, centre %d,%d, radius %.0f, top %.0f, depth %.0f, %d spires",
+                        RegionLayout.TYPE_NAMES[r.type[i]], (r.flags[i] & RegionLayout.FLAG_GUARANTEED) != 0 ? " (guaranteed)" : "",
+                        r.cx[i], r.cz[i], r.params[off + SkyFormShape.RADIUS], r.params[off + SkyFormShape.TOP],
+                        r.params[off + SkyFormShape.DEPTH], (int) r.params[off + SkyFormShape.SPIRE_COUNT]));
+            } else if (i >= 0) {
                 String[] characters = {"lowland", "mixed", "highland", "mountainous", "caldera"};
                 int off = r.paramOffset[i];
                 String character = characters[(int) r.params[off + ContinentShape.CHARACTER]];

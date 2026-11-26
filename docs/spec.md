@@ -346,7 +346,7 @@ Wszystkie liczby z dokumentu designowego są parametrami w configu COMMON (`conf
 | `layout.regionSize` | 1024 | Bok regionu układu (bloki) |
 | `layout.cacheRegions` | 512 | Maksymalna liczba regionów w cache |
 | `zones.radii` | 1500, 4000, 8000 | Progi stref Przystań / Pogranicze / Dzicz |
-| `zones.maxIslandY` | 200, 240, 280, 305 | Najwyższe wyspy w strefach (pod udźwig statków) |
+| `zones.maxIslandY` | 200, 240, 280, 305 | Najwyższe wyspy w strefach (pod udźwig statków); limit wierzchu form na niebie poza kontynentami |
 | `seabed.baseY` | −5 … −20 | Baza dna od spawnu do Krańca |
 | `seabed.relief` | ±12 (typowo ±8–10), min. siła 0,6 | Wieloskalowa rzeźba dna względem bazy |
 | `seabed.duneAmplitude` | 2 | Wydmy (±) |
@@ -364,6 +364,9 @@ Wszystkie liczby z dokumentu designowego są parametrami w configu COMMON (`conf
 | `islands.hangingSpires` | 3 … 8 (małe wyspy 0 … 2), długość 10 … 40 | Iglice pod spodami wysp |
 | `towers.perRegion`, `towers.size` | 2 … 4; szerokość 15 … 40, wysokość 50 … 150 | Wyspy-wieże |
 | `skyIslands.perRegion`, `skyIslands.size` | 10 … 20; 10 … 30 i 30 … 80 | Małe i średnie wyspy (ok. połowa jako satelity 100 … 400 od kontynentu) |
+| `skyForms.cellSize`, `skyForms.cellChance`, `skyForms.towerShare` | 192; 0,86; 0,25 | Siatka wież i wysp pojedynczych (wynik: ok. 3,2 wieży i 10 wysp na region) |
+| `clusters.archipelagoChance`, `clusters.hallelujahChance`, `clusters.radius` | 0,35; 0,25; 220 … 420 | Klastry na narożnikach siatki kontynentów |
+| `clusters.guaranteeDistance`, `clusters.guaranteeRadius` | 650; 230 | Gwarantowany archipelag i klaster Alleluja przy spawnie |
 | `ocean.islandDensity` | ok. 2× wartości z E3a | Gęstość wysp oceanicznych |
 | `seabedBiomes.zoneScale` | 300 … 800 | Wielkość stref biomów dna |
 | `visibility.sky` | 1 wyspa w 250, 3 w 500 (z Y 150) | Reguła widoczności nieba |
@@ -439,6 +442,21 @@ Wdrożenie idzie w dziesięciu etapach; każdy kończy się działającym świat
      - przejście klifu w stok przybrzeżny wolniejsze;
      - mosty skalne w `sky_details`, bo interpolacja rozbija płyty 6–10 bloków;
      - nowe cele `/skyseas locate` (sylwetki, `rock_bridge`, `elevated`, `massif`, `hanging_spire`); `/skyseas info` pokazuje sylwetkę, bazę, przechylenie, człony i iglice.
+   - Zrealizowane w rundzie 2:
+     - wspólny kształt `SkyFormShape` dla wież, małych i średnich wysp, wysp archipelagów i brył Alleluja: gwiaździsty obrys z szumem po kierunku (nie odrywa wysepek), płaski wierzch, spód zwężający się od krawędzi grubej na 16 bloków (bryły interpolowane) albo 5 (małe, per blok); wieże i bryły Alleluja to stożki ścięte zwężające się do połowy promienia; bez szumu 3D i bez pochylenia brył Alleluja;
+     - małe wyspy (promień < 15) i mosty archipelagów liczone per blok w `sky_details`; pozostałe formy w `sky_islands`; `Layout.DETAIL_SPAN` = 96 (zakres nad podłogą detali);
+     - poziom 3: siatka 192 bloków, szansa 0,86, jeden kandydat na komórkę w dowolnym miejscu; z dwóch nachodzących na siebie kandydatów sąsiednich komórek ustępuje ten o niższym priorytecie (rzut z komórki), więc wynik nie zależy od kolejności; 25% wież, z reszty połowa małych;
+     - poziom 4: klastry na narożnikach siatki kontynentów (35% archipelag, 25% Alleluja, promień dysku 220–420) i dwa gwarantowane w komórce startowej, 650 bloków od spawnu na przeciwnych osiach (promień 230); narożne klastry ustępują gwarantowanym;
+     - kandydaci klastra zależą tylko od ziarna klastra (korytarz 32 przez środek, odstęp 16 między obrysami); kontynenty i ląd w oceanie odrzucają pojedynczych kandydatów bez przesuwania pozostałych, więc sprawdzamy tylko formy dotykające regionu i końce jego mostów;
+     - odstępstwo od kolejności poziomów: wyspy pojedyncze omijają dyski klastrów (zamiast klastrów czytających wyspy pojedyncze); wynik też nie zależy od kolejności;
+     - mosty i łuki archipelagów: 0–3 na archipelag, między sąsiednimi wyspami z przerwą 12–80 i różnicą wierzchów ≤ 30; łuk (wzniesienie 8–25) przy przerwie ≥ 30 w połowie przypadków, pod limitem strefy;
+     - iglice pod spodem: 3–8 pod średnimi wyspami, wieżami i dużymi wyspami archipelagów, 0–2 pod małymi, czubek ≥ Y 90; bryły Alleluja bez iglic;
+     - limity stref 200/240/280/305 liczone w środku każdej formy; spód form ≥ Y 110 (wyspy ≥ 120);
+     - czyste niebo: formy i mosty odrzucane w odległości 16 od lądu w oceanie i od kontynentów (+ szum nawisów); ląd w oceanie zbierany także poza regionem;
+     - korytarze w grubych partiach brył na niebie (`sky/corridors`): vanillowe spaghetti 3D i noodle tam, gdzie bryła ma > 30 bloków, 12 bloków stropu i 6 spągu; bez komór; dotyczy też kontynentów (góry);
+     - reguła widoczności nieba liczona po odległości poziomej (`Layout.skyVisible`), na mapie jako punkty co 50 bloków;
+     - budżet zacienienia nie jest egzekwowany, tylko raportowany (liczby w `docs/status-e3.md`, decyzja 1.7);
+     - `/skyseas locate archipelago|hallelujah|tower|sky_island|sky_bridge`; parametry form w `WorldParams.SkyForms` (rekord przekroczył limit parametrów konstruktora JVM).
    - Zrealizowane w rundzie 0: dwa indeksy kubełkowe na region (niebo, ocean) i parametry o zmiennej długości; `ClimateProbe`; `skyseas:cave_top` (bez jaskiń w iglicach morskich); ochrona stropu obejmuje też wierzchni blok dna (GameTest złapał dziurę na stromym zboczu szelfu); `continents` = 0,5 nad lądem wysp oceanicznych od Y 62 (tymczasowo, do E4).
 5. **E4 — Klimat i biomy 3D.** Wszystkie funkcje klimatu, chłodzenie z wysokością, klastry tematyczne, biomy jaskiniowe; pliki czterech biomów dna, ich tagi i nakładka na źródło biomów w warstwie oceanu.
    - Akceptacja: lądowe biomy na wyspach, oceaniczne w wodzie, deep dark tylko pod grubą skałą, rafy w warm ocean.

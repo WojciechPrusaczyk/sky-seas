@@ -5,6 +5,7 @@ import pl.skyseas.shape.ContinentShape;
 import pl.skyseas.shape.OceanShape;
 import pl.skyseas.shape.ShapeMath;
 import pl.skyseas.shape.SimplexNoise;
+import pl.skyseas.shape.SkyFormShape;
 
 /**
  * Builds a {@link RegionLayout} level by level; each level reads only the finished
@@ -17,7 +18,15 @@ import pl.skyseas.shape.SimplexNoise;
  *   <li>Ocean forms: islands (size classes by zone), seamounts, volcanoes and sea spire
  *       groups, each on its own grid; forms above water are rejected under a continent
  *       (clear-sky rule). Climate-bound forms read the temperature at their centre.</li>
+ *   <li>Single sky forms: towers, small and medium islands, one candidate per grid cell,
+ *       kept far enough inside the cell that neighbours never overlap.</li>
+ *   <li>Clusters at corners of the continent grid (and two guaranteed near spawn):
+ *       archipelagos (with rock bridges and arches) and Hallelujah clusters. A cluster's
+ *       candidates depend only on its seed; continents and ocean land reject single
+ *       candidates without shifting the others.</li>
  * </ol>
+ * Sky forms of levels 3 and 4 never overlap continents, ocean land, clusters of other
+ * corners or each other (footprint plus a gap), so no island hangs above another.
  */
 public final class LayoutGenerator {
     private static final long CONTINENT_SALT = 0x434F4E54L;
@@ -25,6 +34,17 @@ public final class LayoutGenerator {
     private static final long SEAMOUNT_SALT = 0x534D4E54L;
     private static final long VOLCANO_SALT = 0x564F4C43L;
     private static final long SPIRE_SALT = 0x53504952L;
+    private static final long SINGLE_SALT = 0x534E474CL;
+    private static final long CLUSTER_SALT = 0x434C5354L;
+    /**
+     * Sky form candidates centred within this distance of the region are checked against
+     * continents and ocean land (forms touching the region and the ends of its bridges).
+     */
+    private static final double CHECK_RANGE = 300.0;
+    /** Longest gap a bridge spans between two island outlines. */
+    private static final double BRIDGE_GAP_MAX = 80.0;
+    private static final double BRIDGE_GAP_MIN = 12.0;
+    private static final double BRIDGE_STEP_MAX = 30.0;
     private static final double OCEAN_INDEX_MARGIN = 2.0;
     /** Wavelength of the island-density noise (blocks). */
     private static final double DENSITY_SCALE = 1800.0;
@@ -51,21 +71,38 @@ public final class LayoutGenerator {
         return Math.max(island, Math.max(mounts, p.seaSpireSpread() + p.seaSpireRadiusMax() * 2.0 + 7.0));
     }
 
+    /** Farthest block of a single or cluster sky form from its centre. */
+    static double skyReach(WorldParams p) {
+        double r = Math.max(Math.max(p.skyForms().archipelagoRadiusMax(), p.skyForms().mediumIslandRadiusMax()),
+                Math.max(p.skyForms().towerRadiusMax(), p.skyForms().hallelujahRadiusMax()));
+        return r * SkyFormShape.FOOTPRINT + 4.0;
+    }
+
     public static RegionLayout generate(long seed, WorldParams p, ClimateProbe climate, int rx, int rz) {
         int size = p.layoutRegionSize();
         int x0 = rx * size;
         int z0 = rz * size;
         RegionBuilder out = new RegionBuilder();
-        Continents continents = continents(seed, p, x0, z0, size, maxOceanReach(p) + p.clearSkyMargin(), out);
-        double[] prm = new double[OceanShape.STRIDE];
-        oceanForms(seed, p, climate, x0, z0, size, continents, prm, out, RegionLayout.OCEAN_ISLAND,
+        double skyCheck = CHECK_RANGE + skyReach(p) + p.clearSkyMargin() + p.continentEdgeNoise();
+        Continents continents = continents(seed, p, x0, z0, size,
+                Math.max(maxOceanReach(p) + p.clearSkyMargin(), skyCheck), out);
+        double[] prm = new double[Math.max(OceanShape.STRIDE, SkyFormShape.STRIDE)];
+        // Ocean land is collected beyond the region too: sky forms near it must keep clear of it.
+        double oceanExtra = skyCheck + maxOceanReach(p);
+        Land land = new Land();
+        oceanForms(seed, p, climate, x0, z0, size, oceanExtra, continents, land, prm, out, RegionLayout.OCEAN_ISLAND,
                 p.oceanIslandCellSize(), p.oceanIslandChance(), ISLAND_SALT);
-        oceanForms(seed, p, climate, x0, z0, size, continents, prm, out, RegionLayout.SEAMOUNT,
+        oceanForms(seed, p, climate, x0, z0, size, oceanExtra, continents, land, prm, out, RegionLayout.SEAMOUNT,
                 p.seamountCellSize(), p.seamountChance(), SEAMOUNT_SALT);
-        oceanForms(seed, p, climate, x0, z0, size, continents, prm, out, RegionLayout.VOLCANO,
+        oceanForms(seed, p, climate, x0, z0, size, oceanExtra, continents, land, prm, out, RegionLayout.VOLCANO,
                 p.volcanoCellSize(), p.volcanoChance(), VOLCANO_SALT);
-        oceanForms(seed, p, climate, x0, z0, size, continents, prm, out, RegionLayout.SEA_SPIRE,
+        oceanForms(seed, p, climate, x0, z0, size, oceanExtra, continents, land, prm, out, RegionLayout.SEA_SPIRE,
                 p.seaSpireCellSize(), p.seaSpireChance(), SPIRE_SALT);
+        double[] clusters = clusters(seed, p, x0, z0, size);
+        singles(seed, p, x0, z0, size, continents, land, clusters, prm, out);
+        for (int c = 0; c < clusters.length; c += CLUSTER_STRIDE) {
+            cluster(p, x0, z0, size, continents, land, clusters, c, prm, out);
+        }
         return out.build(rx, rz, size, p.layoutBucketSize(), indexMargin(p), OCEAN_INDEX_MARGIN);
     }
 
@@ -152,10 +189,9 @@ public final class LayoutGenerator {
 
     /** Level 2: one ocean form type on its own grid (sea spires come in groups). */
     private static void oceanForms(long seed, WorldParams p, ClimateProbe climate, int x0, int z0, int size,
-                                   Continents continents, double[] prm, RegionBuilder out, byte type, int cell,
-                                   double chance, long salt) {
+                                   double extra, Continents continents, Land land, double[] prm, RegionBuilder out,
+                                   byte type, int cell, double chance, long salt) {
         int kind = type - RegionLayout.OCEAN_ISLAND;
-        double extra = maxOceanReach(p);
         int ci0 = Math.floorDiv((int) Math.floor(x0 - extra), cell);
         int ci1 = Math.floorDiv((int) Math.ceil(x0 + size + extra), cell);
         int cj0 = Math.floorDiv((int) Math.floor(z0 - extra), cell);
@@ -174,7 +210,7 @@ public final class LayoutGenerator {
                     int sizeClass = sizeClass(p, zone, Hash.unit(Hash.hash(s, 103)));
                     boolean warm = sizeClass > 0 && climate.temperature((int) x, (int) z) >= p.oceanWarmMinTemperature();
                     OceanShape.placeIsland(p, s, x, z, sizeClass, warm, prm, 0);
-                    addOcean(p, x0, z0, size, continents, prm, out, type, kind, s, zone);
+                    addOcean(p, x0, z0, size, continents, land, prm, out, type, kind, s, zone);
                 } else if (type == RegionLayout.SEA_SPIRE) {
                     double t = climate.temperature((int) x, (int) z);
                     if (t < p.oceanLukewarmMinTemperature() || t >= p.oceanWarmMinTemperature()) {
@@ -186,7 +222,7 @@ public final class LayoutGenerator {
                         double a = Hash.unit(Hash.hash(ks, 105)) * 2.0 * Math.PI;
                         double d = k == 0 ? 0.0 : Math.sqrt(Hash.unit(Hash.hash(ks, 106))) * p.seaSpireSpread();
                         OceanShape.placeSpire(p, ks, x + Math.cos(a) * d, z + Math.sin(a) * d, prm, 0);
-                        addOcean(p, x0, z0, size, continents, prm, out, type, kind, ks, zone);
+                        addOcean(p, x0, z0, size, continents, land, prm, out, type, kind, ks, zone);
                     }
                 } else {
                     double t = climate.temperature((int) x, (int) z);
@@ -201,7 +237,7 @@ public final class LayoutGenerator {
                         }
                         OceanShape.placeVolcano(p, s, x, z, prm, 0);
                     }
-                    addOcean(p, x0, z0, size, continents, prm, out, type, kind, s, zone);
+                    addOcean(p, x0, z0, size, continents, land, prm, out, type, kind, s, zone);
                 }
             }
         }
@@ -220,20 +256,412 @@ public final class LayoutGenerator {
         return roll < large ? 2 : (roll < large + p.oceanIslandMediumShare() ? 1 : 0);
     }
 
-    private static void addOcean(WorldParams p, int x0, int z0, int size, Continents continents, double[] prm,
+    private static void addOcean(WorldParams p, int x0, int z0, int size, Continents continents, Land land, double[] prm,
                                  RegionBuilder out, byte type, int kind, long id, double zone) {
         double x = prm[OceanShape.CX];
         double z = prm[OceanShape.CZ];
         double reach = OceanShape.reach(kind, prm, 0);
-        if (x + reach < x0 || x - reach >= x0 + size || z + reach < z0 || z - reach >= z0 + size) {
+        boolean inside = !(x + reach < x0 || x - reach >= x0 + size || z + reach < z0 || z - reach >= z0 + size);
+        double landRadius = OceanShape.landRadius(kind, prm, 0);
+        if ((!inside && landRadius <= 0.0) || (landRadius > 0.0 && underContinent(p, continents, x, z, landRadius))) {
             return;
         }
-        double land = OceanShape.landRadius(kind, prm, 0);
-        if (land > 0.0 && underContinent(p, continents, x, z, land)) {
+        if (landRadius > 0.0) {
+            land.add(x, z, landRadius);
+        }
+        if (inside) {
+            out.add(type, id, (int) Math.round(x), (int) Math.round(z), reach, p.worldMinY(),
+                    (int) Math.ceil(OceanShape.maxY(kind, prm, 0)), id, 0, zone, prm, 0, OceanShape.STRIDE);
+        }
+    }
+
+    /** Ocean land discs (centre, radius) near the region, for the clear-sky rule of sky forms. */
+    private static final class Land {
+        double[] v = new double[96];
+        int n;
+
+        void add(double x, double z, double r) {
+            if (n + 3 > v.length) {
+                v = java.util.Arrays.copyOf(v, 2 * v.length);
+            }
+            v[n++] = x;
+            v[n++] = z;
+            v[n++] = r;
+        }
+
+        /** True if ocean land comes within {@code width} of the segment a-b. */
+        boolean nearSegment(double ax, double az, double bx, double bz, double width) {
+            for (int k = 0; k < n; k += 3) {
+                if (segmentDistance(v[k], v[k + 1], ax, az, bx, bz) < width + v[k + 2]) {
+                    return true;
+                }
+            }
+            return false;
+        }
+
+        /** True if a sky form of this footprint comes within the clear-sky margin of ocean land. */
+        boolean near(double x, double z, double footprint, double margin) {
+            for (int k = 0; k < n; k += 3) {
+                double d = footprint + margin + v[k + 2];
+                double dx = x - v[k];
+                double dz = z - v[k + 1];
+                if (dx * dx + dz * dz < d * d) {
+                    return true;
+                }
+            }
+            return false;
+        }
+    }
+
+    private static final int CLUSTER_STRIDE = 6;
+
+    /**
+     * Clusters that may matter for the region: {x, z, radius, type, seed bits, flags} per
+     * cluster. At most one per corner of the continent grid, plus the two guaranteed in the
+     * starter's cell, on opposite axes, where the starter leaves a wide ring of sky.
+     */
+    private static double[] clusters(long seed, WorldParams p, int x0, int z0, int size) {
+        int cell = p.continentCellSize();
+        double extra = CHECK_RANGE + p.skyForms().clusterRadiusMax() + 2.0 * skyReach(p) + p.skyForms().skyFormGap() + p.skyForms().skyCellSize();
+        int ci0 = Math.floorDiv((int) Math.floor(x0 - extra), cell) - 1;
+        int ci1 = Math.floorDiv((int) Math.ceil(x0 + size + extra), cell);
+        int cj0 = Math.floorDiv((int) Math.floor(z0 - extra), cell) - 1;
+        int cj1 = Math.floorDiv((int) Math.ceil(z0 + size + extra), cell);
+        double[] out = new double[((ci1 - ci0 + 1) * (cj1 - cj0 + 1) + 2) * CLUSTER_STRIDE];
+        int n = 0;
+        long g = Hash.hash(seed ^ CLUSTER_SALT, 0x5157);
+        double a = (int) (Hash.unit(Hash.hash(g, 100)) * 4) * 0.5 * Math.PI;
+        double gx = Math.cos(a) * p.skyForms().guaranteeDistance();
+        double gz = Math.sin(a) * p.skyForms().guaranteeDistance();
+        double gr = p.skyForms().guaranteeClusterRadius();
+        n = addCluster(out, n, gx, gz, gr, RegionLayout.ARCHIPELAGO, Hash.hash(g, 1),
+                RegionLayout.FLAG_GUARANTEED, x0, z0, size, extra);
+        n = addCluster(out, n, -gx, -gz, gr, RegionLayout.HALLELUJAH, Hash.hash(g, 2),
+                RegionLayout.FLAG_GUARANTEED, x0, z0, size, extra);
+        for (int ci = ci0; ci <= ci1; ci++) {
+            for (int cj = cj0; cj <= cj1; cj++) {
+                long s = Hash.hash(seed ^ CLUSTER_SALT, ci, cj);
+                double roll = Hash.unit(Hash.hash(s, 100));
+                byte type = roll < p.skyForms().archipelagoChance() ? RegionLayout.ARCHIPELAGO
+                        : roll < p.skyForms().archipelagoChance() + p.skyForms().hallelujahChance() ? RegionLayout.HALLELUJAH : -1;
+                if (type < 0) {
+                    continue;
+                }
+                double radius = ShapeMath.lerp(p.skyForms().clusterRadiusMin(), p.skyForms().clusterRadiusMax(), Hash.unit(Hash.hash(s, 101)));
+                double x = (ci + 0.5) * cell + (Hash.unit(Hash.hash(s, 102)) - 0.5) * 0.2 * cell;
+                double z = (cj + 0.5) * cell + (Hash.unit(Hash.hash(s, 103)) - 0.5) * 0.2 * cell;
+                // Corner clusters next to spawn give way to the guaranteed ones.
+                double apart = radius + gr + 2.0 * skyReach(p) + p.skyForms().skyFormGap();
+                if (Math.hypot(x - gx, z - gz) < apart || Math.hypot(x + gx, z + gz) < apart) {
+                    continue;
+                }
+                n = addCluster(out, n, x, z, radius, type, s, 0, x0, z0, size, extra);
+            }
+        }
+        return java.util.Arrays.copyOf(out, n);
+    }
+
+    private static int addCluster(double[] out, int n, double x, double z, double radius, byte type, long seed, int flags,
+                                  int x0, int z0, int size, double extra) {
+        if (x + extra < x0 || x - extra >= x0 + size || z + extra < z0 || z - extra >= z0 + size) {
+            return n;
+        }
+        out[n] = x;
+        out[n + 1] = z;
+        out[n + 2] = radius;
+        out[n + 3] = type;
+        out[n + 4] = Double.longBitsToDouble(seed);
+        out[n + 5] = flags;
+        return n + CLUSTER_STRIDE;
+    }
+
+    /** True if a sky form of this footprint comes within the gap of a cluster's disc of islands. */
+    private static boolean inCluster(WorldParams p, double[] clusters, double x, double z, double footprint) {
+        for (int c = 0; c < clusters.length; c += CLUSTER_STRIDE) {
+            double d = clusters[c + 2] + skyReach(p) + p.skyForms().skyFormGap() + footprint;
+            if (Math.hypot(x - clusters[c], z - clusters[c + 1]) < d) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /**
+     * Level 3: towers, small and medium islands, at most one candidate per cell, anywhere
+     * in it. Of two overlapping candidates of neighbouring cells the one with the lower
+     * priority roll gives way; both rolls come from the cells alone, so the outcome does
+     * not depend on the order cells are visited in.
+     */
+    private static void singles(long seed, WorldParams p, int x0, int z0, int size, Continents continents, Land land,
+                                double[] clusters, double[] prm, RegionBuilder out) {
+        WorldParams.SkyForms f = p.skyForms();
+        int cell = f.skyCellSize();
+        double extra = skyReach(p) + indexMargin(p);
+        int ci0 = Math.floorDiv((int) Math.floor(x0 - extra), cell);
+        int ci1 = Math.floorDiv((int) Math.ceil(x0 + size + extra), cell);
+        int cj0 = Math.floorDiv((int) Math.floor(z0 - extra), cell);
+        int cj1 = Math.floorDiv((int) Math.ceil(z0 + size + extra), cell);
+        double[] c = new double[SINGLE_STRIDE];
+        double[] o = new double[SINGLE_STRIDE];
+        for (int ci = ci0; ci <= ci1; ci++) {
+            for (int cj = cj0; cj <= cj1; cj++) {
+                if (!single(seed, p, ci, cj, c)) {
+                    continue;
+                }
+                double x = c[0];
+                double z = c[1];
+                double radius = c[2];
+                double footprint = radius * SkyFormShape.FOOTPRINT;
+                double reach = footprint + indexMargin(p);
+                if (x + reach < x0 || x - reach >= x0 + size || z + reach < z0 || z - reach >= z0 + size
+                        || yields(seed, p, ci, cj, c, o) || inCluster(p, clusters, x, z, footprint)
+                        || rejected(p, continents, land, x, z, footprint)) {
+                    continue;
+                }
+                long s = Hash.hash(seed ^ SINGLE_SALT, ci, cj);
+                boolean tower = c[3] == 0.0;
+                boolean small = c[3] == 1.0;
+                double limit = p.maxIslandY(Math.hypot(x, z));
+                if (tower) {
+                    double h = Math.min(ShapeMath.lerp(f.towerHeightMin(), f.towerHeightMax(), Hash.unit(Hash.hash(s, 106))),
+                            limit - f.skyFormMinY() - 6.0);
+                    double top = ShapeMath.lerp(f.skyFormMinY() + h + 4.0, limit - 2.0, Hash.unit(Hash.hash(s, 107)));
+                    SkyFormShape.place(x, z, radius, top, h, SkyFormShape.towerTaper(radius, h), false, prm, 0);
+                    spires(p, s, false, prm);
+                    addSky(p, out, RegionLayout.TOWER, s, prm, 0);
+                } else {
+                    double depth = small ? Math.min(25.0, radius * ShapeMath.lerp(0.8, 1.3, Hash.unit(Hash.hash(s, 106))))
+                            : ShapeMath.clamp(radius * ShapeMath.lerp(0.6, 1.0, Hash.unit(Hash.hash(s, 106))), 18.0, 45.0);
+                    double top = ShapeMath.lerp(f.skyIslandYMin() + depth + 4.0, limit - 2.0, Hash.unit(Hash.hash(s, 107)));
+                    SkyFormShape.place(x, z, radius, top, depth, SkyFormShape.islandTaper(radius, depth), small, prm, 0);
+                    spires(p, s, small, prm);
+                    addSky(p, out, RegionLayout.SKY_ISLAND, s, prm, small ? RegionLayout.FLAG_DETAIL : 0);
+                }
+            }
+        }
+    }
+
+    private static final int SINGLE_STRIDE = 5;
+
+    /** Raw candidate of a cell: {x, z, radius, kind (0 tower, 1 small, 2 medium), priority}; false if none. */
+    private static boolean single(long seed, WorldParams p, int ci, int cj, double[] out) {
+        WorldParams.SkyForms f = p.skyForms();
+        long s = Hash.hash(seed ^ SINGLE_SALT, ci, cj);
+        if (Hash.unit(Hash.hash(s, 100)) >= f.skyCellChance()) {
+            return false;
+        }
+        boolean tower = Hash.unit(Hash.hash(s, 103)) < f.towerShare();
+        boolean small = !tower && Hash.unit(Hash.hash(s, 104)) < f.smallIslandShare();
+        double size01 = Hash.unit(Hash.hash(s, 105));
+        double radius = tower ? ShapeMath.lerp(f.towerRadiusMin(), f.towerRadiusMax(), size01)
+                : small ? ShapeMath.lerp(f.smallIslandRadiusMin(), f.smallIslandRadiusMax(), size01)
+                : ShapeMath.lerp(f.mediumIslandRadiusMin(), f.mediumIslandRadiusMax(), size01);
+        int cell = f.skyCellSize();
+        out[0] = (ci + Hash.unit(Hash.hash(s, 101))) * cell;
+        out[1] = (cj + Hash.unit(Hash.hash(s, 102))) * cell;
+        out[2] = radius;
+        out[3] = tower ? 0.0 : small ? 1.0 : 2.0;
+        out[4] = Hash.unit(Hash.hash(s, 110));
+        return true;
+    }
+
+    /** True if a candidate of a neighbouring cell overlaps this one and has the higher priority. */
+    private static boolean yields(long seed, WorldParams p, int ci, int cj, double[] c, double[] o) {
+        double gap = p.skyForms().skyFormGap();
+        for (int di = -1; di <= 1; di++) {
+            for (int dj = -1; dj <= 1; dj++) {
+                if ((di != 0 || dj != 0) && single(seed, p, ci + di, cj + dj, o)
+                        && Math.hypot(c[0] - o[0], c[1] - o[1]) < (c[2] + o[2]) * SkyFormShape.FOOTPRINT + gap
+                        && o[4] > c[4]) {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
+    /** 0-2 spires under small islands, 3-8 under the others (fewer where they do not fit). */
+    private static void spires(WorldParams p, long s, boolean small, double[] prm) {
+        int min = small ? 0 : p.continentSpiresMin();
+        int max = small ? 2 : p.continentSpiresMax();
+        int count = min + (int) (Hash.unit(Hash.hash(s, 108)) * (max - min + 1));
+        SkyFormShape.placeSpires(p, s, count, p.skyForms().skySpireMinY(), prm, 0);
+    }
+
+    private static boolean rejected(WorldParams p, Continents continents, Land land, double x, double z, double footprint) {
+        return land.near(x, z, footprint, p.clearSkyMargin()) || underContinent(p, continents, x, z, footprint);
+    }
+
+    private static void addSky(WorldParams p, RegionBuilder out, byte type, long id, double[] prm, int flags) {
+        double x = prm[SkyFormShape.CX];
+        double z = prm[SkyFormShape.CZ];
+        out.add(type, id, (int) Math.round(x), (int) Math.round(z), prm[SkyFormShape.RADIUS] * SkyFormShape.FOOTPRINT,
+                (int) Math.floor(SkyFormShape.minY(prm, 0)), (int) Math.ceil(SkyFormShape.maxY(prm, 0)), id, flags,
+                ZoneField.factorAtDistance(p, Math.hypot(x, z)), prm, 0, SkyFormShape.STRIDE);
+    }
+
+    /**
+     * Level 4: one cluster. Candidates fill the disc around the centre, off a straight
+     * corridor through it and apart from earlier candidates; this depends only on the
+     * cluster's seed. Continents and ocean land then reject single candidates, checked
+     * only for those that touch the region or end one of its bridges.
+     */
+    private static void cluster(WorldParams p, int x0, int z0, int size, Continents continents, Land land,
+                                double[] clusters, int c, double[] prm, RegionBuilder out) {
+        double ccx = clusters[c];
+        double ccz = clusters[c + 1];
+        double radius = clusters[c + 2];
+        boolean arch = clusters[c + 3] == RegionLayout.ARCHIPELAGO;
+        byte type = arch ? RegionLayout.ARCHIPELAGO : RegionLayout.HALLELUJAH;
+        long cs = Double.doubleToRawLongBits(clusters[c + 4]);
+        int flags = (int) clusters[c + 5];
+        int min = arch ? p.skyForms().archipelagoCountMin() : p.skyForms().hallelujahCountMin();
+        int max = arch ? p.skyForms().archipelagoCountMax() : p.skyForms().hallelujahCountMax();
+        int want = min + (int) (Hash.unit(Hash.hash(cs, 1)) * (max - min + 1));
+        double phi = Hash.unit(Hash.hash(cs, 2)) * Math.PI;
+        double ux = Math.cos(phi);
+        double uz = Math.sin(phi);
+        double[] cx = new double[want];
+        double[] cz = new double[want];
+        double[] cr = new double[want];
+        long[] seeds = new long[want];
+        int n = 0;
+        for (int a = 0; a < 8 * want && n < want; a++) {
+            long ks = Hash.hash(cs, 1000 + a);
+            double r = arch ? ShapeMath.lerp(p.skyForms().archipelagoRadiusMin(), p.skyForms().archipelagoRadiusMax(),
+                    Math.pow(Hash.unit(Hash.hash(ks, 1)), 2.0))
+                    : ShapeMath.lerp(p.skyForms().hallelujahRadiusMin(), p.skyForms().hallelujahRadiusMax(), Hash.unit(Hash.hash(ks, 1)));
+            double ang = Hash.unit(Hash.hash(ks, 2)) * 2.0 * Math.PI;
+            double d = Math.sqrt(Hash.unit(Hash.hash(ks, 3))) * radius;
+            double x = ccx + Math.cos(ang) * d;
+            double z = ccz + Math.sin(ang) * d;
+            double fp = r * SkyFormShape.FOOTPRINT;
+            if (Math.abs((x - ccx) * -uz + (z - ccz) * ux) < fp + 0.5 * p.skyForms().clusterCorridor()) {
+                continue;
+            }
+            boolean free = true;
+            for (int k = 0; k < n && free; k++) {
+                free = Math.hypot(x - cx[k], z - cz[k]) >= fp + cr[k] * SkyFormShape.FOOTPRINT + p.skyForms().skyFormGap();
+            }
+            if (!free) {
+                continue;
+            }
+            cx[n] = x;
+            cz[n] = z;
+            cr[n] = r;
+            seeds[n] = ks;
+            n++;
+        }
+        // 0 unknown, 1 kept, 2 rejected by continents or ocean land.
+        byte[] state = new byte[n];
+        double[] tops = new double[n];
+        for (int k = 0; k < n; k++) {
+            tops[k] = clusterForm(p, arch, seeds[k], cx[k], cz[k], cr[k], p.maxIslandY(Math.hypot(cx[k], cz[k])), prm);
+            double reach = cr[k] * SkyFormShape.FOOTPRINT + indexMargin(p);
+            if (cx[k] + reach < x0 || cx[k] - reach >= x0 + size || cz[k] + reach < z0 || cz[k] - reach >= z0 + size
+                    || !kept(p, continents, land, cx, cz, cr, state, k)) {
+                continue;
+            }
+            int detail = arch && cr[k] < p.skyForms().smallIslandRadiusMax() ? RegionLayout.FLAG_DETAIL : 0;
+            addSky(p, out, type, seeds[k], prm, flags | detail);
+        }
+        if (!arch) {
             return;
         }
-        out.add(type, id, (int) Math.round(x), (int) Math.round(z), reach, p.worldMinY(),
-                (int) Math.ceil(OceanShape.maxY(kind, prm, 0)), id, 0, zone, prm, 0, OceanShape.STRIDE);
+        int bridges = (int) (Hash.unit(Hash.hash(cs, 3)) * (p.skyForms().archipelagoBridgesMax() + 1));
+        long[] pairs = new long[bridges];
+        for (int b = 0; b < bridges && n > 1; b++) {
+            long bs = Hash.hash(cs, 2000 + b);
+            int i = (int) (Hash.unit(Hash.hash(bs, 1)) * n);
+            int j = -1;
+            double best = BRIDGE_GAP_MAX;
+            for (int k = 0; k < n; k++) {
+                double gap = Math.hypot(cx[k] - cx[i], cz[k] - cz[i]) - (cr[i] + cr[k]) * SkyFormShape.FOOTPRINT;
+                if (k != i && gap >= BRIDGE_GAP_MIN && gap < best && Math.abs(tops[k] - tops[i]) <= BRIDGE_STEP_MAX
+                        && clearPath(cx, cz, cr, n, i, k)) {
+                    best = gap;
+                    j = k;
+                }
+            }
+            long pair = j < 0 ? -1 : (long) Math.min(i, j) * n + Math.max(i, j);
+            pairs[b] = pair;
+            boolean duplicate = false;
+            for (int q = 0; q < b; q++) {
+                duplicate |= pairs[q] == pair;
+            }
+            if (j < 0 || duplicate) {
+                continue;
+            }
+            double hw = ShapeMath.lerp(3.0, 5.0, Hash.unit(Hash.hash(bs, 2)));
+            double thick = ShapeMath.lerp(6.0, 10.0, Hash.unit(Hash.hash(bs, 3)));
+            double archRise = best >= 30.0 && Hash.unit(Hash.hash(bs, 4)) < 0.5
+                    ? ShapeMath.lerp(8.0, 25.0, Hash.unit(Hash.hash(bs, 5))) : 0.0;
+            // An arch stays under the zone's height limit.
+            double limit = Math.min(Math.min(p.maxIslandY(Math.hypot(cx[i], cz[i])), p.maxIslandY(Math.hypot(cx[j], cz[j]))),
+                    p.maxIslandY(Math.hypot(0.5 * (cx[i] + cx[j]), 0.5 * (cz[i] + cz[j]))));
+            archRise = Math.min(archRise, limit - 2.0 - Math.max(tops[i], tops[j]));
+            archRise = archRise < 6.0 ? 0.0 : archRise;
+            SkyFormShape.placeBridge(cx[i], cz[i], tops[i], cr[i], cx[j], cz[j], tops[j], cr[j], hw, thick, archRise, prm, 0);
+            double mx = 0.5 * (cx[i] + cx[j]);
+            double mz = 0.5 * (cz[i] + cz[j]);
+            double reach = SkyFormShape.bridgeReach(prm, 0) + indexMargin(p);
+            if (mx + reach < x0 || mx - reach >= x0 + size || mz + reach < z0 || mz - reach >= z0 + size
+                    || !kept(p, continents, land, cx, cz, cr, state, i) || !kept(p, continents, land, cx, cz, cr, state, j)
+                    || land.nearSegment(cx[i], cz[i], cx[j], cz[j], SkyFormShape.bridgeHalfWidthMax(prm, 0) + p.clearSkyMargin())) {
+                continue;
+            }
+            out.add(RegionLayout.SKY_BRIDGE, bs, (int) Math.round(mx), (int) Math.round(mz), SkyFormShape.bridgeReach(prm, 0),
+                    (int) Math.floor(SkyFormShape.bridgeMinY(prm, 0)), (int) Math.ceil(SkyFormShape.bridgeMaxY(prm, 0)),
+                    bs, flags | RegionLayout.FLAG_DETAIL, ZoneField.factorAtDistance(p, Math.hypot(mx, mz)),
+                    prm, 0, SkyFormShape.BRIDGE_STRIDE);
+        }
+    }
+
+    /** Places one cluster form into prm; returns its top. */
+    private static double clusterForm(WorldParams p, boolean arch, long ks, double x, double z, double r, double limit,
+                                      double[] prm) {
+        if (arch) {
+            boolean small = r < p.skyForms().smallIslandRadiusMax();
+            double depth = small ? Math.min(25.0, r * ShapeMath.lerp(0.8, 1.3, Hash.unit(Hash.hash(ks, 4))))
+                    : ShapeMath.clamp(r * ShapeMath.lerp(0.5, 0.9, Hash.unit(Hash.hash(ks, 4))), 18.0, 60.0);
+            double high = Math.min(p.skyForms().archipelagoYMax(), limit) - 2.0;
+            double top = ShapeMath.lerp(Math.min(high, p.skyForms().archipelagoYMin() + depth + 4.0), high, Hash.unit(Hash.hash(ks, 5)));
+            SkyFormShape.place(x, z, r, top, depth, SkyFormShape.islandTaper(r, depth), small, prm, 0);
+            spires(p, ks, small, prm);
+            return top;
+        }
+        double high = Math.min(p.skyForms().hallelujahYMax(), limit) - 2.0;
+        double h = Math.min(ShapeMath.lerp(p.skyForms().hallelujahHeightMin(), p.skyForms().hallelujahHeightMax(), Hash.unit(Hash.hash(ks, 4))),
+                high - p.skyForms().hallelujahYMin() - 4.0);
+        double top = ShapeMath.lerp(p.skyForms().hallelujahYMin() + h + 4.0, high, Hash.unit(Hash.hash(ks, 5)));
+        SkyFormShape.place(x, z, r, top, h, SkyFormShape.towerTaper(r, h), false, prm, 0);
+        return top;
+    }
+
+    private static boolean kept(WorldParams p, Continents continents, Land land, double[] cx, double[] cz, double[] cr,
+                                byte[] state, int k) {
+        if (state[k] == 0) {
+            state[k] = rejected(p, continents, land, cx[k], cz[k], cr[k] * SkyFormShape.FOOTPRINT) ? (byte) 2 : (byte) 1;
+        }
+        return state[k] == 1;
+    }
+
+    /** No other island of the cluster near the straight line between islands i and j. */
+    private static boolean clearPath(double[] cx, double[] cz, double[] cr, int n, int i, int j) {
+        for (int k = 0; k < n; k++) {
+            if (k != i && k != j && segmentDistance(cx[k], cz[k], cx[i], cz[i], cx[j], cz[j])
+                    < cr[k] * SkyFormShape.FOOTPRINT + 8.0) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    private static double segmentDistance(double px, double pz, double ax, double az, double bx, double bz) {
+        double vx = bx - ax;
+        double vz = bz - az;
+        double t = ShapeMath.clamp(((px - ax) * vx + (pz - az) * vz) / (vx * vx + vz * vz), 0.0, 1.0);
+        return Math.hypot(px - ax - t * vx, pz - az - t * vz);
     }
 
     /**

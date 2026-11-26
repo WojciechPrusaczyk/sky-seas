@@ -11,14 +11,23 @@ public final class RegionLayout {
     public static final byte ARCHIPELAGO = 1;
     public static final byte HALLELUJAH = 2;
     public static final byte CHAIN = 3;
+    public static final byte TOWER = 4;
+    /** Small or medium sky island between continents. */
+    public static final byte SKY_ISLAND = 5;
+    /** Rock bridge or arch between two archipelago islands (always per block). */
+    public static final byte SKY_BRIDGE = 6;
     /** First ocean form type; ocean types minus this are {@code OceanShape} kinds. */
-    public static final byte OCEAN_ISLAND = 4;
-    public static final byte SEAMOUNT = 5;
-    public static final byte VOLCANO = 6;
-    public static final byte SEA_SPIRE = 7;
-    public static final String[] TYPE_NAMES = {"continent", "archipelago", "hallelujah", "chain", "ocean_island",
-            "seamount", "volcano", "sea_spire"};
+    public static final byte OCEAN_ISLAND = 7;
+    public static final byte SEAMOUNT = 8;
+    public static final byte VOLCANO = 9;
+    public static final byte SEA_SPIRE = 10;
+    public static final String[] TYPE_NAMES = {"continent", "archipelago", "hallelujah", "chain", "tower", "sky_island",
+            "sky_bridge", "ocean_island", "seamount", "volcano", "sea_spire"};
     public static final int FLAG_STARTER = 1;
+    /** Sky form built per block in {@code sky_details} (small islands, bridges), not interpolated. */
+    public static final int FLAG_DETAIL = 2;
+    /** Part of a cluster guaranteed near spawn. */
+    public static final int FLAG_GUARANTEED = 4;
 
     public final int rx;
     public final int rz;

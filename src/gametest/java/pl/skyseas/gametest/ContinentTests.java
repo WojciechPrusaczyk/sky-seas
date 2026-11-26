@@ -23,7 +23,8 @@ import pl.skyseas.shape.ContinentShape;
  * E2 acceptance on generated chunks around spawn: the starter continent exists, nothing
  * solid below continentMinBottomY above the sea, its top gets a biome surface (not bare
  * stone) and land biomes reach from the island up to the top of the world. E3: no loose
- * blocks in the sky around coasts, hanging spires and rock bridges.
+ * blocks in the sky around coasts, hanging spires, rock bridges and the sky forms between
+ * continents (towers, sky islands, cluster forms, archipelago bridges).
  */
 @GameTestHolder(SkySeas.MOD_ID)
 @PrefixGameTestTemplate(false)
@@ -97,6 +98,9 @@ public final class ContinentTests {
         helper.succeed();
     }
 
+    /** Air blocks under thick rock seen by {@link #check} (sky corridors, and arches or bridges over other rock). */
+    private static int corridorAir;
+
     /** Half-size of a connectivity window in chunks. */
     private static final int WINDOW_CHUNKS = 2;
 
@@ -157,7 +161,60 @@ public final class ContinentTests {
         helper.succeed();
     }
 
-    /** Generates the chunks around x, z and fails on any solid piece above the sea that does not reach the window border. */
+    /** One window per new sky form kind (round 2 of E3) near spawn, for each seed. */
+    @GameTest(template = "empty", timeoutTicks = 4800)
+    public static void noLooseSkyFormBlocks(GameTestHelper helper) {
+        String[] kinds = {"tower", "medium island", "small island", "archipelago", "hallelujah", "sky bridge"};
+        int windows = 0;
+        corridorAir = 0;
+        for (long seed : SEEDS) {
+            StagedChunkGen gen = StagedChunkGen.create(helper.getLevel(), StagedChunkGen.SKY_SEAS, seed);
+            Layout layout = LayoutAccess.get(gen.randomState());
+            boolean[] found = new boolean[kinds.length];
+            for (int rx = -1; rx <= 1; rx++) {
+                for (int rz = -1; rz <= 1; rz++) {
+                    RegionLayout r = layout.region(rx, rz);
+                    for (int i = 0; i < r.count; i++) {
+                        if (!r.owns(i, layout.params().layoutRegionSize())) {
+                            continue;
+                        }
+                        boolean detail = (r.flags[i] & RegionLayout.FLAG_DETAIL) != 0;
+                        int k = switch (r.type[i]) {
+                            case RegionLayout.TOWER -> 0;
+                            case RegionLayout.SKY_ISLAND -> detail ? 2 : 1;
+                            case RegionLayout.ARCHIPELAGO -> 3;
+                            case RegionLayout.HALLELUJAH -> 4;
+                            case RegionLayout.SKY_BRIDGE -> 5;
+                            default -> -1;
+                        };
+                        if (k >= 0 && !found[k]) {
+                            found[k] = true;
+                            windows += check(helper, gen, seed, kinds[k], r.cx[i], r.cz[i]);
+                        }
+                    }
+                }
+            }
+            for (int k = 0; k < kinds.length; k++) {
+                if (!found[k]) {
+                    helper.fail("seed " + seed + ": no " + kinds[k] + " near spawn");
+                    return;
+                }
+            }
+        }
+        SkySeas.LOGGER.info("ContinentTests: {} sky form windows without loose sky blocks, {} corridor air blocks", windows, corridorAir);
+        // Without corridors arches and overhangs give about 90 such blocks in these windows; with them about 380.
+        if (corridorAir < 200) {
+            helper.fail("no corridors in thick sky forms: " + corridorAir + " air blocks under thick rock");
+            return;
+        }
+        helper.succeed();
+    }
+
+    /**
+     * Generates the chunks around x, z and fails on any solid piece above the sea that
+     * neither reaches the window border nor holds the centre column of a sky form (small
+     * forms fit inside a window whole).
+     */
     private static int check(GameTestHelper helper, StagedChunkGen gen, long seed, String what, int x, int z) {
         int c0x = (x >> 4) - WINDOW_CHUNKS;
         int c0z = (z >> 4) - WINDOW_CHUNKS;
@@ -179,6 +236,34 @@ public final class ContinentTests {
                 }
             }
         }
+        // Corridors: air with at least 12 solid blocks right above it and solid somewhere below in the column.
+        for (int col = 0; col < n * n; col++) {
+            boolean below = false;
+            for (int y = 0; y < ny - 12; y++) {
+                int v = col * ny + y;
+                if (solid[v]) {
+                    below = true;
+                } else if (below) {
+                    boolean roof = true;
+                    for (int k = 1; k <= 12 && roof; k++) {
+                        roof = solid[v + k];
+                    }
+                    corridorAir += roof ? 1 : 0;
+                }
+            }
+        }
+        boolean[] anchor = new boolean[n * n];
+        Layout layout = LayoutAccess.get(gen.randomState());
+        for (int[] q : new int[][]{{16 * c0x, 16 * c0z}, {16 * c0x + n, 16 * c0z}, {16 * c0x, 16 * c0z + n}, {16 * c0x + n, 16 * c0z + n}}) {
+            RegionLayout r = layout.regionAt(q[0], q[1]);
+            for (int i = 0; i < r.count; i++) {
+                int a = r.cx[i] - 16 * c0x;
+                int b = r.cz[i] - 16 * c0z;
+                if (!RegionLayout.isOcean(r.type[i]) && a >= 0 && b >= 0 && a < n && b < n) {
+                    anchor[a * n + b] = true;
+                }
+            }
+        }
         boolean[] seen = new boolean[solid.length];
         int[] queue = new int[solid.length];
         for (int start = 0; start < solid.length; start++) {
@@ -195,7 +280,7 @@ public final class ContinentTests {
                 int y = v % ny;
                 int a = v / ny / n;
                 int b = v / ny % n;
-                border |= a == 0 || b == 0 || a == n - 1 || b == n - 1;
+                border |= a == 0 || b == 0 || a == n - 1 || b == n - 1 || anchor[a * n + b];
                 int[] next = {a > 0 ? v - n * ny : -1, a < n - 1 ? v + n * ny : -1, b > 0 ? v - ny : -1,
                         b < n - 1 ? v + ny : -1, y > 0 ? v - 1 : -1, y < ny - 1 ? v + 1 : -1};
                 for (int m : next) {
