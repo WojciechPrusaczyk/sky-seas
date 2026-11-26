@@ -56,7 +56,7 @@ Niebo ma być gęste i malownicze. Kontynenty są bazą, a między nimi leżą a
 
 | Forma | Skala | Wysokość Y | Rola w grze | Charakter |
 | --- | --- | --- | --- | --- |
-| Kontynent | średnica ok. 460–1380 bloków; ok. 30% złożonych z 2–4 członów; przerwy między kontynentami 400–800 bloków | teren 125–185 z przechyleniem bryły o 20–40; startowy nisko (baza ok. 140–150); od Pogranicza ok. 15% wyniesionych (baza 190–220); góry do 250, u ok. 20% (częściej dalej od spawnu) masyw ze szczytami 270–300; spód od 113 | Start, baza, wioski | Sylwetki z katalogu zamiast okręgów: wydłużone (proporcje 1:2–1:4), półksiężyc lub podkowa z zatoką, hak, rozgałęziony (palce lądu), nieregularny z elips. Człony kontynentu złożonego łączą przesmyki albo naturalne mosty skalne, z różnicą wysokości 20–60 bloków (urwiska lub stoki). Cienka skorupa (10–25 bloków kamienia pod płaskim terenem); kamień w górach, iglicach, mesach i urwiskach; spore płaskie połacie pod budowę; rzeki i jeziora kończące się wodospadami |
+| Kontynent | średnica ok. 460–1380 bloków; ok. 30% złożonych z 2–4 członów; przerwy między kontynentami 400–800 bloków | teren 125–185 z przechyleniem bryły o 20–40; startowy nisko (baza ok. 140–150); od Pogranicza ok. 15% wyniesionych (baza 190–220); góry do 250, u ok. 20% (częściej dalej od spawnu) masyw ze szczytami 270–300; spód od 113 | Start, baza, wioski | Sylwetki z katalogu zamiast okręgów: wydłużone (proporcje 1:2–1:4), półksiężyc lub podkowa z zatoką, hak, rozgałęziony (palce lądu), nieregularny z elips. Człony kontynentu złożonego łączą przesmyki albo naturalne mosty skalne, z różnicą wysokości 20–60 bloków (urwiska lub stoki). Cienka skorupa (16–28 bloków kamienia pod płaskim terenem, klif przy brzegu co najmniej 16); kamień w górach, iglicach, mesach i urwiskach; spore płaskie połacie pod budowę; rzeki i jeziora kończące się wodospadami |
 | Archipelag | wyspy 15–150 bloków, klastry po 10–40 | 120–240 | Eksploracja, nawigacja, trasy dla pilotów | Jeden dominujący biom na klaster, różne wysokości, łuki skalne, naturalne mosty, zwisające pnącza |
 | Góry Alleluja | bryły 20–50 szerokości i 40–120 wysokości, klastry po 15–40 | 110–305 | Slalom dla pilotów, dużo kamienia przy małym cieniu | Wysokie, wąskie bryły z zielonymi wierzchołkami, pnącza na dziesiątki bloków, wodospady spadające z bryły na bryłę |
 | Wyspy-wieże | szerokość 15–40, wysokość 50–150 bloków; 2–4 na region | wierzchołek do limitu strefy | Punkty orientacyjne, slalom | Mała powierzchnia, duża wysokość, płaski zielony wierzchołek; także poza klastrami Alleluja |
@@ -65,7 +65,7 @@ Niebo ma być gęste i malownicze. Kontynenty są bazą, a między nimi leżą a
 
 **Spody wysp.** Bez masywnego kilu. Pod każdą większą wyspą (kontynenty, średnie wyspy, wieże) zwisa 3–8 skalnych iglic długości 10–40 bloków, pod małymi 0–2. W iglicach mogą siedzieć gniazda diamentów.
 
-**Krawędzie bez okruchów.** Szum 3D przy krawędziach tylko wycina, nigdy nie dokłada masy poza obrysem 2D, więc nie ma oderwanych, latających okruchów.
+**Krawędzie bez okruchów.** Szum 3D przy krawędziach tylko wycina, nigdy nie dokłada masy poza obrysem 2D, i tnie tylko ścianę klifu (wnęki, nawisy), więc nie ma oderwanych, latających okruchów. Krawędź jest klifem grubym na co najmniej 16 bloków.
 
 **Gwarancje przy spawnie.** W promieniu ok. 1000 bloków od spawnu leży co najmniej jeden archipelag i jeden klaster gór Alleluja.
 

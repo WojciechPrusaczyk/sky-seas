@@ -123,7 +123,7 @@ Układ to deterministyczny plan wysp liczony raz na region 1024×1024 bloków, w
 
 **Poziomy (kolejność = priorytet)**
 
-1. **Kontynenty.** Siatka z jitterem, jeden kandydat na komórkę; przesunięcie w komórce zależy od faktycznego zasięgu kontynentu, a rzadki rozłożysty kontynent, który się nie mieści, jest proporcjonalnie zmniejszany. Rozstaw komórek dobrany tak, żeby przerwy między kontynentami wynosiły 400–800 bloków. Promień 230–690 (średnica ok. 460–1380). Kontynent startowy na 0,0. Każdy kontynent dostaje sylwetkę z katalogu (wydłużona 1:2–1:4, półksiężyc lub podkowa, hak, rozgałęziona, nieregularna z elips); ok. 30% jest złożonych z 2–4 członów połączonych przesmykami albo mostami skalnymi, z różnicą wysokości członów 20–60 bloków.
+1. **Kontynenty.** Siatka 1700 bloków, jeden kontynent na komórkę. Kontynent zostawia z każdej strony komórki połowę przerwy między pudełkami obrysu (240–600 bloków, losowo dla kontynentu) i jest skalowany tak, żeby wypełnić resztę; luz wzdłuż krótszego boku pudełka staje się przesunięciem. Sylwetki nie wypełniają pudełek, więc zmierzona przerwa brzeg–brzeg do najbliższego sąsiada wynosi 400–800 bloków (runda 1: 96% kontynentów, zakres 431–855). Rozmiar wynika z komórki i przerwy (pudełko ok. 900–1300 bloków); parametr promienia 230–690 z E2 zniknął. Kontynent startowy na 0,0. Każdy kontynent dostaje sylwetkę z katalogu (wydłużona 1:2–1:4, półksiężyc lub podkowa, hak, rozgałęziona, nieregularna z elips); ok. 30% jest złożonych z 2–4 członów połączonych przesmykami albo mostami skalnymi, z różnicą wysokości członów 20–60 bloków.
 2. **Formy oceaniczne.** Wyspy oceaniczne (klasy 70/25/5 według designu, gęstość ok. 2× względem E3a, większy udział średnich), góry podwodne, wulkany, iglice morskie, formacje monumentalne i strefy biomów dna. Formy wystające nad wodę są odrzucane pod rzutem kontynentu z marginesem 16 bloków (+ szum nawisów).
 3. **Wyspy pojedyncze.** Wyspy-wieże (2–4 na region) oraz małe i średnie wyspy (10–20 na region; ok. połowa jako satelity 100–400 bloków od krawędzi kontynentu, reszta rozsiana). Odrzucane, gdy ich rzut z marginesem 16 nachodzi na ląd w oceanie lub inną wyspę na niebie, albo gdy przekraczają budżet zacienienia.
 4. **Klastry: archipelagi i góry Alleluja.** Środek klastra z siatki, wyspy wewnątrz klastra. Wyspa jest odrzucana, gdy jej rzut z marginesem 16 nachodzi na ląd w oceanie lub kontynent, gdy przekracza budżet zacienienia albo gdy wisi nad inną wyspą klastra.
@@ -211,7 +211,7 @@ Każdy typ: `MapCodec` zarejestrowany w `Registries.DENSITY_FUNCTION_TYPE` przez
 
 **Kształty (pakiet `shape`)**
 
-- **Kontynent.** Sylwetka z katalogu: wydłużona (proporcje 1:2–1:4), półksiężyc lub podkowa z zatoką, hak, rozgałęziona (palce lądu) albo nieregularna; budowana z nachodzących na siebie elips z zaszumionym obrysem (rdzeń i satelity rozmieszczone według sylwetki), z lekko zawirowaną domeną i fraktalnym detalem wybrzeża; pole krawędzi ma spadek ok. 1 na blok, więc detal nie odrywa okruchów (test: brak fragmentów < 32×32, odłączone < 3%). Kontynent złożony (ok. 30%): 2–4 człony o różnych sylwetkach i bazach różniących się o 20–60 bloków, połączone przesmykiem albo mostem skalnym, z urwiskiem lub stokiem między nimi. Wysokość: baza 125–185 z przechyleniem całej bryły o 20–40 bloków; startowy 140–150; od Pogranicza ok. 15% wyniesionych (baza 190–220). Charakter kontynentu (nizinny 20%, mieszany 30%, wyżynny 15%, górski 20% z pasmem gór wzdłuż kręgosłupa, kaldera 15% z pierścieniem gór z przełęczami i kotliną) ustala wagi form; ok. 20% kontynentów (częściej dalej od spawnu) ma masyw ze szczytami 270–300. Wierzch: regiony terenu (równiny co najmniej 35%, obecnie ok. 49%), pagórki, wyżyny z uskokami, mesy o pionowych ścianach, rzadkie skupiska iglic, tarasowe góry; łagodna mikrorzeźba (±1,5 bloku, fala ok. 40) i lekko falujące linie uskoków; przy części wybrzeża stok zamiast klifu; płaskowyż pod spawn na startowym. Pod płaskim terenem 10–25 bloków skorupy z delikatnymi zwisami (szum 2D do ok. 6 bloków). Pod spodem 3–8 zwisających iglic skalnych długości 10–40 bloków (sloty na gniazda diamentów), bez masywnego kilu. Szum 3D (nawisy, łuki) w paśmie 24 bloków od brzegu i na wysokich ścianach tylko wycina: nigdy nie dodaje masy poza obrysem 2D, więc nie ma oderwanych okruchów; test sprawdza spójność brył w 3D. Spód nigdy poniżej Y 113.
+- **Kontynent.** Sylwetka z katalogu: wydłużona (proporcje 1:2–1:4), półksiężyc lub podkowa z zatoką, hak, rozgałęziona (palce lądu) albo nieregularna; budowana z nachodzących na siebie elips z zaszumionym obrysem (rdzeń i satelity rozmieszczone według sylwetki), z lekko zawirowaną domeną i fraktalnym detalem wybrzeża; pole krawędzi ma spadek ok. 1 na blok, więc detal nie odrywa okruchów (test: brak fragmentów < 32×32, odłączone < 3%). Kontynent złożony (ok. 30%): 2–4 człony o różnych sylwetkach i bazach różniących się o 20–60 bloków, połączone przesmykiem albo mostem skalnym, z urwiskiem lub stokiem między nimi. Wysokość: baza 125–185 z przechyleniem całej bryły o 20–40 bloków; startowy 140–150; od Pogranicza ok. 15% wyniesionych (baza 190–220). Charakter kontynentu (nizinny 20%, mieszany 30%, wyżynny 15%, górski 20% z pasmem gór wzdłuż kręgosłupa, kaldera 15% z pierścieniem gór z przełęczami i kotliną) ustala wagi form; ok. 20% kontynentów (częściej dalej od spawnu) ma masyw ze szczytami 270–300. Wierzch: regiony terenu (równiny co najmniej 35%, obecnie ok. 49%), pagórki, wyżyny z uskokami, mesy o pionowych ścianach, rzadkie skupiska iglic, tarasowe góry; łagodna mikrorzeźba (±1,5 bloku, fala ok. 40) i lekko falujące linie uskoków; przy części wybrzeża stok zamiast klifu; płaskowyż pod spawn na startowym. Pod płaskim terenem 16–28 bloków skorupy z delikatnymi zwisami (szum 2D do ok. 6 bloków); przy brzegu krawędź jest klifem grubości co najmniej 16 bloków (komórki interpolacji mają 8 bloków wysokości, cieńsze płyty rozpadają się na grudki). Pod spodem 3–8 zwisających iglic skalnych długości 10–40 bloków (sloty na gniazda diamentów), bez masywnego kilu; na nisko położonych kontynentach krótsze albo żadne, bo czubek musi zostać nad Y 113. Iglice i mosty skalne liczy `sky_details` per blok. Szum 3D tylko wycina (amplituda 8, pas 32 bloków od brzegu i wysokie ściany gór); przy brzegu wycina tylko ścianę klifu (wnęki, nawisy), a wierzch i spód krawędzi zostają całe. Jego gradient jest mniejszy niż spadek odległości od powierzchni, więc nie odcina kawałków; łuki na krawędziach kontynentów nie powstają. Test JUnit sprawdza spójność brył w 3D z odtworzoną interpolacją 4×8×4, GameTest na wygenerowanych chunkach. Spód nigdy poniżej Y 113.
 - **Wyspa-wieża.** Pionowa bryła o szerokości 15–40 i wysokości 50–150 bloków, z zaszumionym promieniem zwężającym się ku dołowi, płaskim zielonym wierzchołkiem (do limitu strefy) i iglicami pod spodem.
 - **Mała i średnia wyspa.** Spłaszczona bryła 10–30 lub 30–80 bloków z płaskim wierzchem, zaszumionym obrysem i stożkowym spodem z 0–2 (mała) lub 3–8 (średnia) iglicami; małe liczone w `sky_details`, średnie w `sky_islands`.
 - **Archipelag.** Superelipsoidy z zaszumionym promieniem, płaski wierzch, stożkowy spód; rzadkie łuki i mosty jako kapsuły między parą wysp.
@@ -352,7 +352,10 @@ Wszystkie liczby z dokumentu designowego są parametrami w configu COMMON (`conf
 | `seabed.duneAmplitude` | 2 | Wydmy (±) |
 | `seabed.canyonDepth` | 8 … 14 | Głębokość kanionów (oceany umiarkowane) od spawnu do Krańca |
 | `seabed.trenchMinY` | −40 | Najgłębsze rowy (pod ciśnienie w Create Deep Seas) |
-| `continents.cellSize` | do dobrania w rundzie 1 E3 (dziś 1800) | Rozstaw kontynentów; cel: przerwy 400–800 bloków |
+| `continents.cellSize` | 1700 | Rozstaw kontynentów |
+| `continents.boxGap` | 240 … 600 | Przerwa między pudełkami obrysu sąsiadów; brzeg–brzeg wychodzi 400–800 |
+| `continents.crust` | 16 … 28 | Skorupa pod płaskim terenem; krawędź klifu 16 |
+| `continents.edgeNoise`, `continents.edgeBand` | 8; 32 | Szum 3D przy brzegu: amplituda (tylko wycina), szerokość pasa |
 | `continents.baseY` | 125 … 185; startowy 140 … 150 | Baza terenu kontynentów |
 | `continents.tilt` | 20 … 40 | Przechylenie bryły (bloki różnicy między krańcami) |
 | `continents.compositeShare` | 0,30 | Udział kontynentów złożonych (2–4 człony, różnica wysokości 20–60) |
@@ -366,7 +369,6 @@ Wszystkie liczby z dokumentu designowego są parametrami w configu COMMON (`conf
 | `visibility.sky` | 1 wyspa w 250, 3 w 500 (z Y 150) | Reguła widoczności nieba |
 | `visibility.sea` | coś w 250 | Reguła widoczności morza |
 | `visibility.seabed` | forma w 150, monumentalna (> 30 bloków) w 500 | Reguła widoczności dna |
-| `continents.radius` | 230 … 690 | Promień kontynentów |
 | `continents.minBottomY` | 113 | Bufor 50 bloków nad wodą |
 | `starter.continentRadius` | 350 | Kontynent startowy (płaskowyż pod spawn: promień 150) |
 | `starter.guaranteeRadius` | 1000 | Promień gwarancji startowych |
@@ -425,6 +427,18 @@ Wdrożenie idzie w dziesięciu etapach; każdy kończy się działającym świat
    - Runda 3: dno (gęstsze wyspy i formy, strefy biomów dna, formacje monumentalne, `seabed_details`, reguły widoczności morza i dna).
    - Runda 4: domknięcie (łańcuchy, cenoty, błękitne dziury, gwarancje startowe, spawn, `/skyseas audit`).
    - Akceptacja etapu: audyt pokazuje 0 wysp nad lądem w oceanie, zacienienie ≤ 30% (albo uzgodnioną korektę), łańcuchy w limitach kroku, szyby kończą się w komorach, reguły widoczności spełnione; etap `noise` ≤ 1,3× vanilli.
+   - Zrealizowane w rundzie 1:
+     - sylwetki z katalogu; złożone 29% (kaldera nigdy nie jest złożona, więc pozostałe charaktery częściej);
+     - wysokości i przechylenie; wyniesione 13,5% poza Przystanią; masywy 22%;
+     - iglice pod spodem (średnio 5 na kontynent);
+     - przerwy z pudełek obrysu (wyżej);
+     - kolumna `sky_mountain` zastąpiona przez `sky_detail` (waga szumu 3D liczona w układzie);
+     - nowe funkcje `sky_details` (iglice, mosty skalne per blok) i `sky_spire_floor` (flat_cache, szybkie odrzucanie);
+     - krawędź klifu 16 i skorupa 16–28 zamiast 10–25;
+     - szum krawędzi słabszy i tylko na ścianie klifu;
+     - przejście klifu w stok przybrzeżny wolniejsze;
+     - mosty skalne w `sky_details`, bo interpolacja rozbija płyty 6–10 bloków;
+     - nowe cele `/skyseas locate` (sylwetki, `rock_bridge`, `elevated`, `massif`, `hanging_spire`); `/skyseas info` pokazuje sylwetkę, bazę, przechylenie, człony i iglice.
    - Zrealizowane w rundzie 0: dwa indeksy kubełkowe na region (niebo, ocean) i parametry o zmiennej długości; `ClimateProbe`; `skyseas:cave_top` (bez jaskiń w iglicach morskich); ochrona stropu obejmuje też wierzchni blok dna (GameTest złapał dziurę na stromym zboczu szelfu); `continents` = 0,5 nad lądem wysp oceanicznych od Y 62 (tymczasowo, do E4).
 5. **E4 — Klimat i biomy 3D.** Wszystkie funkcje klimatu, chłodzenie z wysokością, klastry tematyczne, biomy jaskiniowe; pliki czterech biomów dna, ich tagi i nakładka na źródło biomów w warstwie oceanu.
    - Akceptacja: lądowe biomy na wyspach, oceaniczne w wodzie, deep dark tylko pod grubą skałą, rafy w warm ocean.

@@ -10,23 +10,34 @@ Stan na 2026-11-26, po decyzjach z `docs/decisions/2026-11-26-e3-rework.md`. Dec
 | E1: ocean i dno (+ E1.1: wieloskalowa rzeźba dna) | zamknięty | `e1-done` |
 | E2: układ, kontynenty, `/skyseas map` | zamknięty po czterech rundach poprawek w grze | `e2-done` (lokalnie; push zablokował filtr uprawnień, do wypchnięcia ręcznie) |
 | E3 runda 0 (dawne E3a): wyspy oceaniczne, szelfy, atole, podwodne góry, wulkany, iglice morskie | zrobiona, na gałęzi `e3-wip` (commit `5fa7482`), oceniona w grze negatywnie | – |
-| E3 rundy 1–4 (plan w sekcji 5) | czekają na akceptację planu | – |
+| E3 runda 1: kontynenty | zrobiona, na `e3-wip`, czeka na Twój test w grze (wyniki niżej) | – |
+| E3 rundy 2–4 (plan w sekcji 5) | czekają | – |
 | E4–E9 | nie rozpoczęte | – |
 
 Proces od teraz: praca na gałęzi `e3-wip` z commitami po drodze; merge na `main`, tag `e3-done` i push dopiero po akceptacji całego etapu.
 
-**Ostatnie pomiary** (`/skyseas bench 256`, względem vanilli na tym samym seedzie):
+**Ostatnie pomiary (runda 1, `generatorVersion` 10, `/skyseas bench 64`, względem vanilli na tym samym seedzie):**
 
 | Obszar | biomes | noise | surface |
 | --- | --- | --- | --- |
-| Kontynent startowy (0,0) | 1,08× | 0,90× | 1,17× |
-| Daleki ocean | 1,21× | 0,96× | 0,55× |
+| Kontynent startowy (0,0) | 1,25× | 1,00× | 0,49× |
+| −3400, −3400 (kontynenty dalej od spawnu) | 1,39× | 0,93× | 2,07× |
 
-Cel ze spec: noise ≤ 1,3×. Jest duży zapas na dodatkowe formy.
+Cel ze spec to noise ≤ 1,3×. Surface 2,07× w drugim obszarze wynika z większej powierzchni odsłoniętej skały (grube klify, masywy). Kryterium go nie obejmuje, a reguły powierzchni przepisujemy w E5.
 
-**Testy:**
-- JUnit 29/29, w tym determinizm przy 8 wątkach, czyste niebo nad lądem w oceanie, klasy wysp, brak okruchów kontynentów i budżet regionu < 20 ms.
-- GameTesty 5/5.
+**Testy (runda 1):**
+- **JUnit 32/32.** Nowe testy:
+  - przerwy brzeg–brzeg: 109 ze 114 kontynentów ma najbliższego sąsiada w 400–800, zakres 431–855;
+  - udziały: złożone 29%, wyniesione 13,5% poza Przystanią, masywy 22%, średnio 5,1 iglicy, wszystkie sylwetki obecne;
+  - spójność 3D z odtworzoną interpolacją gry w 344 oknach (brzegi, iglice, mosty, wnętrza, masywy): 0 luźnych kawałków;
+  - pudełka kontynentów w swoich komórkach.
+- **GameTesty 6/6.** Nowy: brak luźnych bloków na wygenerowanych chunkach przy brzegu, iglicy i moście skalnym.
+
+**Diagnoza „latających bloków” (runda 1).** Mają dwie przyczyny, obie usunięte:
+1. Klinowy brzeg był cieńszy niż 16 bloków na ok. 30 blokach od krawędzi, a gra interpoluje gęstość z komórek 4×8×4. Cienką płytę interpolacja zamieniała w grudki.
+2. Szum nawisów dokładał masę poza obrysem.
+
+Pomogła też wolniejsza zmiana szumu. Współrzędne z gry nadal się przydadzą do sprawdzenia, czy to było to.
 
 ## 2. Odstępstwa od spec i designu (wszystkie zrealizowane zmiany)
 
@@ -269,7 +280,9 @@ Każda runda kończy się JUnit, GameTestami, mapą, benchem (`noise` ≤ 1,3× 
 ## 6. Otwarte punkty
 
 1. **Próg reguł widoczności:** proponuję 100% jako cel i ≥ 98% punktów do akceptacji, z listą wyjątków na mapie. Do Twojej decyzji.
-2. **Współrzędne „latających bloków”:** podasz osobno. Runda 1 i tak wprowadza zasadę „szum tylko wycina” i test 3D.
+2. **Współrzędne „latających bloków”:** podasz osobno. Runda 1 usuwa obie znalezione przyczyny (sekcja 1); test w grze pokaże, czy coś zostało.
+4. **Łuki na krawędziach kontynentów:** przy interpolacji 4×8×4 szum, który je rzeźbił, odcinał kawałki. Teraz krawędź ma wnęki i nawisy, ale nie łuki. Jeśli łuki są potrzebne, zrobię je jako osobne formy per blok w `sky_details`, tak jak mosty skalne.
+5. **Krawędź 16 i skorupa 16–28** (design mówił 10–25): to minimum, przy którym interpolacja nie rozbija płyty.
 3. **Limit zacienienia 30%:** liczby z rundy 2 pokażą, czy koliduje z gęstością nieba. Jeśli tak, przyjdę z propozycją korekty.
 
 ## 7. Bieżące parametry (`WorldParams.DEFAULTS`, wybór)
@@ -278,11 +291,11 @@ Każda runda kończy się JUnit, GameTestami, mapą, benchem (`noise` ≤ 1,3× 
 | --- | --- |
 | Świat | Y −64…320, morze 63 (bez zmian) |
 | Dno | baza −5…−20 wg strefy; rzeźba ±12 (typowo ±8–10); wydmy ±2; kaniony 8–14; rowy do −40 |
-| Kontynenty | siatka 1800; promień 230–690; startowy 350 (płaskowyż 150); teren 135–175; szczyty do 250; skorupa 10–25; spód ≥ 113 |
+| Kontynenty | siatka 1700; przerwa pudełek 240–600 (brzeg–brzeg 400–800); startowy 350 (płaskowyż 150, baza 140–150, bez przechylenia); teren 125–185, przechylenie 20–40; wyniesione 15% od Pogranicza, 190–220; złożone 30% (różnica członów 20–60, mosty 6–10 szer., przesmyki 20–40); szczyty do 250, masywy 10→30% do 270–300; skorupa 16–28, krawędź 16; iglice 3–8 × 10–40; szum krawędzi 8 w pasie 32; spód ≥ 113 |
 | Wyspy oceaniczne | siatka 300; szansa 0,8 × gęstość 0,25–1,5; promienie 2,5/15/75/200; szczyt nad wodą 1–8 / 4–18 / 10–40; szelf Y 35–60, szerokość 6–20 / 20–60 / 45–130; zbocze 45–90 |
 | Atole | szansa 0,5 w ciepłej wodzie (temperatura ≥ 0,55); laguna Y 52–59 |
 | Góry podwodne | siatka 900, szansa 0,5, promień 60–150, szczyt Y 40–58 (woda umiarkowana) |
 | Wulkany | siatka 800, szansa 0,7, promień 70–140, krawędź Y 15–50, krater 8–18 (woda zimna) |
 | Iglice morskie | siatka 450, szansa 0,6, 1–4 w grupie, promień 3–8, 8–35 nad wodą (woda letnia) |
 | Czyste niebo | margines 16 + 12 (szum nawisów) |
-| `generatorVersion` | 9 |
+| `generatorVersion` | 10 |

@@ -11,7 +11,9 @@ import pl.skyseas.shape.SimplexNoise;
  * earlier levels, so no decision depends on generation order.
  *
  * <ol>
- *   <li>Continents on a jittered grid, one candidate per cell, the starter at 0,0.</li>
+ *   <li>Continents on a grid, one per cell, the starter at 0,0. Each keeps half of a
+ *       400-800 block gap free on every side of its cell and is scaled to fill the rest,
+ *       so neighbouring coasts are a short flight apart; any slack becomes jitter.</li>
  *   <li>Ocean forms: islands (size classes by zone), seamounts, volcanoes and sea spire
  *       groups, each on its own grid; forms above water are rejected under a continent
  *       (clear-sky rule). Climate-bound forms read the temperature at their centre.</li>
@@ -96,21 +98,27 @@ public final class LayoutGenerator {
             for (int cj = cj0; cj <= cj1; cj++) {
                 long s = Hash.hash(seed ^ CONTINENT_SALT, ci, cj);
                 boolean starter = ci == 0 && cj == 0;
-                double r = starter ? p.starterContinentRadius()
-                        : ShapeMath.lerp(p.continentRadiusMin(), p.continentRadiusMax(), Hash.unit(Hash.hash(s, 3)));
-                // The continent's actual reach decides how far it may wander from the cell centre
-                // (less grid-like); a rare sprawling one that does not fit is scaled down. No collisions.
+                double distance = Math.hypot((double) ci * cell, (double) cj * cell);
                 int off = c.count * c.stride;
-                double limit = cell / 2.0 - margin;
-                ContinentShape.place(p, s, 0, 0, r, starter, c.params, off);
-                while (c.params[off + ContinentShape.EXTENT] > limit) {
-                    r *= 0.95;
-                    ContinentShape.place(p, s, 0, 0, r, starter, c.params, off);
+                double half = cell / 2.0 - ShapeMath.lerp(p.continentBoxGapMin(), p.continentBoxGapMax(),
+                        Hash.unit(Hash.hash(s, 901))) / 2.0;
+                double r = starter ? p.starterContinentRadius() : 0.6 * half;
+                ContinentShape.place(p, s, 0, 0, r, starter, distance, c.params, off);
+                // The box grows almost linearly with the radius: a few rescales fill the cell.
+                for (int n = 0; n < 4 && !starter; n++) {
+                    r *= half / boxHalf(c.params, off);
+                    ContinentShape.place(p, s, 0, 0, r, starter, distance, c.params, off);
                 }
-                double jitter = limit - c.params[off + ContinentShape.EXTENT];
-                int x = starter ? 0 : (int) Math.round(ci * (double) cell + (2.0 * Hash.unit(Hash.hash(s, 1)) - 1.0) * jitter);
-                int z = starter ? 0 : (int) Math.round(cj * (double) cell + (2.0 * Hash.unit(Hash.hash(s, 2)) - 1.0) * jitter);
-                ContinentShape.place(p, s, x, z, r, starter, c.params, off);
+                while (boxHalf(c.params, off) > half) {
+                    r *= 0.97;
+                    ContinentShape.place(p, s, 0, 0, r, starter, distance, c.params, off);
+                }
+                int x = starter ? 0 : (int) Math.round(ci * (double) cell + jitter(c.params, off, ContinentShape.BOX_MIN_X,
+                        half, Hash.unit(Hash.hash(s, 902))));
+                int z = starter ? 0 : (int) Math.round(cj * (double) cell + jitter(c.params, off, ContinentShape.BOX_MIN_Z,
+                        half, Hash.unit(Hash.hash(s, 903))));
+                ContinentShape.place(p, s, x, z, r, starter, distance, c.params, off);
+                ContinentShape.placeSpires(p, s, c.params, off);
                 c.seed[c.count] = s;
                 c.count++;
                 double extent = c.params[off + ContinentShape.EXTENT];
@@ -126,6 +134,20 @@ public final class LayoutGenerator {
             }
         }
         return c;
+    }
+
+    /** Half of the larger side of a continent's bounding box. */
+    private static double boxHalf(double[] prm, int off) {
+        return 0.5 * Math.max(prm[off + ContinentShape.BOX_MAX_X] - prm[off + ContinentShape.BOX_MIN_X],
+                prm[off + ContinentShape.BOX_MAX_Z] - prm[off + ContinentShape.BOX_MIN_Z]);
+    }
+
+    /** Offset of the centre from the cell centre along one axis: box centred, then moved within the slack. */
+    private static double jitter(double[] prm, int off, int boxMin, double half, double roll) {
+        double min = prm[off + boxMin];
+        double max = prm[off + boxMin + 1];
+        double slack = Math.max(0.0, half - 0.5 * (max - min));
+        return -0.5 * (min + max) + (2.0 * roll - 1.0) * slack;
     }
 
     /** Level 2: one ocean form type on its own grid (sea spires come in groups). */

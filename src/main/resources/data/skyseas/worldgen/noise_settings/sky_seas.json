@@ -37,7 +37,11 @@
         "type": "minecraft:min",
         "argument1": {
           "type": "minecraft:max",
-          "argument1": "skyseas:sky/islands",
+          "argument1": {
+            "type": "minecraft:max",
+            "argument1": "skyseas:sky/islands",
+            "argument2": "skyseas:sky/details"
+          },
           "argument2": "skyseas:oceanic"
         },
         "argument2": {

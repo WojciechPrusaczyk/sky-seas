@@ -9,14 +9,17 @@ import pl.skyseas.shape.OceanShape;
  * regions, the island at a column and the column values used by the density functions.
  */
 public final class Layout {
-    public static final int EDGE = 0;
-    public static final int TOP = 1;
-    public static final int BOTTOM = 2;
-    public static final int MOUNTAIN = 3;
+    public static final int EDGE = ContinentShape.EDGE;
+    public static final int TOP = ContinentShape.TOP;
+    public static final int BOTTOM = ContinentShape.BOTTOM;
+    public static final int MOUNTAIN = ContinentShape.MOUNTAIN;
+    public static final int DETAIL = ContinentShape.DETAIL;
     /** Column values where no island reaches: far outside, empty Y range. */
     public static final double NO_EDGE = -1000.0;
     public static final double NO_TOP = -1000.0;
     public static final double NO_BOTTOM = 1000.0;
+    /** Detail floor where no spire or rock bridge reaches the column. */
+    public static final double NO_SPIRE = 1000.0;
 
     private final long seed;
     private final WorldParams params;
@@ -81,7 +84,7 @@ public final class Layout {
         return i >= 0 && ContinentShape.edge(params, r.params, r.paramOffset[i], r.shapeSeed[i], x, z) > 0.0 ? i : -1;
     }
 
-    /** One column value ({@link #EDGE}, {@link #TOP}, {@link #BOTTOM}, {@link #MOUNTAIN}) of the nearest island. */
+    /** One column value ({@link #EDGE}, {@link #TOP}, {@link #BOTTOM}, {@link #MOUNTAIN}, {@link #DETAIL}) of the nearest island. */
     public double column(int x, int z, int kind) {
         RegionLayout r = regionAt(x, z);
         int i = nearestIsland(r, x, z);
@@ -93,19 +96,62 @@ public final class Layout {
                 default -> 0.0;
             };
         }
-        int off = r.paramOffset[i];
-        long s = r.shapeSeed[i];
-        double edge = ContinentShape.edge(params, r.params, off, s, x, z);
-        if (kind == EDGE) {
-            return edge;
+        return ContinentShape.column(params, r.params, r.paramOffset[i], r.shapeSeed[i], x, z, kind);
+    }
+
+    /**
+     * Lowest block of a per-block detail (spire tip, rock bridge underside) that may reach
+     * any block of the 4x4 column cell starting at x, z (flat_cache samples one corner per
+     * cell), or {@link #NO_SPIRE}.
+     */
+    public double detailFloor(int x, int z) {
+        RegionLayout r = regionAt(x, z);
+        int b = r.bucket(x, z);
+        double floor = NO_SPIRE;
+        double reach = ContinentShape.SPIRE_REACH + 6.0;
+        for (int k = r.skyStart(b), end = r.skyEnd(b); k < end; k++) {
+            int i = r.skyItem(k);
+            int off = r.paramOffset[i];
+            int spires = r.type[i] == RegionLayout.CONTINENT ? (int) r.params[off + ContinentShape.SPIRE_COUNT] : 0;
+            for (int s = 0; s < spires; s++) {
+                int o = off + ContinentShape.SPIRE0 + ContinentShape.SPIRE_STRIDE * s;
+                double dx = x - r.params[o];
+                double dz = z - r.params[o + 1];
+                if (dx * dx + dz * dz < reach * reach) {
+                    floor = Math.min(floor, r.params[o + 2] - r.params[o + 3]);
+                }
+            }
+            if (r.type[i] == RegionLayout.CONTINENT) {
+                floor = ContinentShape.bridgeFloor(params, r.params, off, r.shapeSeed[i], x, z, floor);
+            }
         }
-        double flat = ContinentShape.flatTop(r.params, off, s, x, z);
-        double mountain = ContinentShape.mountain(params, r.params, off, s, x, z, edge);
-        return switch (kind) {
-            case BOTTOM -> ContinentShape.bottom(params, r.params, off, s, x, z, edge, flat, mountain);
-            case TOP -> ContinentShape.top(params, flat, mountain);
-            default -> mountain;
-        };
+        return floor;
+    }
+
+    /** Density of per-block details (hanging spires, rock bridges) at a block (blocks, positive inside). */
+    public double detailDensity(int x, int y, int z) {
+        RegionLayout r = regionAt(x, z);
+        int b = r.bucket(x, z);
+        double best = -100.0;
+        double reach = ContinentShape.SPIRE_REACH;
+        long noiseSeed = detailSeed() + 7;
+        for (int k = r.skyStart(b), end = r.skyEnd(b); k < end; k++) {
+            int i = r.skyItem(k);
+            int off = r.paramOffset[i];
+            int spires = r.type[i] == RegionLayout.CONTINENT ? (int) r.params[off + ContinentShape.SPIRE_COUNT] : 0;
+            for (int s = 0; s < spires; s++) {
+                int o = off + ContinentShape.SPIRE0 + ContinentShape.SPIRE_STRIDE * s;
+                double dx = x - r.params[o];
+                double dz = z - r.params[o + 1];
+                if (dx * dx + dz * dz < reach * reach) {
+                    best = Math.max(best, ContinentShape.spireDensity(r.params, o, noiseSeed, x, y, z));
+                }
+            }
+            if (r.type[i] == RegionLayout.CONTINENT) {
+                best = Math.max(best, ContinentShape.bridgeDensity(params, r.params, off, r.shapeSeed[i], x, y, z));
+            }
+        }
+        return best;
     }
 
     /** Seabed surface with the ocean forms of the layout raised on the plain seabed {@code base}. */

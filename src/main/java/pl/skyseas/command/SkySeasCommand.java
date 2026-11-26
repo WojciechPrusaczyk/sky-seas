@@ -57,7 +57,8 @@ public final class SkySeasCommand {
     }
 
     /** Locate targets: item type, or -1 for any ocean island; extra filter in {@link #matches}. */
-    private static final String[] LOCATE = {"continent", "ocean_island", "large_island", "atoll", "seamount",
+    private static final String[] LOCATE = {"continent", "elongated", "crescent", "hook", "branched", "composite",
+            "rock_bridge", "elevated", "massif", "hanging_spire", "ocean_island", "large_island", "atoll", "seamount",
             "volcano", "sea_spire"};
     private static final int LOCATE_MAX_RING = 12;
 
@@ -71,6 +72,27 @@ public final class SkySeasCommand {
 
     private static boolean matches(RegionLayout r, int i, String target) {
         int off = r.paramOffset[i];
+        if (r.type[i] == RegionLayout.CONTINENT) {
+            switch (target) {
+                case "elongated", "crescent", "hook", "branched", "composite" -> {
+                    return target.equals(ContinentShape.SILHOUETTE_NAMES[(int) r.params[off + ContinentShape.SILHOUETTE]]);
+                }
+                case "rock_bridge" -> {
+                    return bridge(r, i) >= 0;
+                }
+                case "elevated" -> {
+                    return r.params[off + ContinentShape.ELEVATED] > 0.0;
+                }
+                case "massif" -> {
+                    return r.params[off + ContinentShape.MASSIF_PEAK] > 0.0;
+                }
+                case "hanging_spire" -> {
+                    return r.params[off + ContinentShape.SPIRE_COUNT] > 0.0;
+                }
+                default -> {
+                }
+            }
+        }
         return switch (target) {
             case "continent" -> r.type[i] == RegionLayout.CONTINENT;
             case "ocean_island" -> r.type[i] == RegionLayout.OCEAN_ISLAND;
@@ -78,7 +100,35 @@ public final class SkySeasCommand {
             case "atoll" -> r.type[i] == RegionLayout.OCEAN_ISLAND && r.params[off + OceanShape.RING] > 0.0;
             case "seamount" -> r.type[i] == RegionLayout.SEAMOUNT;
             case "volcano" -> r.type[i] == RegionLayout.VOLCANO;
-            default -> r.type[i] == RegionLayout.SEA_SPIRE;
+            case "sea_spire" -> r.type[i] == RegionLayout.SEA_SPIRE;
+            default -> false;
+        };
+    }
+
+    /** Offset of the first rock bridge link of a continent, or -1. */
+    private static int bridge(RegionLayout r, int i) {
+        int off = r.paramOffset[i];
+        for (int l = 0; l < (int) r.params[off + ContinentShape.LINK_COUNT]; l++) {
+            int o = off + ContinentShape.LINK0 + ContinentShape.LINK_STRIDE * l;
+            if (r.params[o + ContinentShape.L_BRIDGE] > 0.0) {
+                return o;
+            }
+        }
+        return -1;
+    }
+
+    /** Where to point for a found item: the bridge, massif or spire itself, else the centre. */
+    private static double[] point(RegionLayout r, int i, String target) {
+        int off = r.paramOffset[i];
+        double[] q = r.params;
+        return switch (target) {
+            case "rock_bridge" -> {
+                int o = bridge(r, i);
+                yield new double[]{0.5 * (q[o] + q[o + 2]), 0.5 * (q[o + 1] + q[o + 3])};
+            }
+            case "massif" -> new double[]{q[off + ContinentShape.MASSIF_X], q[off + ContinentShape.MASSIF_Z]};
+            case "hanging_spire" -> new double[]{q[off + ContinentShape.SPIRE0], q[off + ContinentShape.SPIRE0 + 1]};
+            default -> new double[]{r.cx[i], r.cz[i]};
         };
     }
 
@@ -109,11 +159,12 @@ public final class SkySeasCommand {
                     RegionLayout r = layout.region(rx, rz);
                     for (int i = 0; i < r.count; i++) {
                         if (r.owns(i, size) && matches(r, i, target)) {
-                            double d = Math.hypot(r.cx[i] - pos.getX(), r.cz[i] - pos.getZ());
+                            double[] at = point(r, i, target);
+                            double d = Math.hypot(at[0] - pos.getX(), at[1] - pos.getZ());
                             if (d < best) {
                                 best = d;
-                                bx = r.cx[i];
-                                bz = r.cz[i];
+                                bx = (int) Math.round(at[0]);
+                                bz = (int) Math.round(at[1]);
                             }
                         }
                     }
@@ -163,9 +214,16 @@ public final class SkySeasCommand {
                     .append(" (").append(r.count).append(" islands)");
             if (i >= 0) {
                 String[] characters = {"lowland", "mixed", "highland", "mountainous", "caldera"};
-                String character = characters[(int) r.params[r.paramOffset[i] + ContinentShape.CHARACTER]];
-                sb.append(String.format(Locale.ROOT, "\n  island: %s continent %016x%s, centre %d,%d, edge %.0f, top %.1f, bottom %.1f",
-                        character, r.id[i], (r.flags[i] & RegionLayout.FLAG_STARTER) != 0 ? " (starter)" : "", r.cx[i], r.cz[i],
+                int off = r.paramOffset[i];
+                String character = characters[(int) r.params[off + ContinentShape.CHARACTER]];
+                String silhouette = ContinentShape.SILHOUETTE_NAMES[(int) r.params[off + ContinentShape.SILHOUETTE]];
+                sb.append(String.format(Locale.ROOT, "\n  island: %s %s%s continent %016x%s, centre %d,%d, base %.0f, tilt %.0f, "
+                                + "summit limit %.0f, %d members, %d spires\n  edge %.0f, top %.1f, bottom %.1f",
+                        character, silhouette, r.params[off + ContinentShape.ELEVATED] > 0.0 ? " elevated" : "",
+                        r.id[i], (r.flags[i] & RegionLayout.FLAG_STARTER) != 0 ? " (starter)" : "", r.cx[i], r.cz[i],
+                        r.params[off + ContinentShape.BASE_Y], r.params[off + ContinentShape.TILT],
+                        r.params[off + ContinentShape.MAX_Y], (int) r.params[off + ContinentShape.MEMBER_COUNT],
+                        (int) r.params[off + ContinentShape.SPIRE_COUNT],
                         layout.column(pos.getX(), pos.getZ(), Layout.EDGE), layout.column(pos.getX(), pos.getZ(), Layout.TOP),
                         layout.column(pos.getX(), pos.getZ(), Layout.BOTTOM)));
             } else {

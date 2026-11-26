@@ -42,18 +42,37 @@ package pl.skyseas.config;
  * @param layoutBucketSize        side of a bucket of the region's island index (blocks)
  * @param layoutCacheRegions      maximum number of cached layout regions
  * @param continentCellSize       continent grid cell (blocks); one candidate per cell
- * @param continentRadiusMin      smallest continent radius
- * @param continentRadiusMax      largest continent radius
+ * @param continentBoxGapMin      narrowest gap between the outline boxes of neighbouring continents (blocks);
+ *                                half of it stays free on each side inside a grid cell. Outlines do not fill
+ *                                their boxes, so coast-to-coast gaps come out about 170 blocks wider: 400-800
+ * @param continentBoxGapMax      widest such gap
  * @param continentOutlineNoise   outline radius varies by +/- this fraction (bays, peninsulas)
  * @param continentWarp           domain warp of the outline, fraction of the radius
- * @param continentBaseYMin       lowest flat terrain height of a continent
- * @param continentBaseYMax       highest flat terrain height of a continent
- * @param continentPeakMaxY       highest mountain peak
- * @param continentCrustMin       thinnest crust under flat terrain
+ * @param continentBaseYMin       lowest flat terrain height of a continent (tilt and members included)
+ * @param continentBaseYMax       highest flat terrain height of a continent (exceeded only when members and tilt
+ *                                together span more than the range)
+ * @param continentPeakMaxY       highest mountain peak outside massifs
+ * @param continentMassifPeakYMin lowest massif summit
+ * @param continentMassifPeakYMax highest massif summit
+ * @param continentMassifShareMin share of continents with a massif at spawn
+ * @param continentMassifShareMax share of continents with a massif at the zone plateau
+ * @param continentTiltMin        least tilt of a continent (height difference across it, blocks)
+ * @param continentTiltMax        most tilt
+ * @param continentCompositeShare share of composite continents (2-4 members joined by isthmuses or rock bridges)
+ * @param continentMemberStepMin  least height difference between joined members
+ * @param continentMemberStepMax  largest height difference between joined members
+ * @param continentElevatedShare  share of elevated continents beyond the Haven
+ * @param continentElevatedBaseYMin lowest flat terrain of an elevated continent
+ * @param continentElevatedBaseYMax highest flat terrain of an elevated continent
+ * @param starterBaseYMin         lowest flat terrain of the starter continent
+ * @param starterBaseYMax         highest flat terrain of the starter continent
+ * @param continentCrustMin       thinnest crust under flat terrain; at least the rim thickness (16), since cells
+ *                                of the interpolated density are 8 blocks tall and thinner slabs break up
  * @param continentCrustMax       thickest crust under flat terrain
- * @param continentRootsMin       fewest cone roots under a continent
- * @param continentRootsMax       most cone roots under a continent
- * @param continentRootDepthMax   longest root below the crust
+ * @param continentSpiresMin      fewest rock spires hanging under a continent
+ * @param continentSpiresMax      most hanging spires
+ * @param continentSpireLengthMin shortest hanging spire (blocks)
+ * @param continentSpireLengthMax longest hanging spire (blocks); shorter where the underside is low
  * @param continentEdgeBand       width of the band along the edge with 3D noise (overhangs, arches)
  * @param continentEdgeNoise      strength of that 3D noise (blocks)
  * @param continentMountainThreshold terrain region noise level below which the land is flat plains
@@ -139,18 +158,33 @@ public record WorldParams(
         int layoutBucketSize,
         int layoutCacheRegions,
         int continentCellSize,
-        double continentRadiusMin,
-        double continentRadiusMax,
+        double continentBoxGapMin,
+        double continentBoxGapMax,
         double continentOutlineNoise,
         double continentWarp,
         double continentBaseYMin,
         double continentBaseYMax,
         double continentPeakMaxY,
+        double continentMassifPeakYMin,
+        double continentMassifPeakYMax,
+        double continentMassifShareMin,
+        double continentMassifShareMax,
+        double continentTiltMin,
+        double continentTiltMax,
+        double continentCompositeShare,
+        double continentMemberStepMin,
+        double continentMemberStepMax,
+        double continentElevatedShare,
+        double continentElevatedBaseYMin,
+        double continentElevatedBaseYMax,
+        double starterBaseYMin,
+        double starterBaseYMax,
         double continentCrustMin,
         double continentCrustMax,
-        int continentRootsMin,
-        int continentRootsMax,
-        double continentRootDepthMax,
+        int continentSpiresMin,
+        int continentSpiresMax,
+        double continentSpireLengthMin,
+        double continentSpireLengthMax,
         double continentEdgeBand,
         double continentEdgeNoise,
         double continentMountainThreshold,
@@ -204,7 +238,7 @@ public record WorldParams(
         double seaSpireTopMax) {
 
     /** Bumped whenever a code change alters generated chunks (see CLAUDE.md). */
-    public static final int GENERATOR_VERSION = 9;
+    public static final int GENERATOR_VERSION = 10;
 
     public static final WorldParams DEFAULTS = new WorldParams(
             -64,
@@ -238,21 +272,36 @@ public record WorldParams(
             1024,
             64,
             512,
-            1800,
-            230.0,
-            690.0,
+            1700,
+            240.0,
+            600.0,
             0.12,
             0.06,
-            135.0,
-            175.0,
+            125.0,
+            185.0,
             250.0,
-            10.0,
-            25.0,
+            270.0,
+            300.0,
+            0.1,
+            0.3,
+            20.0,
+            40.0,
+            0.3,
+            20.0,
+            60.0,
+            0.15,
+            190.0,
+            220.0,
+            140.0,
+            150.0,
+            16.0,
+            28.0,
             3,
             8,
+            10.0,
             40.0,
-            24.0,
-            12.0,
+            32.0,
+            8.0,
             -0.3,
             113.0,
             350.0,
