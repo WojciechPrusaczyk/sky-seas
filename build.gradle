@@ -116,3 +116,18 @@ idea {
         downloadJavadoc = true
     }
 }
+
+// Copies the mod jar into a launcher instance for in-game tests with a real modpack.
+// Target: -PinstanceMods=<dir> or the Prism Launcher "SkySeas modpack" instance. Older skyseas jars there are removed.
+def instanceMods = providers.gradleProperty('instanceMods').getOrElse(
+        "${System.getProperty('user.home')}/.local/share/PrismLauncher/instances/SkySeas modpack/minecraft/mods")
+tasks.register('installModpack', Copy) {
+    dependsOn tasks.named('jar')
+    from tasks.named('jar')
+    into instanceMods
+    def target = file(instanceMods)
+    def prefix = "${mod_id}-"
+    doFirst {
+        target.listFiles()?.findAll { it.name.startsWith(prefix) && it.name.endsWith('.jar') }?.each { it.delete() }
+    }
+}
