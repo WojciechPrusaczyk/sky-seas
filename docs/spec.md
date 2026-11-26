@@ -123,7 +123,7 @@ Układ to deterministyczny plan wysp liczony raz na region 1024×1024 bloków, w
 
 **Poziomy (kolejność = priorytet)**
 
-1. **Kontynenty.** Siatka z jitterem (komórka 3000–4000 bloków, jeden kandydat na komórkę), promień 400–1000. Odstęp komórek wyklucza kolizje. Kontynent startowy na 0,0.
+1. **Kontynenty.** Siatka z jitterem (komórka 3000 bloków, jeden kandydat na komórkę), promień 200–600 (średnica 400–1200). Odstęp komórek wyklucza kolizje. Kontynent startowy na 0,0.
 2. **Wyspy oceaniczne.** Gęstsza siatka z jitterem, klasa wielkości losowana 70/25/5 (skałki, średnie, duże). Odrzucane, gdy leżą pod rzutem kontynentu z marginesem 16 bloków.
 3. **Klastry: archipelagi i góry Alleluja.** Środek klastra z siatki, wyspy wewnątrz klastra. Wyspa jest odrzucana, gdy jej rzut z marginesem 16 nachodzi na wyspę oceaniczną lub kontynent, gdy przekracza budżet zacienienia regionu (30% powierzchni morza) albo gdy wisi nad inną wyspą klastra.
 4. **Łańcuchy powrotne.** Z wybranych punktów krawędzi kontynentu ścieżka w dół do ok. Y 70: 5–15 wysp, krok pionowy do 12 bloków, przerwa pozioma do 6, promień wyspy co najmniej 4 (zapas ziemi). Omija wyspy oceaniczne.
@@ -146,7 +146,7 @@ W obrębie poziomu każda komórka siatki ma najwyżej jednego kandydata, więc 
 
 **Seed bez mixinów.** `LayoutRootFunction` zawiera `NoiseHolder` z własnymi parametrami szumu `skyseas:layout_seed`. Gdy `RandomState` podpina szumy (`mapAll` z wizytorem), funkcja wylicza 64-bitowe ziarno z hasha próbek podpiętego szumu w stałych punktach. Każdy `RandomState` ma własny obiekt `Layout`; nie ma globalnego statycznego seeda.
 
-**Gwarancje startowe (`StarterLayout`).** Kontynent 1000–1500 bloków na 0,0 z płaskowyżem pod spawn; w promieniu 1000 bloków: archipelag, niski klaster gór Alleluja, duża wyspa oceaniczna z cenotą, ciepła rafa i łańcuch powrotny. Rafa trafia w najcieplejszy punkt w promieniu; jeśli żaden nie jest ciepły, układ dodaje lokalny bias temperatury. Przy pierwszym uruchomieniu świata spawn jest ustawiany na środek płaskowyżu.
+**Gwarancje startowe (`StarterLayout`).** Kontynent ok. 700 bloków na 0,0 z płaskowyżem pod spawn; w promieniu 1000 bloków: archipelag, niski klaster gór Alleluja, duża wyspa oceaniczna z cenotą, ciepła rafa i łańcuch powrotny. Rafa trafia w najcieplejszy punkt w promieniu; jeśli żaden nie jest ciepły, układ dodaje lokalny bias temperatury. Przy pierwszym uruchomieniu świata spawn jest ustawiany na środek płaskowyżu.
 
 **Strefy (`ZoneField`).** `f(x,z) = clamp(smoothstep(0, Rmax, d + A·noise(x,z)), 0, 1)`, gdzie `d` to odległość od 0,0, `Rmax` = 8000, a szum o amplitudzie `A` poszarpuje granice. Progi stref: 1500 / 4000 / 8000. Wartość ciągła skaluje parametry, indeks strefy służy tylko do reguł typu „brak gniazd w Przystani”.
 
@@ -203,7 +203,7 @@ Każdy typ: `MapCodec` zarejestrowany w `Registries.DENSITY_FUNCTION_TYPE` przez
 
 **Kształty (pakiet `shape`)**
 
-- **Kontynent.** Obrys z maski z zawirowaną domeną (domain warp) i szumem: zatoki i półwyspy. Wierzch: baza Y 135–175, tarasy i pole gór (szum grzbietowy × maska gór; maska jest niska na co najmniej 35% powierzchni, co daje płaskie tereny). Pod płaskim terenem 10–25 bloków skorupy, góry pełne do skorupy. Spód: skorupa + 3–8 stożkowych korzeni ze slotami na gniazda diamentów. Nawisy i łuki: szum 3D tylko w paśmie 24 bloków od brzegu i na stokach. Spód nigdy poniżej Y 113.
+- **Kontynent.** Sylwetka to suma 3–6 nachodzących na siebie elips (rdzeń i satelity o różnej wielkości, proporcjach i kierunku, każda z zaszumionym obrysem), lekko zawirowana domena i fraktalny detal wybrzeża w kilku skalach (zatoczki, cyple); pole krawędzi ma spadek ok. 1 na blok, więc detal nie odrywa okruchów (test: brak fragmentów < 32×32, odłączone < 3%). Wierzch: baza Y 135–175 i regiony terenu: równiny (co najmniej 35%, obecnie ok. 49% powierzchni), pagórki, wyżyny z uskokami, mesy o pionowych ścianach, skalne iglice i tarasowe pasma górskie; przy części wybrzeża teren opada stokiem zamiast urywać się klifem; płaskowyż pod spawn na kontynencie startowym. Pod płaskim terenem 10–25 bloków skorupy, góry pełne do skorupy. Spód: skorupa + 3–8 stożkowych korzeni ze slotami na gniazda diamentów. Nawisy i łuki: szum 3D tylko w paśmie 24 bloków od brzegu i na stokach. Spód nigdy poniżej Y 113.
 - **Archipelag.** Superelipsoidy z zaszumionym promieniem, płaski wierzch, stożkowy spód; rzadkie łuki i mosty jako kapsuły między parą wysp.
 - **Góry Alleluja.** Pionowe kapsuły 40–120 bloków, promień zwężający się ku dołowi + szum, lekkie pochylenie, płaski wierzch pod trawę.
 - **Łańcuchy.** Spłaszczone elipsoidy o promieniu 4–10 w `sky_details`, z gwarantowaną warstwą ziemi na wierzchu.
@@ -334,10 +334,10 @@ Wszystkie liczby z dokumentu designowego są parametrami w configu COMMON (`conf
 | `seabed.duneAmplitude` | 2 | Wydmy (±) |
 | `seabed.canyonDepth` | 8 … 14 | Głębokość kanionów (oceany umiarkowane) od spawnu do Krańca |
 | `seabed.trenchMinY` | −40 | Najgłębsze rowy (pod ciśnienie w Create Deep Seas) |
-| `continents.cellSize` | 3500 | Rozstaw kontynentów |
-| `continents.radius` | 400 … 1000 | Promień kontynentów |
+| `continents.cellSize` | 3000 | Rozstaw kontynentów |
+| `continents.radius` | 200 … 600 | Promień kontynentów |
 | `continents.minBottomY` | 113 | Bufor 50 bloków nad wodą |
-| `starter.continentRadius` | 600 | Kontynent startowy |
+| `starter.continentRadius` | 350 | Kontynent startowy (płaskowyż pod spawn: promień 150) |
 | `starter.guaranteeRadius` | 1000 | Promień gwarancji startowych |
 | `shading.maxFraction` | 0,30 | Limit zacienienia morza w regionie |
 | `clearSky.margin` | 16 | Margines czystego nieba nad lądem w oceanie |
@@ -385,7 +385,7 @@ Wdrożenie idzie w dziesięciu etapach; każdy kończy się działającym świat
    - Zrealizowane dodatkowo: `skyseas:depth` (parametr biomu `depth` z E4: 0 w wodzie), dolna granica floodedness aquiferów przy dnie (bez suchych kieszeni nad dnem), `continents` stałe (głęboki ocean) do E4.
 3. **E2 — Układ i kontynenty.** `Layout`, cache, seed z szumu, poziom kontynentów, kształt kontynentu, `/skyseas map`.
    - Akceptacja: testy JUnit determinizmu; kontynent startowy na 0,0; spód ≥ 113; mapa PNG czytelna.
-   - Zrealizowane: `continents` = 0,5 w zasięgu wyspy (obrys + 16) od spodu wyspy do sufitu świata, poza nim −0,6 (pełny klimat w E4); noodle tylko poniżej Y 63 (nie przewierca wysp); obrys kontynentu gwiaździsty (szum próbkowany na okręgu w kierunku punktu, potem lekki warp), więc bez oderwanych kawałków (test JUnit: < 1% powierzchni odłączonej); `/skyseas info cache`; `/skyseas bench <n> here [vanilla]` mierzy obszar wokół pozycji (np. nad kontynentem).
+   - Zrealizowane: `continents` = 0,5 w zasięgu wyspy (obrys + 16) od spodu wyspy do sufitu świata, poza nim −0,6 (pełny klimat w E4); noodle tylko poniżej Y 63 (nie przewierca wysp); regiony terenu i sylwetka z elips (decyzja z przeglądu E2, opis w sekcji Kształty); `/skyseas info cache`; `/skyseas bench <n> here [vanilla]` mierzy obszar wokół pozycji (np. nad kontynentem).
    - Odstępstwa: szum kształtów to klasyczny simplex 2D/3D z gradientami z tablic indeksowanymi hashem pozycyjnym zamiast OpenSimplex2S; parametry wysp jako `double[]` (precyzja współrzędnych > 2^24); router liczy `max(interpolated(sky), interpolated(oceanic))` zamiast `interpolated(max(...))`, co zostawia ocean bit w bit jak w E1.1; skale szumów kształtu kontynentu są nazwanymi stałymi w `ContinentShape`, liczby z designu w `WorldParams`.
 4. **E3 — Pozostałe formy i reguły.** Wyspy oceaniczne, archipelagi, góry Alleluja, łańcuchy, szyby, strefy, gwarancje startowe; podwodne góry, wulkany (kształt), podwodne łuki i skalne iglice.
    - Akceptacja: audyt pokazuje 0 wysp nad lądem w oceanie, zacienienie ≤ 30%, łańcuchy w limitach kroku; szyby kończą się w komorach.

@@ -24,7 +24,8 @@ public final class SkyColumn {
             double slope = 0.6 * ShapeMath.smoothstep(4.0, 24.0, mountain);
             double w = Math.max(band, slope);
             if (w > 0.0) {
-                double n = SimplexNoise.noise3(noiseSeed, x / 40.0, y / 24.0, z / 40.0);
+                double n = 0.7 * SimplexNoise.noise3(noiseSeed, x / 40.0, y / 24.0, z / 40.0)
+                        + 0.3 * SimplexNoise.noise3(noiseSeed + 1, x / 13.0, y / 9.0, z / 13.0);
                 // Adding less than carving keeps loose debris off the edges.
                 d += a * w * (n > 0.0 ? 0.5 * n : n);
             }

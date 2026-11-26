@@ -22,7 +22,7 @@ public final class LayoutGenerator {
 
     /** Largest outline extent of any continent: also bounds the cell jitter, so continents never collide. */
     static double maxContinentExtent(WorldParams p) {
-        return p.continentRadiusMax() * (1.0 + p.continentOutlineNoise() + p.continentWarp());
+        return ContinentShape.maxExtent(p, p.continentRadiusMax());
     }
 
     public static RegionLayout generate(long seed, WorldParams p, int rx, int rz) {

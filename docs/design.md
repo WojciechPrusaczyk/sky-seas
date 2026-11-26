@@ -55,7 +55,7 @@ Niebo tworzą cztery formy: kontynenty jako baza, archipelagi i góry Alleluja d
 
 | Forma | Skala | Wysokość Y | Rola w grze | Charakter |
 | --- | --- | --- | --- | --- |
-| Kontynent | 800–2000 bloków | teren 135–175, góry do 250, spód od 113 | Start, baza, wioski | Cienka skorupa (10–25 bloków kamienia pod płaskim terenem); kamień w górach, iglicach, łukach, mesach, urwiskach i nawisach; spore płaskie połacie pod budowę; rzeki i jeziora kończące się wodospadami; płytki spód z kilkoma skalnymi korzeniami |
+| Kontynent | 400–1200 bloków | teren 135–175, góry do 250, spód od 113 | Start, baza, wioski | Cienka skorupa (10–25 bloków kamienia pod płaskim terenem); kamień w górach, iglicach, łukach, mesach, urwiskach i nawisach; spore płaskie połacie pod budowę; rzeki i jeziora kończące się wodospadami; płytki spód z kilkoma skalnymi korzeniami |
 | Archipelag | wyspy 15–150 bloków, klastry po 10–40 | 120–240 | Eksploracja, nawigacja, trasy dla pilotów | Jeden dominujący biom na klaster, różne wysokości, łuki skalne, naturalne mosty, zwisające pnącza |
 | Góry Alleluja | bryły 20–50 szerokości i 40–120 wysokości, klastry po 15–40 | 110–305 | Slalom dla pilotów, dużo kamienia przy małym cieniu | Wysokie, wąskie bryły z zielonymi wierzchołkami, pnącza na dziesiątki bloków, wodospady spadające z bryły na bryłę |
 | Łańcuchy powrotne | wyspy 10–40 bloków, po kilka do kilkunastu w łańcuchu | od kilku bloków nad wodą do krawędzi kontynentu | Droga powrotna, zanim gracze mają statek | Normalne małe wyspy z trawą i drzewami, wyglądające jak część archipelagu, a nie rumowisko; rozstawione nieregularnie, na różnych wysokościach. Na każdej jest dość ziemi, żeby dosypać słup albo most do następnej. Najniższa wisi kilka bloków nad wodą |
@@ -193,7 +193,7 @@ Jeden współczynnik rośnie płynnie od spawnu do ok. 8000 bloków i tam się z
 
 Serwer ma zwykle 4 graczy, w szczycie do 10; wszyscy startują razem na jednym kontynencie, a spawn powstaje ręcznie po wygenerowaniu świata.
 
-- **Kontynent startowy** na 0,0, ok. 1000–1500 bloków, ze sporym płaskim terenem pod spawn.
+- **Kontynent startowy** na 0,0, ok. 700 bloków, ze sporym płaskim terenem pod spawn.
 - **Gwarancje do ok. 1000 bloków od spawnu:** archipelag, klaster gór Alleluja, ciepła rafa na pierwsze nurkowania, wyspa oceaniczna z zejściem do deepslate oraz jedna duża wyspa z cenotą.
 - **Świat nieskończony**, z losowym przeplotem regionów dalej od spawnu.
 - **Skala w czasie lotu, nie w blokach.** Na przykład skok między wyspami archipelagu to 1–2 minuty, a lot z kontynentu na kontynent 10–15 minut. Odległości ustalimy po locie testowym.

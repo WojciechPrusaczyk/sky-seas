@@ -56,7 +56,7 @@ package pl.skyseas.config;
  * @param continentRootDepthMax   longest root below the crust
  * @param continentEdgeBand       width of the band along the edge with 3D noise (overhangs, arches)
  * @param continentEdgeNoise      strength of that 3D noise (blocks)
- * @param continentMountainThreshold mountain mask noise level below which terrain is flat
+ * @param continentMountainThreshold terrain region noise level below which the land is flat plains
  * @param continentMinBottomY     nothing of a sky island below this Y (50 blocks over the sea)
  * @param starterContinentRadius  radius of the starter continent at 0,0
  * @param starterPlateauRadius    radius of the flat spawn plateau on the starter continent
@@ -118,7 +118,7 @@ public record WorldParams(
         double skyDensityScale) {
 
     /** Bumped whenever a code change alters generated chunks (see CLAUDE.md). */
-    public static final int GENERATOR_VERSION = 4;
+    public static final int GENERATOR_VERSION = 5;
 
     public static final WorldParams DEFAULTS = new WorldParams(
             -64,
@@ -152,11 +152,11 @@ public record WorldParams(
             1024,
             64,
             512,
-            3500,
-            400.0,
-            1000.0,
-            0.25,
+            3000,
+            200.0,
+            600.0,
             0.12,
+            0.06,
             135.0,
             175.0,
             250.0,
@@ -167,10 +167,10 @@ public record WorldParams(
             40.0,
             24.0,
             12.0,
-            0.05,
+            -0.3,
             113.0,
-            600.0,
-            250.0,
+            350.0,
+            150.0,
             16.0,
             8.0);
 

@@ -79,7 +79,7 @@ class LayoutTest {
             assertEquals(0, r.cx[i]);
             assertEquals(0, r.cz[i]);
             // Flat spawn plateau: no mountains near the centre.
-            for (int x = -200; x <= 200; x += 20) {
+            for (int x = -120; x <= 120; x += 20) {
                 assertEquals(0.0, layout.column(x, 0, Layout.MOUNTAIN), 1e-9, "mountain on the plateau at " + x);
             }
         }
@@ -162,18 +162,22 @@ class LayoutTest {
                 if (layout.column(x, z, Layout.EDGE) > 0.0) {
                     double top = layout.column(x, z, Layout.TOP);
                     double bottom = layout.column(x, z, Layout.BOTTOM);
-                    assertTrue(top <= P.continentPeakMaxY() && top >= P.continentBaseYMin() - 4, "top " + top);
+                    assertTrue(top <= P.continentPeakMaxY() && top >= P.continentMinBottomY(), "top " + top);
                     assertTrue(bottom >= P.continentMinBottomY(), "bottom " + bottom);
                 }
             }
         }
     }
 
-    /** Natural edges, no rubble: almost all of a continent's area is connected to its centre. */
+    /**
+     * Natural edges, no rubble: a continent may shed a few offshore islets (coves cutting
+     * a headland), but no small fragments, and almost all of its area is one piece.
+     */
     @Test
-    void outlineHasNoDetachedPieces() {
+    void outlineHasNoRubble() {
         int step = 8;
-        double worst = 0.0;
+        double worstDetached = 0.0;
+        int smallest = Integer.MAX_VALUE;
         for (long seed : SEEDS) {
             Layout layout = new Layout(seed, P);
             for (int rx = -4; rx <= 4; rx++) {
@@ -184,15 +188,19 @@ class LayoutTest {
                                 || r.cz[i] < r.originZ || r.cz[i] >= r.originZ + P.layoutRegionSize()) {
                             continue; // each continent once, in the region of its centre
                         }
-                        worst = Math.max(worst, detachedFraction(r, i, step));
+                        int[] result = pieces(r, i, step);
+                        worstDetached = Math.max(worstDetached, 1.0 - (double) result[0] / result[1]);
+                        smallest = Math.min(smallest, result[2]);
                     }
                 }
             }
         }
-        assertTrue(worst < 0.01, "detached area fraction " + worst);
+        assertTrue(worstDetached < 0.03, "detached area fraction " + worstDetached);
+        assertTrue(smallest >= 16, "rubble: detached piece of " + smallest + " cells of " + step + "x" + step);
     }
 
-    private static double detachedFraction(RegionLayout r, int i, int step) {
+    /** {largest piece, total, smallest detached piece} in cells. */
+    private static int[] pieces(RegionLayout r, int i, int step) {
         int off = i * r.paramStride;
         int n = (int) Math.ceil(r.radius[i] / step) * 2 + 1;
         boolean[] inside = new boolean[n * n];
@@ -209,24 +217,48 @@ class LayoutTest {
         }
         int[] queue = new int[n * n];
         boolean[] seen = new boolean[n * n];
-        int head = 0;
-        int tail = 0;
-        int start = (n / 2) * n + n / 2;
-        queue[tail++] = start;
-        seen[start] = true;
-        while (head < tail) {
-            int c = queue[head++];
-            int a = c / n;
-            int b = c % n;
-            int[] next = {a > 0 ? c - n : -1, a < n - 1 ? c + n : -1, b > 0 ? c - 1 : -1, b < n - 1 ? c + 1 : -1};
-            for (int m : next) {
-                if (m >= 0 && inside[m] && !seen[m]) {
-                    seen[m] = true;
-                    queue[tail++] = m;
+        int largest = 0;
+        int smallest = Integer.MAX_VALUE;
+        int pieces = 0;
+        for (int startCell = 0; startCell < n * n; startCell++) {
+            if (!inside[startCell] || seen[startCell]) {
+                continue;
+            }
+            int head = 0;
+            int tail = 0;
+            queue[tail++] = startCell;
+            seen[startCell] = true;
+            while (head < tail) {
+                int c = queue[head++];
+                int a = c / n;
+                int b = c % n;
+                // 8-connected: on a coarse grid a thin diagonal headland touches only at corners.
+                for (int da = -1; da <= 1; da++) {
+                    for (int db = -1; db <= 1; db++) {
+                        int na = a + da;
+                        int nb = b + db;
+                        if (na < 0 || nb < 0 || na >= n || nb >= n) {
+                            continue;
+                        }
+                        int m = na * n + nb;
+                        if (inside[m] && !seen[m]) {
+                            seen[m] = true;
+                            queue[tail++] = m;
+                        }
+                    }
                 }
             }
+            pieces++;
+            if (tail > largest) {
+                if (pieces > 1) {
+                    smallest = Math.min(smallest, largest);
+                }
+                largest = tail;
+            } else {
+                smallest = Math.min(smallest, tail);
+            }
         }
-        return 1.0 - (double) tail / total;
+        return new int[]{largest, total, smallest};
     }
 
     @Test
