@@ -20,8 +20,8 @@ public final class SkyColumn {
 
     public static double density(WorldParams p, long noiseSeed, double x, double y, double z,
                                  double edge, double top, double bottom, double detail) {
-        // Inside the outline at least 1: cell corners grazing the coast would interpolate to loose slivers.
-        double d = Math.min(Math.min(top - y, y - bottom), edge > 0.0 ? Math.max(edge, 1.0) : edge);
+        // Inside the outline at least 2: cell corners grazing the coast would interpolate to loose slivers.
+        double d = Math.min(Math.min(top - y, y - bottom), edge > 0.0 ? Math.max(edge, 2.0) : edge);
         if (d > 0.0 && detail > 0.0) {
             // Carving must change slower than the distance to the surface (gradient below 1),
             // otherwise it cuts loose pieces off thin rims; amplitude and scales keep it there.

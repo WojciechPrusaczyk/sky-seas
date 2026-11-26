@@ -21,7 +21,7 @@ public final class Layout {
     public static final double NO_BOTTOM = 1000.0;
     /** Detail floor where no spire or rock bridge reaches the column. */
     public static final double NO_SPIRE = 1000.0;
-    /** Tallest per-block detail above the floor {@link #detailFloor} reports (small islands with spires). */
+    /** Tallest continent rock bridge above the floor {@link #detailFloor} reports. */
     public static final double DETAIL_SPAN = 96.0;
 
     private final long seed;
@@ -168,6 +168,45 @@ public final class Layout {
             }
         }
         return floor;
+    }
+
+    /**
+     * Highest block of a per-block detail that may reach the 4x4 column cell starting at
+     * x, z, or {@link #NO_TOP}. Islands built per block may overlap at any heights, so the
+     * floor alone does not bound them.
+     */
+    public double detailCeiling(int x, int z) {
+        RegionLayout r = regionAt(x, z);
+        int b = r.bucket(x, z);
+        double ceiling = NO_TOP;
+        double reach = ContinentShape.SPIRE_REACH + 6.0;
+        for (int k = r.skyStart(b), end = r.skyEnd(b); k < end; k++) {
+            int i = r.skyItem(k);
+            int off = r.paramOffset[i];
+            int o0 = spire0(r, i);
+            for (int s = 0, n = spireCount(r, i); s < n; s++) {
+                int o = o0 + ContinentShape.SPIRE_STRIDE * s;
+                double dx = x - r.params[o];
+                double dz = z - r.params[o + 1];
+                if (dx * dx + dz * dz < reach * reach) {
+                    ceiling = Math.max(ceiling, r.params[o + 2] + 2.0);
+                }
+            }
+            byte t = r.type[i];
+            if (t == RegionLayout.CONTINENT) {
+                double floor = ContinentShape.bridgeFloor(params, r.params, off, r.shapeSeed[i], x, z, NO_SPIRE);
+                if (floor < NO_SPIRE) {
+                    ceiling = Math.max(ceiling, floor + DETAIL_SPAN);
+                }
+            } else if (t == RegionLayout.SKY_BRIDGE) {
+                if (SkyFormShape.bridgeNear(r.params, off, x + 2.0, z + 2.0, 6.0)) {
+                    ceiling = Math.max(ceiling, r.maxY[i]);
+                }
+            } else if ((r.flags[i] & RegionLayout.FLAG_DETAIL) != 0 && near(r, i, x + 2.0, z + 2.0, 6.0)) {
+                ceiling = Math.max(ceiling, r.maxY[i]);
+            }
+        }
+        return ceiling;
     }
 
     /** True if the column is within the item's reach radius plus a margin. */

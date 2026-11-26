@@ -62,8 +62,9 @@ public final class SeabedTests {
                         for (int z = 0; z < 16; z++) {
                             int bx = pos.getBlockX(x);
                             int bz = pos.getBlockZ(z);
-                            int top = seabedTop(p, chunk, bx, bz);
-                            String error = checkColumn(p, chunk, bx, bz, top, isOceanForm(layout, bx, bz));
+                            boolean oceanForm = isOceanForm(layout, bx, bz);
+                            int top = seabedTop(p, chunk, bx, bz, oceanForm ? layout.oceanHeight(bx, bz, SeabedShape.maxHeight(p)) : p.worldMinY());
+                            String error = checkColumn(p, chunk, bx, bz, top, oceanForm);
                             if (error != null) {
                                 helper.fail("seed " + seed + ": " + error);
                                 return;
@@ -177,9 +178,14 @@ public final class SeabedTests {
         return layout.oceanAt(layout.regionAt(x, z), x, z, OceanShape.NONE) >= 0;
     }
 
-    /** Y of the highest seabed or ocean-form block under the sky islands (skips air, water and vanilla icebergs). */
-    private static int seabedTop(WorldParams p, ProtoChunk chunk, int x, int z) {
-        BlockPos.MutableBlockPos pos = new BlockPos.MutableBlockPos(x, (int) p.continentMinBottomY() - 1, z);
+    /**
+     * Y of the highest seabed or ocean-form block under the sky forms (skips air, water and
+     * vanilla icebergs), scanning down from just above the ocean form's surface (on the highest seabed base) or from
+     * under continentMinBottomY, below every sky form.
+     */
+    private static int seabedTop(WorldParams p, ProtoChunk chunk, int x, int z, double oceanForm) {
+        int start = Math.max((int) p.continentMinBottomY() - 1, (int) Math.ceil(oceanForm) + 2);
+        BlockPos.MutableBlockPos pos = new BlockPos.MutableBlockPos(x, start, z);
         while (pos.getY() >= SEA_LEVEL && (chunk.getBlockState(pos).isAir() || isOceanColumn(chunk.getBlockState(pos)))) {
             pos.move(0, -1, 0);
         }
@@ -204,13 +210,6 @@ public final class SeabedTests {
             if (state.isAir() || !state.getFluidState().isEmpty()) {
                 return "hole in roof at " + x + "," + y + "," + z + " (seabed top " + top + "): " + state
                         + "\n" + describeColumn(chunk, x, z, top);
-            }
-        }
-        // Sky islands start at continentMinBottomY: the 50 blocks over the sea stay open.
-        for (int y = Math.max(SEA_LEVEL, top + 1); y < p.continentMinBottomY(); y++) {
-            BlockState state = chunk.getBlockState(pos.setY(y));
-            if (!state.isAir() && !isOceanColumn(state)) {
-                return "unexpected block above sea level at " + x + "," + y + "," + z;
             }
         }
         return null;

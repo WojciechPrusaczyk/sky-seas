@@ -17,6 +17,7 @@ import pl.skyseas.config.WorldParams;
 import pl.skyseas.density.LayoutAccess;
 import pl.skyseas.layout.Layout;
 import pl.skyseas.layout.RegionLayout;
+import pl.skyseas.shape.SkyFormShape;
 import pl.skyseas.shape.ContinentShape;
 
 /**
@@ -161,27 +162,30 @@ public final class ContinentTests {
         helper.succeed();
     }
 
-    /** One window per new sky form kind (round 2 of E3) near spawn, for each seed. */
+    /** One window per sky form kind within two regions of spawn, for each seed. */
     @GameTest(template = "empty", timeoutTicks = 4800)
     public static void noLooseSkyFormBlocks(GameTestHelper helper) {
-        String[] kinds = {"tower", "medium island", "small island", "archipelago", "hallelujah", "sky bridge"};
+        String[] kinds = {"tower", "medium island", "small island", "archipelago", "hallelujah", "sky bridge", "sunk island"};
         int windows = 0;
         corridorAir = 0;
         for (long seed : SEEDS) {
             StagedChunkGen gen = StagedChunkGen.create(helper.getLevel(), StagedChunkGen.SKY_SEAS, seed);
             Layout layout = LayoutAccess.get(gen.randomState());
             boolean[] found = new boolean[kinds.length];
-            for (int rx = -1; rx <= 1; rx++) {
-                for (int rz = -1; rz <= 1; rz++) {
+            for (int rx = -2; rx <= 2; rx++) {
+                for (int rz = -2; rz <= 2; rz++) {
                     RegionLayout r = layout.region(rx, rz);
                     for (int i = 0; i < r.count; i++) {
                         if (!r.owns(i, layout.params().layoutRegionSize())) {
                             continue;
                         }
-                        boolean detail = (r.flags[i] & RegionLayout.FLAG_DETAIL) != 0;
-                        int k = switch (r.type[i]) {
+                        WorldParams.SkyForms f = layout.params().skyForms();
+                        int off = r.paramOffset[i];
+                        boolean sunk = r.type[i] == RegionLayout.SKY_ISLAND && r.params[off + SkyFormShape.TOP] <= f.sunkTopMax();
+                        boolean small = r.type[i] == RegionLayout.SKY_ISLAND && r.params[off + SkyFormShape.RADIUS] < f.smallIslandRadiusMax();
+                        int k = sunk ? 6 : switch (r.type[i]) {
                             case RegionLayout.TOWER -> 0;
-                            case RegionLayout.SKY_ISLAND -> detail ? 2 : 1;
+                            case RegionLayout.SKY_ISLAND -> small ? 2 : 1;
                             case RegionLayout.ARCHIPELAGO -> 3;
                             case RegionLayout.HALLELUJAH -> 4;
                             case RegionLayout.SKY_BRIDGE -> 5;
@@ -211,17 +215,20 @@ public final class ContinentTests {
     }
 
     /**
-     * Generates the chunks around x, z and fails on any solid piece above the sea that
+     * Generates the chunks around x, z and fails on any solid piece of sky form that
      * neither reaches the window border nor holds the centre column of a sky form (small
-     * forms fit inside a window whole).
+     * forms fit inside a window whole). The window starts just under continentMinBottomY,
+     * so pieces reaching its floor are seabed or ocean forms.
      */
     private static int check(GameTestHelper helper, StagedChunkGen gen, long seed, String what, int x, int z) {
         int c0x = (x >> 4) - WINDOW_CHUNKS;
         int c0z = (z >> 4) - WINDOW_CHUNKS;
         int n = 16 * (2 * WINDOW_CHUNKS + 1);
-        int y0 = 100;
+        int y0 = (int) LayoutAccess.get(gen.randomState()).params().continentMinBottomY() - 1;
         int ny = 320 - y0;
         boolean[] solid = new boolean[n * n * ny];
+        // Pieces of ice and snow alone are vanilla icebergs (SurfaceSystem.frozenOceanExtension), not sky forms.
+        boolean[] ice = new boolean[n * n * ny];
         for (int cx = 0; cx <= 2 * WINDOW_CHUNKS; cx++) {
             for (int cz = 0; cz <= 2 * WINDOW_CHUNKS; cz++) {
                 ProtoChunk chunk = gen.generate(new ChunkPos(c0x + cx, c0z + cz), null);
@@ -230,7 +237,10 @@ public final class ContinentTests {
                     for (int b = 0; b < 16; b++) {
                         for (int y = y0; y < 320; y++) {
                             BlockState state = chunk.getBlockState(pos.set(chunk.getPos().getBlockX(a), y, chunk.getPos().getBlockZ(b)));
-                            solid[((16 * cx + a) * n + 16 * cz + b) * ny + y - y0] = !state.isAir() && state.getFluidState().isEmpty();
+                            int v = ((16 * cx + a) * n + 16 * cz + b) * ny + y - y0;
+                            solid[v] = !state.isAir() && state.getFluidState().isEmpty();
+                            ice[v] = state.is(Blocks.PACKED_ICE) || state.is(Blocks.SNOW_BLOCK) || state.is(Blocks.BLUE_ICE)
+                                    || state.is(Blocks.ICE) || state.is(Blocks.SNOW);
                         }
                     }
                 }
@@ -275,12 +285,14 @@ public final class ContinentTests {
             queue[tail++] = start;
             seen[start] = true;
             boolean border = false;
+            boolean iceberg = true;
             while (head < tail) {
                 int v = queue[head++];
                 int y = v % ny;
                 int a = v / ny / n;
                 int b = v / ny % n;
-                border |= a == 0 || b == 0 || a == n - 1 || b == n - 1 || anchor[a * n + b];
+                iceberg &= ice[v];
+                border |= a == 0 || b == 0 || a == n - 1 || b == n - 1 || anchor[a * n + b] || y == 0;
                 int[] next = {a > 0 ? v - n * ny : -1, a < n - 1 ? v + n * ny : -1, b > 0 ? v - ny : -1,
                         b < n - 1 ? v + ny : -1, y > 0 ? v - 1 : -1, y < ny - 1 ? v + 1 : -1};
                 for (int m : next) {
@@ -290,12 +302,13 @@ public final class ContinentTests {
                     }
                 }
             }
-            if (!border) {
+            if (!border && !iceberg) {
                 int y = start % ny + y0;
                 int bx = 16 * c0x + start / ny / n;
                 int bz = 16 * c0z + start / ny % n;
                 helper.fail("seed " + seed + " " + what + " window at " + x + "," + z + ": loose piece of " + tail
-                        + " blocks at " + bx + "," + y + "," + bz);
+                        + " blocks at " + bx + "," + y + "," + bz + " (" + gen.generate(new ChunkPos(bx >> 4, bz >> 4), null)
+                        .getBlockState(new BlockPos(bx, y, bz)).getBlock().getName().getString() + ")");
             }
         }
         return 1;

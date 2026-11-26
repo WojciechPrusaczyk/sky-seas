@@ -8,7 +8,7 @@ import pl.skyseas.layout.Layout;
 /**
  * 2D column values of the nearest sky island, one registered type per {@link Kind}:
  * {@code skyseas:sky_edge}, {@code sky_top}, {@code sky_bottom}, {@code sky_detail} (weight of the
- * 3D detail noise) and {@code sky_spire_floor} (lowest per-block detail near the column: spire tips, rock bridges).
+ * 3D detail noise) and {@code sky_spire_floor} (lowest per-block detail near the column: spire tips, rock bridges) and {@code sky_detail_ceiling} (highest).
  * Wrap in flat_cache. The {@code root} argument is {@code skyseas:layout/root}.
  */
 public record SkyColumnFunction(Kind kind, DensityFunction root, Layout layout) implements DensityFunction {
@@ -18,7 +18,8 @@ public record SkyColumnFunction(Kind kind, DensityFunction root, Layout layout) 
         TOP("sky_top", Layout.TOP, Layout.NO_TOP, 320.0),
         BOTTOM("sky_bottom", Layout.BOTTOM, 0.0, Layout.NO_BOTTOM),
         DETAIL("sky_detail", Layout.DETAIL, 0.0, 1.0),
-        SPIRE_FLOOR("sky_spire_floor", -1, -64.0, Layout.NO_SPIRE);
+        SPIRE_FLOOR("sky_spire_floor", -1, -64.0, Layout.NO_SPIRE),
+        DETAIL_CEILING("sky_detail_ceiling", -2, Layout.NO_TOP, 400.0);
 
         public final String id;
         final int column;
@@ -51,10 +52,14 @@ public record SkyColumnFunction(Kind kind, DensityFunction root, Layout layout) 
                 case TOP -> Layout.NO_TOP;
                 case DETAIL -> 0.0;
                 case SPIRE_FLOOR -> Layout.NO_SPIRE;
+                case DETAIL_CEILING -> Layout.NO_TOP;
             };
         }
         if (kind == Kind.SPIRE_FLOOR) {
             return layout.detailFloor(ctx.blockX(), ctx.blockZ());
+        }
+        if (kind == Kind.DETAIL_CEILING) {
+            return layout.detailCeiling(ctx.blockX(), ctx.blockZ());
         }
         return layout.column(ctx.blockX(), ctx.blockZ(), kind.column);
     }

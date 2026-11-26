@@ -64,6 +64,9 @@ package pl.skyseas.config;
  * @param continentElevatedShare  share of elevated continents beyond the Haven
  * @param continentElevatedBaseYMin lowest flat terrain of an elevated continent
  * @param continentElevatedBaseYMax highest flat terrain of an elevated continent
+ * @param continentLowShare       share of continents (not the starter) lying low, their coasts and undersides in the sea
+ * @param continentLowBaseYMin    lowest flat terrain of a low continent
+ * @param continentLowBaseYMax    highest flat terrain of a low continent
  * @param starterBaseYMin         lowest flat terrain of the starter continent
  * @param starterBaseYMax         highest flat terrain of the starter continent
  * @param continentCrustMin       thinnest crust under flat terrain; at least the rim thickness (16), since cells
@@ -76,7 +79,7 @@ package pl.skyseas.config;
  * @param continentEdgeBand       width of the band along the edge with 3D noise (overhangs, arches)
  * @param continentEdgeNoise      strength of that 3D noise (blocks)
  * @param continentMountainThreshold terrain region noise level below which the land is flat plains
- * @param continentMinBottomY     nothing of a sky island below this Y (50 blocks over the sea)
+ * @param continentMinBottomY     nothing of a sky form below this Y (low continents and islands sink into the sea, never to the seabed)
  * @param starterContinentRadius  radius of the starter continent at 0,0
  * @param starterPlateauRadius    radius of the flat spawn plateau on the starter continent
  * @param islandReachMargin       island reach = outline + this margin (land climate above it)
@@ -178,6 +181,9 @@ public record WorldParams(
         double continentElevatedShare,
         double continentElevatedBaseYMin,
         double continentElevatedBaseYMax,
+        double continentLowShare,
+        double continentLowBaseYMin,
+        double continentLowBaseYMax,
         double starterBaseYMin,
         double starterBaseYMax,
         double continentCrustMin,
@@ -240,7 +246,7 @@ public record WorldParams(
         SkyForms skyForms) {
 
     /** Bumped whenever a code change alters generated chunks (see CLAUDE.md). */
-    public static final int GENERATOR_VERSION = 12;
+    public static final int GENERATOR_VERSION = 13;
 
     public static final WorldParams DEFAULTS = new WorldParams(
             -64,
@@ -279,8 +285,8 @@ public record WorldParams(
             600.0,
             0.12,
             0.06,
-            125.0,
-            185.0,
+            100.0,
+            200.0,
             250.0,
             270.0,
             300.0,
@@ -292,8 +298,11 @@ public record WorldParams(
             20.0,
             60.0,
             0.15,
-            190.0,
-            220.0,
+            200.0,
+            240.0,
+            0.17,
+            70.0,
+            90.0,
             140.0,
             150.0,
             16.0,
@@ -305,7 +314,7 @@ public record WorldParams(
             32.0,
             8.0,
             -0.3,
-            113.0,
+            30.0,
             350.0,
             150.0,
             16.0,
@@ -354,54 +363,54 @@ public record WorldParams(
             8.0,
             35.0,
             new SkyForms(
-                new int[]{200, 240, 280, 305},
-                110.0,
-                90.0,
-                192,
-                0.86,
-                0.25,
+                305.0,
+                70.0,
+                70.0,
+                112,
+                1.0,
+                0.15,
                 0.5,
                 5.0,
                 15.0,
                 15.0,
                 40.0,
-                120.0,
                 7.5,
                 20.0,
                 50.0,
                 150.0,
-                0.35,
-                0.25,
-                220.0,
-                420.0,
+                0.45,
+                0.3,
+                300.0,
+                480.0,
                 650.0,
                 230.0,
-                10,
-                40,
+                20,
+                60,
                 7.5,
                 75.0,
-                120.0,
-                240.0,
-                3,
-                15,
-                40,
+                4,
+                20,
+                50,
                 10.0,
                 25.0,
                 40.0,
                 120.0,
-                110.0,
-                305.0,
                 32.0,
-                16.0));
-
-    /** Highest sky form top at a distance from spawn (zone borders without jitter). */
-    public double maxIslandY(double distance) {
-        int k = 0;
-        while (k < zoneRadii.length && distance >= zoneRadii[k]) {
-            k++;
-        }
-        return skyForms.zoneMaxIslandY()[k];
-    }
+                16.0,
+                0.1,
+                1500.0,
+                900.0,
+                0.1,
+                64.0,
+                75.0,
+                80.0,
+                160.0,
+                40.0,
+                0.6,
+                0.3,
+                0.3,
+                200.0,
+                260.0));
 
     /** Distance at which the zone factor reaches 1 (start of the Edge). */
     public double zoneMaxRadius() {
@@ -411,18 +420,17 @@ public record WorldParams(
     /**
      * Sky forms between continents.
      *
-     * @param zoneMaxIslandY          highest sky form top per zone (Haven, Borderlands, Wilds, Edge); continents excepted
-     * @param skyFormMinY             lowest underside of towers, sky islands and cluster forms (spires hang lower)
-     * @param skySpireMinY            lowest tip of a spire under a tower or sky island
+     * @param skyMaxY                 highest top of a sky form (continents excepted)
+     * @param skyFormMinY             lowest underside of towers and Hallelujah bodies (sunk islands go lower)
+     * @param skySpireMinY            lowest tip of a spire under any sky form (continents included)
      * @param skyCellSize             grid cell of single sky forms (towers, small and medium islands); one per cell
-     * @param skyCellChance           chance of a candidate per cell (before rejections)
+     * @param skyCellChance           chance of a candidate per cell where the sky is densest (before rejections)
      * @param towerShare              share of single forms that are towers
      * @param smallIslandShare        share of the remaining single forms that are small islands
      * @param smallIslandRadiusMin    small sky island radius (10-30 blocks across)
      * @param smallIslandRadiusMax
      * @param mediumIslandRadiusMin   medium sky island radius (30-80 blocks across)
      * @param mediumIslandRadiusMax
-     * @param skyIslandYMin           lowest underside of a small or medium island
      * @param towerRadiusMin          tower radius (15-40 blocks across)
      * @param towerRadiusMax
      * @param towerHeightMin          tower height from flat top to underside
@@ -437,8 +445,6 @@ public record WorldParams(
      * @param archipelagoCountMax
      * @param archipelagoRadiusMin    archipelago island radius (15-150 blocks across)
      * @param archipelagoRadiusMax
-     * @param archipelagoYMin         lowest underside in an archipelago
-     * @param archipelagoYMax         highest top in an archipelago
      * @param archipelagoBridgesMax   most rock bridges or arches in an archipelago
      * @param hallelujahCountMin      bodies of a Hallelujah cluster (before rejections)
      * @param hallelujahCountMax
@@ -446,13 +452,25 @@ public record WorldParams(
      * @param hallelujahRadiusMax
      * @param hallelujahHeightMin     body height
      * @param hallelujahHeightMax
-     * @param hallelujahYMin          lowest underside of a Hallelujah body
-     * @param hallelujahYMax          highest top of a Hallelujah body
      * @param clusterCorridor         width of the straight flight corridor kept free through every cluster
-     * @param skyFormGap              least horizontal gap between the footprints of two sky forms
+     * @param skyFormGap              least horizontal gap between the footprints of two large sky forms
+     * @param skyDensityMin           chance per cell where the sky is sparsest (density noise lerps to skyCellChance)
+     * @param densityScale            wavelength of the density noise (dense swarms, empty stretches)
+     * @param heightScale             wavelength of the height noise: islands of an area share a height band
+     * @param sunkShare               share of islands sinking into the sea (top just above the water)
+     * @param sunkTopMin              top of a sunk island
+     * @param sunkTopMax
+     * @param islandTopMin            lowest top of an island that is not sunk
+     * @param towerTopMin             lowest top of a tower
+     * @param detailRadiusMax         islands smaller than this are built per block and may overlap or merge
+     * @param detailOverlap           such islands keep their centres at least this share of the summed footprints apart
+     * @param continentOverlap        such islands may reach this share of their footprint radius over a continent's coast
+     * @param edgeClusterChance       chance of a cluster at the middle of a side of a continent grid cell
+     * @param edgeClusterRadiusMin    disc radius of such clusters
+     * @param edgeClusterRadiusMax
      */
     public record SkyForms(
-            int[] zoneMaxIslandY,
+            double skyMaxY,
             double skyFormMinY,
             double skySpireMinY,
             int skyCellSize,
@@ -463,7 +481,6 @@ public record WorldParams(
             double smallIslandRadiusMax,
             double mediumIslandRadiusMin,
             double mediumIslandRadiusMax,
-            double skyIslandYMin,
             double towerRadiusMin,
             double towerRadiusMax,
             double towerHeightMin,
@@ -478,8 +495,6 @@ public record WorldParams(
             int archipelagoCountMax,
             double archipelagoRadiusMin,
             double archipelagoRadiusMax,
-            double archipelagoYMin,
-            double archipelagoYMax,
             int archipelagoBridgesMax,
             int hallelujahCountMin,
             int hallelujahCountMax,
@@ -487,9 +502,21 @@ public record WorldParams(
             double hallelujahRadiusMax,
             double hallelujahHeightMin,
             double hallelujahHeightMax,
-            double hallelujahYMin,
-            double hallelujahYMax,
             double clusterCorridor,
-            double skyFormGap) {
+            double skyFormGap,
+            double skyDensityMin,
+            double densityScale,
+            double heightScale,
+            double sunkShare,
+            double sunkTopMin,
+            double sunkTopMax,
+            double islandTopMin,
+            double towerTopMin,
+            double detailRadiusMax,
+            double detailOverlap,
+            double continentOverlap,
+            double edgeClusterChance,
+            double edgeClusterRadiusMin,
+            double edgeClusterRadiusMax) {
     }
 }

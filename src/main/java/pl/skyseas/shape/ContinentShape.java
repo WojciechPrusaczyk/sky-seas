@@ -192,6 +192,8 @@ public final class ContinentShape {
     /** Coastal slopes: drop of the terrain towards the edge where the coast is not a cliff. */
     private static final double COAST_DROP = 20.0;
     private static final double COAST_DROP_WIDTH = 70.0;
+    /** Coasts slope down only where the plain lies above this Y (low continents keep plain cliffs into the sea). */
+    private static final double COAST_DROP_FLOOR = 123.0;
     /** Thickness of the land at the coast (blocks); the crust grows from it inland. */
     private static final double EDGE_THICKNESS = 16.0;
     /** Hanging spires: top radius range, how far into the crust they start, least spacing. */
@@ -289,6 +291,10 @@ public final class ContinentShape {
         } else if (elevated) {
             lo = p.continentElevatedBaseYMin();
             hi = p.continentElevatedBaseYMax();
+        } else if (character != CALDERA && u(seed, 16) < p.continentLowShare()) {
+            // Low continents: coasts, underside and parts of the plains sink into the sea.
+            lo = p.continentLowBaseYMin();
+            hi = p.continentLowBaseYMax();
         } else {
             lo = character == CALDERA ? Math.max(CALDERA_BASE_MIN, p.continentBaseYMin()) : p.continentBaseYMin();
             hi = p.continentBaseYMax();
@@ -627,7 +633,7 @@ public final class ContinentShape {
 
     /**
      * Rock spires hanging under the crust, away from the coast and from each other; their
-     * tips stay above minBottomY, so low continents get shorter spires (or none).
+     * tips stay above skySpireMinY, so low continents get shorter spires (or none).
      */
     public static void placeSpires(WorldParams p, long seed, double[] prm, int off) {
         int want = p.continentSpiresMin() + (int) (u(seed, 3) * (p.continentSpiresMax() - p.continentSpiresMin() + 1));
@@ -658,7 +664,7 @@ public final class ContinentShape {
             }
             double bottom = column(p, prm, off, seed, x, z, BOTTOM);
             double length = Math.min(ShapeMath.lerp(p.continentSpireLengthMin(), p.continentSpireLengthMax(), u(seed, i + 4)),
-                    bottom - p.continentMinBottomY() - 1.0);
+                    bottom - p.skyForms().skySpireMinY() - 1.0);
             if (length < 0.8 * p.continentSpireLengthMin()) {
                 continue;
             }
@@ -958,7 +964,7 @@ public final class ContinentShape {
             open = ShapeMath.smoothstep(plateau, plateau + 120.0, Math.sqrt(dx * dx + dz * dz));
         }
         double micro = MICRO_AMP * SimplexNoise.noise2(seed + 27, x / 40.0, z / 40.0) * ShapeMath.smoothstep(0.0, 12.0, edge);
-        double drop = ShapeMath.clamp(flat - p.continentMinBottomY() - 10.0, 0.0, COAST_DROP);
+        double drop = ShapeMath.clamp(flat - COAST_DROP_FLOOR, 0.0, COAST_DROP);
         // A wide noise band: cliffs turn into slopes gradually along the coast, never as a steep ramp.
         double coastDrop = drop * ShapeMath.smoothstep(-0.3, 0.5, SimplexNoise.noise2(seed + 17, x / 300.0, z / 300.0))
                 * (1.0 - ShapeMath.smoothstep(0.0, COAST_DROP_WIDTH, edge)) * open;

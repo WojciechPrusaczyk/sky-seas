@@ -13,26 +13,23 @@ import pl.skyseas.shape.SkyColumn;
  * (not interpolated): rock spires hanging under continents and rock bridges between
  * members of composite continents. The flat_cache'd {@code floor} (lowest detail block
  * near the column) rejects almost every block with one
- * comparison; only blocks within a spire's height range look up the layout.
+ * comparison, the ceiling with another; only blocks between them look up the layout.
  */
-public record SkyDetailsFunction(DensityFunction root, DensityFunction floor, Layout layout) implements DensityFunction {
+public record SkyDetailsFunction(DensityFunction root, DensityFunction floor, DensityFunction ceiling, Layout layout) implements DensityFunction {
     public static final MapCodec<SkyDetailsFunction> DATA_CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
             DensityFunction.HOLDER_HELPER_CODEC.fieldOf("root").forGetter(SkyDetailsFunction::root),
-            DensityFunction.HOLDER_HELPER_CODEC.fieldOf("floor").forGetter(SkyDetailsFunction::floor)
+            DensityFunction.HOLDER_HELPER_CODEC.fieldOf("floor").forGetter(SkyDetailsFunction::floor),
+            DensityFunction.HOLDER_HELPER_CODEC.fieldOf("ceiling").forGetter(SkyDetailsFunction::ceiling)
     ).apply(i, SkyDetailsFunction::of));
     private static final KeyDispatchDataCodec<SkyDetailsFunction> CODEC = KeyDispatchDataCodec.of(DATA_CODEC);
-    /** Tallest detail above its floor. */
-    private static final double SPAN = Layout.DETAIL_SPAN;
-
-    static SkyDetailsFunction of(DensityFunction root, DensityFunction floor) {
-        return new SkyDetailsFunction(root, floor, LayoutRootFunction.layoutOf(root));
+    static SkyDetailsFunction of(DensityFunction root, DensityFunction floor, DensityFunction ceiling) {
+        return new SkyDetailsFunction(root, floor, ceiling, LayoutRootFunction.layoutOf(root));
     }
 
     @Override
     public double compute(FunctionContext ctx) {
         int y = ctx.blockY();
-        double f = floor.compute(ctx);
-        if (layout == null || y < f || y > f + SPAN) {
+        if (layout == null || y < floor.compute(ctx) || y > ceiling.compute(ctx)) {
             return SkyColumn.MIN;
         }
         return SkyColumn.scale(WorldParams.DEFAULTS, layout.detailDensity(ctx.blockX(), y, ctx.blockZ()));
@@ -45,7 +42,7 @@ public record SkyDetailsFunction(DensityFunction root, DensityFunction floor, La
 
     @Override
     public DensityFunction mapAll(Visitor visitor) {
-        return visitor.apply(of(root.mapAll(visitor), floor.mapAll(visitor)));
+        return visitor.apply(of(root.mapAll(visitor), floor.mapAll(visitor), ceiling.mapAll(visitor)));
     }
 
     @Override
