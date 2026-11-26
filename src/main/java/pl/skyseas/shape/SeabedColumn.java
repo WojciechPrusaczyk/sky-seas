@@ -24,11 +24,12 @@ public final class SeabedColumn {
 
     /**
      * True for blocks of the roof that must stay solid, given the seabed density at the
-     * block ({@link #density}). The top block (depth 0..1) is left to the terrain itself.
+     * block ({@link #density}), from the surface block down. On steep slopes interpolated
+     * caves of a neighbouring cell can reach the surface block too.
      */
     public static boolean inRoof(WorldParams p, double seabedDensity) {
         double depth = seabedDensity * p.seabedDensityScale();
-        return depth > 1.0 && depth <= p.caveRoofThickness();
+        return depth > 0.0 && depth <= p.caveRoofThickness();
     }
 
     /** Density added to cheese caves: largest under thin rock, zero under thick rock. */

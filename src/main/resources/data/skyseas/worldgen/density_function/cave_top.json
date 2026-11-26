@@ -1,0 +1,8 @@
+{
+  "type": "minecraft:cache_2d",
+  "argument": {
+    "type": "skyseas:cave_top",
+    "root": "skyseas:layout/root",
+    "height": "skyseas:seabed_height"
+  }
+}

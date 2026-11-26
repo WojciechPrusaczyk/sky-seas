@@ -14,11 +14,15 @@ import java.util.concurrent.Future;
 import org.junit.jupiter.api.Test;
 import pl.skyseas.config.WorldParams;
 import pl.skyseas.shape.ContinentShape;
+import pl.skyseas.shape.OceanShape;
+import pl.skyseas.shape.SimplexNoise;
 import pl.skyseas.shape.SkyColumn;
 
 class LayoutTest {
     private static final WorldParams P = WorldParams.DEFAULTS;
     private static final long[] SEEDS = {20261125L, -4172144997902289642L, 1L};
+    /** Varied climate (warm, lukewarm, temperate, cold) over a few thousand blocks. */
+    private static final ClimateProbe CLIMATE = (x, z) -> 0.9 * SimplexNoise.noise2(7, x / 2500.0, z / 2500.0);
 
     @Test
     void sameRegionRegardlessOfOrderAndThreads() throws Exception {
@@ -29,13 +33,13 @@ class LayoutTest {
                 keys.add(new int[]{rx, rz});
             }
         }
-        Layout sequential = new Layout(seed, P);
+        Layout sequential = new Layout(seed, P, CLIMATE);
         List<RegionLayout> expected = new ArrayList<>();
         for (int[] k : keys) {
             expected.add(sequential.region(k[0], k[1]));
         }
 
-        Layout parallel = new Layout(seed, P);
+        Layout parallel = new Layout(seed, P, CLIMATE);
         List<int[]> shuffled = new ArrayList<>(keys);
         Collections.shuffle(shuffled, new Random(42));
         ExecutorService pool = Executors.newFixedThreadPool(8);
@@ -63,8 +67,12 @@ class LayoutTest {
             assertArrayEquals(a.cx, b.cx);
             assertArrayEquals(a.cz, b.cz);
             assertArrayEquals(a.params, b.params);
-            assertArrayEquals(a.bucketStart, b.bucketStart);
-            assertArrayEquals(a.bucketItems, b.bucketItems);
+            assertArrayEquals(a.type, b.type);
+            assertArrayEquals(a.paramOffset, b.paramOffset);
+            assertArrayEquals(a.skyStart, b.skyStart);
+            assertArrayEquals(a.skyItems, b.skyItems);
+            assertArrayEquals(a.oceanStart, b.oceanStart);
+            assertArrayEquals(a.oceanItems, b.oceanItems);
         }
     }
 
@@ -94,7 +102,13 @@ class LayoutTest {
             for (int rz = -10; rz <= 10; rz++) {
                 RegionLayout r = layout.region(rx, rz);
                 for (int i = 0; i < r.count; i++) {
+                    if (r.type[i] != RegionLayout.CONTINENT) {
+                        continue;
+                    }
                     for (int j = i + 1; j < r.count; j++) {
+                        if (r.type[j] != RegionLayout.CONTINENT) {
+                            continue;
+                        }
                         double d = Math.hypot(r.cx[i] - r.cx[j], r.cz[i] - r.cz[j]);
                         assertTrue(d > r.radius[i] + r.radius[j] + margin, "continents too close: " + d);
                     }
@@ -185,6 +199,9 @@ class LayoutTest {
                 for (int rz = -4; rz <= 4; rz++) {
                     RegionLayout r = layout.region(rx, rz);
                     for (int i = 0; i < r.count; i++) {
+                        if (r.type[i] != RegionLayout.CONTINENT) {
+                            continue;
+                        }
                         if (r.cx[i] < r.originX || r.cx[i] >= r.originX + P.layoutRegionSize()
                                 || r.cz[i] < r.originZ || r.cz[i] >= r.originZ + P.layoutRegionSize()) {
                             continue; // each continent once, in the region of its centre
@@ -203,7 +220,7 @@ class LayoutTest {
 
     /** {largest piece, total, smallest detached piece} in cells. */
     private static int[] pieces(RegionLayout r, int i, int step) {
-        int off = i * r.paramStride;
+        int off = r.paramOffset[i];
         int n = (int) Math.ceil(r.radius[i] / step) * 2 + 1;
         boolean[] inside = new boolean[n * n];
         int total = 0;
@@ -267,12 +284,12 @@ class LayoutTest {
     void regionComputesWithinBudget() {
         Layout warm = new Layout(SEEDS[0], P);
         for (int i = 0; i < 200; i++) {
-            LayoutGenerator.generate(SEEDS[0], P, i, -i);
+            LayoutGenerator.generate(SEEDS[0], P, ClimateProbe.TEMPERATE, i, -i);
         }
         long worst = 0;
         for (int i = 0; i < 100; i++) {
             long t0 = System.nanoTime();
-            LayoutGenerator.generate(warm.seed(), P, 1000 + i, 7 * i);
+            LayoutGenerator.generate(warm.seed(), P, CLIMATE, 1000 + i, 7 * i);
             worst = Math.max(worst, System.nanoTime() - t0);
         }
         assertTrue(worst < 20_000_000L, "slowest region " + worst / 1e6 + " ms");
@@ -285,5 +302,64 @@ class LayoutTest {
         ContinentShape.place(P, 99, 10, 20, 700, false, a, 0);
         ContinentShape.place(P, 99, 10, 20, 700, false, b, 0);
         assertArrayEquals(a, b);
+    }
+
+    /** Clear-sky rule: no sky island within the margin of land at sea level. */
+    @Test
+    void clearSkyOverOceanLand() {
+        int land = 0;
+        for (long seed : SEEDS) {
+            Layout layout = new Layout(seed, P, CLIMATE);
+            for (int x = -6000; x <= 6000; x += 4) {
+                for (int z = -6000; z <= 6000; z += 4) {
+                    if (layout.oceanHeight(x, z, -10.0) >= 63.0) {
+                        land++;
+                        double edge = layout.column(x, z, Layout.EDGE);
+                        assertTrue(edge <= -P.clearSkyMargin(), "sky island " + edge + " over ocean land at " + x + "," + z);
+                    }
+                }
+            }
+        }
+        assertTrue(land > 1000, "too little ocean land: " + land);
+    }
+
+    /** Every ocean form type appears; size classes roughly as designed; no large islands in the Haven. */
+    @Test
+    void oceanFormsAndClasses() {
+        int[] types = new int[8];
+        int[] classes = new int[3];
+        int atolls = 0;
+        Layout layout = new Layout(SEEDS[0], P, CLIMATE);
+        for (int rx = -12; rx <= 12; rx++) {
+            for (int rz = -12; rz <= 12; rz++) {
+                RegionLayout r = layout.region(rx, rz);
+                for (int i = 0; i < r.count; i++) {
+                    if (!r.owns(i, P.layoutRegionSize())) {
+                        continue;
+                    }
+                    types[r.type[i]]++;
+                    if (r.type[i] == RegionLayout.OCEAN_ISLAND) {
+                        int off = r.paramOffset[i];
+                        int c = (int) r.params[off + OceanShape.SIZE_CLASS];
+                        classes[c]++;
+                        if (r.params[off + OceanShape.RING] > 0.0) {
+                            atolls++;
+                        }
+                        if (c == 2) {
+                            assertTrue(Math.hypot(r.cx[i], r.cz[i]) > P.zoneRadii()[0], "large island in the Haven");
+                        }
+                    }
+                }
+            }
+        }
+        System.out.println("LayoutTest: types " + java.util.Arrays.toString(types) + " classes "
+                + java.util.Arrays.toString(classes) + " atolls " + atolls);
+        for (byte t = RegionLayout.OCEAN_ISLAND; t <= RegionLayout.SEA_SPIRE; t++) {
+            assertTrue(types[t] > 0, "no " + RegionLayout.TYPE_NAMES[t]);
+        }
+        assertTrue(atolls > 0, "no atolls");
+        int islands = classes[0] + classes[1] + classes[2];
+        assertTrue(classes[0] > 0.6 * islands && classes[1] > 0.15 * islands && classes[2] > 0, "classes "
+                + java.util.Arrays.toString(classes));
     }
 }

@@ -6,6 +6,7 @@ import net.minecraft.world.level.levelgen.DensityFunction;
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.neoforge.registries.DeferredRegister;
 import pl.skyseas.SkySeas;
+import pl.skyseas.density.CaveTopFunction;
 import pl.skyseas.density.LayoutRootFunction;
 import pl.skyseas.density.RoofGuardFunction;
 import pl.skyseas.density.SeabedDerivedFunction;
@@ -25,6 +26,7 @@ public final class SkySeasRegistries {
     static {
         DENSITY_FUNCTION_TYPES.register("zone_factor", () -> ZoneFactorFunction.DATA_CODEC);
         DENSITY_FUNCTION_TYPES.register("seabed_height", () -> SeabedHeightFunction.DATA_CODEC);
+        DENSITY_FUNCTION_TYPES.register("cave_top", () -> CaveTopFunction.DATA_CODEC);
         DENSITY_FUNCTION_TYPES.register("roof_guard", () -> RoofGuardFunction.DATA_CODEC);
         for (SeabedDerivedFunction.Kind kind : SeabedDerivedFunction.Kind.values()) {
             DENSITY_FUNCTION_TYPES.register(kind.id, () -> kind.dataCodec);

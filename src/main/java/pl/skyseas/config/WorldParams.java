@@ -62,6 +62,49 @@ package pl.skyseas.config;
  * @param starterPlateauRadius    radius of the flat spawn plateau on the starter continent
  * @param islandReachMargin       island reach = outline + this margin (land climate above it)
  * @param skyDensityScale         blocks per density unit of sky islands
+ * @param clearSkyMargin          no sky island within this many blocks (horizontally) of land at sea level
+ * @param oceanWarmMinTemperature warmest ocean class (vanilla warm ocean bound): atolls
+ * @param oceanLukewarmMinTemperature lukewarm ocean bound: sea spires
+ * @param oceanColdMaxTemperature cold ocean upper bound (vanilla): volcanoes between this and the frozen bound
+ * @param oceanFrozenMaxTemperature frozen ocean upper bound (vanilla)
+ * @param oceanIslandCellSize     ocean island grid cell (blocks); one candidate per cell
+ * @param oceanIslandChance       chance that a cell has an island (before the clear-sky rule)
+ * @param oceanIslandRadius       class radius bounds: small {0, 1}, medium {1, 2}, large {2, 3} (blocks)
+ * @param oceanIslandMediumShare  share of medium islands
+ * @param oceanIslandLargeShareMax share of large islands at the zone plateau (none in the Haven, rising beyond it)
+ * @param oceanIslandTopMin       lowest summit above sea level per class (small, medium, large)
+ * @param oceanIslandTopMax       highest summit above sea level per class
+ * @param oceanShelfYMin          lowest shelf (shallows) around an island
+ * @param oceanShelfYMax          highest shelf
+ * @param oceanShelfWidthMin      narrowest shelf per class
+ * @param oceanShelfWidthMax      widest shelf per class
+ * @param oceanShelfSlopeMin      narrowest slope from the shelf down to the seabed
+ * @param oceanShelfSlopeMax      widest slope
+ * @param atollChance             chance that a medium or large island in warm water is an atoll
+ * @param atollLagoonYMin         deepest lagoon floor
+ * @param atollLagoonYMax         shallowest lagoon floor
+ * @param seamountCellSize        seamount grid cell (temperate oceans)
+ * @param seamountChance          chance per cell
+ * @param seamountRadiusMin       smallest seamount base radius
+ * @param seamountRadiusMax       largest seamount base radius
+ * @param seamountPeakYMin        lowest seamount summit
+ * @param seamountPeakYMax        highest seamount summit (just under the surface)
+ * @param volcanoCellSize         volcano grid cell (cold oceans)
+ * @param volcanoChance           chance per cell
+ * @param volcanoRadiusMin        smallest volcano base radius
+ * @param volcanoRadiusMax        largest volcano base radius
+ * @param volcanoRimYMin          lowest crater rim
+ * @param volcanoRimYMax          highest crater rim
+ * @param volcanoCraterDepthMin   shallowest crater (below the rim)
+ * @param volcanoCraterDepthMax   deepest crater
+ * @param seaSpireCellSize        sea spire group grid cell (lukewarm oceans)
+ * @param seaSpireChance          chance per cell
+ * @param seaSpireCountMax        most spires in a group
+ * @param seaSpireSpread          spires of a group stand within this radius
+ * @param seaSpireRadiusMin       thinnest spire
+ * @param seaSpireRadiusMax       thickest spire
+ * @param seaSpireTopMin          lowest spire top above sea level
+ * @param seaSpireTopMax          highest spire top above sea level
  */
 public record WorldParams(
         int worldMinY,
@@ -115,10 +158,53 @@ public record WorldParams(
         double starterContinentRadius,
         double starterPlateauRadius,
         double islandReachMargin,
-        double skyDensityScale) {
+        double skyDensityScale,
+        double clearSkyMargin,
+        double oceanWarmMinTemperature,
+        double oceanLukewarmMinTemperature,
+        double oceanColdMaxTemperature,
+        double oceanFrozenMaxTemperature,
+        int oceanIslandCellSize,
+        double oceanIslandChance,
+        double[] oceanIslandRadius,
+        double oceanIslandMediumShare,
+        double oceanIslandLargeShareMax,
+        double[] oceanIslandTopMin,
+        double[] oceanIslandTopMax,
+        double oceanShelfYMin,
+        double oceanShelfYMax,
+        double[] oceanShelfWidthMin,
+        double[] oceanShelfWidthMax,
+        double oceanShelfSlopeMin,
+        double oceanShelfSlopeMax,
+        double atollChance,
+        double atollLagoonYMin,
+        double atollLagoonYMax,
+        int seamountCellSize,
+        double seamountChance,
+        double seamountRadiusMin,
+        double seamountRadiusMax,
+        double seamountPeakYMin,
+        double seamountPeakYMax,
+        int volcanoCellSize,
+        double volcanoChance,
+        double volcanoRadiusMin,
+        double volcanoRadiusMax,
+        double volcanoRimYMin,
+        double volcanoRimYMax,
+        double volcanoCraterDepthMin,
+        double volcanoCraterDepthMax,
+        int seaSpireCellSize,
+        double seaSpireChance,
+        int seaSpireCountMax,
+        double seaSpireSpread,
+        double seaSpireRadiusMin,
+        double seaSpireRadiusMax,
+        double seaSpireTopMin,
+        double seaSpireTopMax) {
 
     /** Bumped whenever a code change alters generated chunks (see CLAUDE.md). */
-    public static final int GENERATOR_VERSION = 8;
+    public static final int GENERATOR_VERSION = 9;
 
     public static final WorldParams DEFAULTS = new WorldParams(
             -64,
@@ -172,7 +258,50 @@ public record WorldParams(
             350.0,
             150.0,
             16.0,
-            8.0);
+            8.0,
+            16.0,
+            0.55,
+            0.2,
+            -0.15,
+            -0.45,
+            300,
+            0.8,
+            new double[]{2.5, 15.0, 75.0, 200.0},
+            0.25,
+            0.08,
+            new double[]{1.0, 4.0, 10.0},
+            new double[]{8.0, 18.0, 40.0},
+            35.0,
+            60.0,
+            new double[]{6.0, 20.0, 45.0},
+            new double[]{20.0, 60.0, 130.0},
+            45.0,
+            90.0,
+            0.5,
+            52.0,
+            59.0,
+            900,
+            0.5,
+            60.0,
+            150.0,
+            40.0,
+            58.0,
+            800,
+            0.7,
+            70.0,
+            140.0,
+            15.0,
+            50.0,
+            8.0,
+            18.0,
+            450,
+            0.6,
+            4,
+            30.0,
+            3.0,
+            8.0,
+            8.0,
+            35.0);
 
     /** Distance at which the zone factor reaches 1 (start of the Edge). */
     public double zoneMaxRadius() {

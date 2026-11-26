@@ -15,6 +15,9 @@ import pl.skyseas.command.RouterLookup;
 import pl.skyseas.command.StagedChunkGen;
 import pl.skyseas.density.SeabedHeightFunction;
 import pl.skyseas.config.WorldParams;
+import pl.skyseas.density.LayoutAccess;
+import pl.skyseas.layout.Layout;
+import pl.skyseas.shape.OceanShape;
 import pl.skyseas.shape.SeabedShape;
 
 /**
@@ -50,6 +53,7 @@ public final class SeabedTests {
         int maxSeen = Integer.MIN_VALUE;
         for (long seed : SEEDS) {
             StagedChunkGen gen = StagedChunkGen.create(helper.getLevel(), StagedChunkGen.SKY_SEAS, seed);
+            Layout layout = LayoutAccess.get(gen.randomState());
             for (int i = 0; i < GRID; i++) {
                 for (int j = 0; j < GRID; j++) {
                     ChunkPos pos = new ChunkPos((i - GRID / 2) * STRIDE_CHUNKS, (j - GRID / 2) * STRIDE_CHUNKS);
@@ -58,8 +62,8 @@ public final class SeabedTests {
                         for (int z = 0; z < 16; z++) {
                             int bx = pos.getBlockX(x);
                             int bz = pos.getBlockZ(z);
-                            int top = seabedTop(chunk, bx, bz);
-                            String error = checkColumn(p, chunk, bx, bz, top);
+                            int top = seabedTop(p, chunk, bx, bz);
+                            String error = checkColumn(p, chunk, bx, bz, top, isOceanForm(layout, bx, bz));
                             if (error != null) {
                                 helper.fail("seed " + seed + ": " + error);
                                 return;
@@ -106,7 +110,7 @@ public final class SeabedTests {
     }
 
     /**
-     * The seabed must not be flat: the spread between the 5th and 95th percentile of
+     * The plain seabed (outside ocean forms) must not be flat: the spread between the 5th and 95th percentile of
      * seabed height in a 4x4 km area must match a relief of roughly +/-8..10 blocks.
      */
     @GameTest(template = "empty")
@@ -117,12 +121,17 @@ public final class SeabedTests {
         for (int[] origin : areas) {
             double[] samples = new double[250 * 250];
             int n = 0;
+            Layout layout = LayoutAccess.get(gen.randomState());
             for (int i = 0; i < 250; i++) {
                 for (int j = 0; j < 250; j++) {
-                    samples[n++] = seabed.compute(new DensityFunction.SinglePointContext(
-                            origin[0] + i * 16, 0, origin[1] + j * 16));
+                    int x = origin[0] + i * 16;
+                    int z = origin[1] + j * 16;
+                    if (!isOceanForm(layout, x, z)) {
+                        samples[n++] = seabed.compute(new DensityFunction.SinglePointContext(x, 0, z));
+                    }
                 }
             }
+            samples = java.util.Arrays.copyOf(samples, n);
             java.util.Arrays.sort(samples);
             double p5 = samples[n * 5 / 100];
             double p50 = samples[n / 2];
@@ -163,9 +172,17 @@ public final class SeabedTests {
         helper.succeed();
     }
 
-    /** Y of the highest seabed block below sea level (skips water and vanilla icebergs). */
-    private static int seabedTop(ProtoChunk chunk, int x, int z) {
-        BlockPos.MutableBlockPos pos = new BlockPos.MutableBlockPos(x, SEA_LEVEL - 1, z);
+    /** True if an ocean form (island, shelf, seamount, volcano, spire) reaches this column. */
+    private static boolean isOceanForm(Layout layout, int x, int z) {
+        return layout.oceanAt(layout.regionAt(x, z), x, z, OceanShape.NONE) >= 0;
+    }
+
+    /** Y of the highest seabed or ocean-form block under the sky islands (skips air, water and vanilla icebergs). */
+    private static int seabedTop(WorldParams p, ProtoChunk chunk, int x, int z) {
+        BlockPos.MutableBlockPos pos = new BlockPos.MutableBlockPos(x, (int) p.continentMinBottomY() - 1, z);
+        while (pos.getY() >= SEA_LEVEL && (chunk.getBlockState(pos).isAir() || isOceanColumn(chunk.getBlockState(pos)))) {
+            pos.move(0, -1, 0);
+        }
         while (pos.getY() > chunk.getMinBuildHeight() && isOceanColumn(chunk.getBlockState(pos))) {
             pos.move(0, -1, 0);
         }
@@ -177,8 +194,8 @@ public final class SeabedTests {
         return state.is(Blocks.WATER) || state.is(Blocks.PACKED_ICE) || state.is(Blocks.SNOW_BLOCK);
     }
 
-    private static String checkColumn(WorldParams p, ProtoChunk chunk, int x, int z, int top) {
-        if (top < SeabedShape.minHeight(p) - 1 || top > SeabedShape.maxHeight(p)) {
+    private static String checkColumn(WorldParams p, ProtoChunk chunk, int x, int z, int top, boolean oceanForm) {
+        if (top < SeabedShape.minHeight(p) - 1 || top > (oceanForm ? OceanShape.maxHeight(p) : SeabedShape.maxHeight(p))) {
             return "seabed top " + top + " out of range at " + x + "," + z;
         }
         BlockPos.MutableBlockPos pos = new BlockPos.MutableBlockPos(x, 0, z);
@@ -190,7 +207,7 @@ public final class SeabedTests {
             }
         }
         // Sky islands start at continentMinBottomY: the 50 blocks over the sea stay open.
-        for (int y = SEA_LEVEL; y < p.continentMinBottomY(); y++) {
+        for (int y = Math.max(SEA_LEVEL, top + 1); y < p.continentMinBottomY(); y++) {
             BlockState state = chunk.getBlockState(pos.setY(y));
             if (!state.isAir() && !isOceanColumn(state)) {
                 return "unexpected block above sea level at " + x + "," + y + "," + z;

@@ -14,13 +14,14 @@ import net.minecraft.world.level.levelgen.DensityFunction;
 import pl.skyseas.SkySeas;
 import pl.skyseas.config.WorldParams;
 import pl.skyseas.density.LayoutAccess;
+import pl.skyseas.density.SeabedHeightFunction;
 import pl.skyseas.density.ZoneFactorFunction;
 import pl.skyseas.layout.Layout;
 import pl.skyseas.layout.ZoneField;
 
 /**
  * {@code /skyseas map}: top-down PNG computed from the layout alone (no chunk
- * generation). Ocean shaded by zone, continents coloured by top height (green, brown,
+ * generation). Ocean shaded by zone, ocean islands and shallows from the seabed height, continents coloured by top height (green, brown,
  * white peaks), island reach outlined, region grid and spawn marked. Runs on its own thread.
  */
 final class LayoutMap {
@@ -31,6 +32,7 @@ final class LayoutMap {
     private static final int REACH = 0x16324F;
     private static final int GRID = 0x5F7F9F;
     private static final int SPAWN = 0xE03030;
+    private static final int SAND = 0xE2D49A;
 
     private LayoutMap() {
     }
@@ -61,8 +63,9 @@ final class LayoutMap {
             return "[Sky Seas] map: not a Sky Seas world";
         }
         WorldParams p = layout.params();
-        ZoneFactorFunction zone = RouterLookup.find(level.getChunkSource().randomState().router().finalDensity(),
-                ZoneFactorFunction.class);
+        DensityFunction router = level.getChunkSource().randomState().router().finalDensity();
+        ZoneFactorFunction zone = RouterLookup.find(router, ZoneFactorFunction.class);
+        SeabedHeightFunction seabed = RouterLookup.find(router, SeabedHeightFunction.class);
         int size = 2 * radius / scale;
         int x0 = centerX - radius;
         int z0 = centerZ - radius;
@@ -79,12 +82,18 @@ final class LayoutMap {
             for (int px = 0; px < size; px++) {
                 int x = x0 + px * scale;
                 int rgb;
+                double h;
                 double edge = layout.column(x, z, Layout.EDGE);
                 if (edge > 0.0) {
                     rgb = landColor(p, layout.column(x, z, Layout.TOP));
                     land++;
                 } else if (edge > -p.islandReachMargin()) {
                     rgb = REACH;
+                } else if (seabed != null && (h = seabed.compute(new DensityFunction.SinglePointContext(x, 0, z))) > 30.0) {
+                    rgb = oceanFormColor(h);
+                    if (h >= 63.0) {
+                        land++;
+                    }
                 } else {
                     double f = zone == null ? ZoneField.factorAtDistance(p, Math.hypot(x, z))
                             : zone.compute(new DensityFunction.SinglePointContext(x, 0, z));
@@ -113,6 +122,14 @@ final class LayoutMap {
                 "[Sky Seas] map: %dx%d px, %d blocks/px, centre %d,%d, land %.1f%%, %d ms, layout regions cached %d\n  png: %s",
                 size, size, scale, centerX, centerZ, 100.0 * land / ((double) size * size), ms,
                 layout.cache().size(), file.toAbsolutePath());
+    }
+
+    /** Ocean islands (sand to green) and shallows (turquoise, lighter when shallower). */
+    private static int oceanFormColor(double h) {
+        if (h >= 63.0) {
+            return h < 64.5 ? SAND : lerpColor(0x5FA046, 0x7A6A4A, (h - 64.5) / 30.0);
+        }
+        return lerpColor(0x2E86A8, 0x6FD3D6, (h - 30.0) / 33.0);
     }
 
     /** Green lowlands, brown slopes, white peaks. */

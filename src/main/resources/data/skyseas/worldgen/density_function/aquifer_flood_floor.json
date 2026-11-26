@@ -1,4 +1,4 @@
 {
   "type": "skyseas:aquifer_flood_floor",
-  "height": "skyseas:seabed_height"
+  "height": "skyseas:cave_top"
 }

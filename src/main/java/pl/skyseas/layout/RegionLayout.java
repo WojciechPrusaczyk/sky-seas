@@ -1,13 +1,23 @@
 package pl.skyseas.layout;
 
 /**
- * Islands touching one layout region, as primitive arrays (struct of arrays), plus a
- * bucket index: for each bucket of {@code layoutBucketSize} blocks, the islands whose
- * reach box crosses it (including islands centred in neighbouring regions). Immutable
- * after {@link LayoutGenerator} builds it.
+ * Islands and ocean forms touching one layout region, as primitive arrays (struct of
+ * arrays), plus two bucket indexes (sky islands, ocean forms): for each bucket of
+ * {@code layoutBucketSize} blocks, the items whose reach box crosses it (including items
+ * centred in neighbouring regions). Immutable after {@link LayoutGenerator} builds it.
  */
 public final class RegionLayout {
     public static final byte CONTINENT = 0;
+    public static final byte ARCHIPELAGO = 1;
+    public static final byte HALLELUJAH = 2;
+    public static final byte CHAIN = 3;
+    /** First ocean form type; ocean types minus this are {@code OceanShape} kinds. */
+    public static final byte OCEAN_ISLAND = 4;
+    public static final byte SEAMOUNT = 5;
+    public static final byte VOLCANO = 6;
+    public static final byte SEA_SPIRE = 7;
+    public static final String[] TYPE_NAMES = {"continent", "archipelago", "hallelujah", "chain", "ocean_island",
+            "seamount", "volcano", "sea_spire"};
     public static final int FLAG_STARTER = 1;
 
     public final int rx;
@@ -19,27 +29,30 @@ public final class RegionLayout {
     public final long[] id;
     public final int[] cx;
     public final int[] cz;
-    /** Outline radius bound (blocks), for the index and rejections. */
+    /** Reach radius bound (blocks), for the index and rejections. */
     public final float[] radius;
     public final short[] minY;
     public final short[] maxY;
     public final long[] shapeSeed;
-    /** Shape parameters, {@link #paramStride} per island. */
+    /** Shape parameters of item i start at {@code params[paramOffset[i]]}. */
     public final double[] params;
-    public final int paramStride;
+    public final int[] paramOffset;
     public final int[] flags;
     /** Zone factor at the centre. */
     public final float[] zone;
 
     final int bucketSize;
     final int buckets;
-    /** CSR index: islands of bucket b are bucketItems[bucketStart[b] .. bucketStart[b + 1]). */
-    final int[] bucketStart;
-    final int[] bucketItems;
+    /** CSR indexes: items of bucket b are items[start[b] .. start[b + 1]). */
+    final int[] skyStart;
+    final int[] skyItems;
+    final int[] oceanStart;
+    final int[] oceanItems;
 
     RegionLayout(int rx, int rz, int regionSize, int count, byte[] type, long[] id, int[] cx, int[] cz,
-                 float[] radius, short[] minY, short[] maxY, long[] shapeSeed, double[] params, int paramStride,
-                 int[] flags, float[] zone, int bucketSize, int[] bucketStart, int[] bucketItems) {
+                 float[] radius, short[] minY, short[] maxY, long[] shapeSeed, double[] params, int[] paramOffset,
+                 int[] flags, float[] zone, int bucketSize, int[] skyStart, int[] skyItems, int[] oceanStart,
+                 int[] oceanItems) {
         this.rx = rx;
         this.rz = rz;
         this.originX = rx * regionSize;
@@ -54,13 +67,19 @@ public final class RegionLayout {
         this.maxY = maxY;
         this.shapeSeed = shapeSeed;
         this.params = params;
-        this.paramStride = paramStride;
+        this.paramOffset = paramOffset;
         this.flags = flags;
         this.zone = zone;
         this.bucketSize = bucketSize;
         this.buckets = regionSize / bucketSize;
-        this.bucketStart = bucketStart;
-        this.bucketItems = bucketItems;
+        this.skyStart = skyStart;
+        this.skyItems = skyItems;
+        this.oceanStart = oceanStart;
+        this.oceanItems = oceanItems;
+    }
+
+    public static boolean isOcean(byte type) {
+        return type >= OCEAN_ISLAND;
     }
 
     /** Bucket of a block inside this region. */
@@ -68,21 +87,38 @@ public final class RegionLayout {
         return ((z - originZ) / bucketSize) * buckets + (x - originX) / bucketSize;
     }
 
-    public int bucketStart(int bucket) {
-        return bucketStart[bucket];
+    public int skyStart(int bucket) {
+        return skyStart[bucket];
     }
 
-    public int bucketEnd(int bucket) {
-        return bucketStart[bucket + 1];
+    public int skyEnd(int bucket) {
+        return skyStart[bucket + 1];
     }
 
-    public int bucketItem(int k) {
-        return bucketItems[k];
+    public int skyItem(int k) {
+        return skyItems[k];
+    }
+
+    public int oceanStart(int bucket) {
+        return oceanStart[bucket];
+    }
+
+    public int oceanEnd(int bucket) {
+        return oceanStart[bucket + 1];
+    }
+
+    public int oceanItem(int k) {
+        return oceanItems[k];
+    }
+
+    /** True if the item's centre lies in this region (each item is counted once over all regions). */
+    public boolean owns(int i, int regionSize) {
+        return cx[i] >= originX && cx[i] < originX + regionSize && cz[i] >= originZ && cz[i] < originZ + regionSize;
     }
 
     /** Rough heap size in bytes (for cache statistics). */
     public long bytes() {
-        return 64L + count * (1L + 8 + 4 + 4 + 4 + 2 + 2 + 8 + 4 + 4 + 8L * paramStride)
-                + 4L * (bucketStart.length + bucketItems.length);
+        return 64L + count * (1L + 8 + 4 + 4 + 4 + 2 + 2 + 8 + 4 + 4 + 4) + 8L * params.length
+                + 4L * (skyStart.length + skyItems.length + oceanStart.length + oceanItems.length);
     }
 }

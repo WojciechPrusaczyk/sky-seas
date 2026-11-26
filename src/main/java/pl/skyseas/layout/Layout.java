@@ -2,6 +2,7 @@ package pl.skyseas.layout;
 
 import pl.skyseas.config.WorldParams;
 import pl.skyseas.shape.ContinentShape;
+import pl.skyseas.shape.OceanShape;
 
 /**
  * Facade of the island layout of one world (one per RandomState, no global state):
@@ -21,10 +22,15 @@ public final class Layout {
     private final WorldParams params;
     private final LayoutCache cache;
 
+    /** Layout with a temperate climate everywhere (tests, tools). */
     public Layout(long seed, WorldParams params) {
+        this(seed, params, ClimateProbe.TEMPERATE);
+    }
+
+    public Layout(long seed, WorldParams params, ClimateProbe climate) {
         this.seed = seed;
         this.params = params;
-        this.cache = new LayoutCache(seed, params);
+        this.cache = new LayoutCache(seed, params, climate);
     }
 
     public long seed() {
@@ -58,9 +64,9 @@ public final class Layout {
         int b = r.bucket(x, z);
         int best = -1;
         double bestEdge = NO_EDGE;
-        for (int k = r.bucketStart(b), end = r.bucketEnd(b); k < end; k++) {
-            int i = r.bucketItem(k);
-            double e = ContinentShape.edge(params, r.params, i * r.paramStride, r.shapeSeed[i], x, z);
+        for (int k = r.skyStart(b), end = r.skyEnd(b); k < end; k++) {
+            int i = r.skyItem(k);
+            double e = ContinentShape.edge(params, r.params, r.paramOffset[i], r.shapeSeed[i], x, z);
             if (e > bestEdge) {
                 bestEdge = e;
                 best = i;
@@ -72,7 +78,7 @@ public final class Layout {
     /** Island whose outline contains the column, or -1. */
     public int islandAt(RegionLayout r, int x, int z) {
         int i = nearestIsland(r, x, z);
-        return i >= 0 && ContinentShape.edge(params, r.params, i * r.paramStride, r.shapeSeed[i], x, z) > 0.0 ? i : -1;
+        return i >= 0 && ContinentShape.edge(params, r.params, r.paramOffset[i], r.shapeSeed[i], x, z) > 0.0 ? i : -1;
     }
 
     /** One column value ({@link #EDGE}, {@link #TOP}, {@link #BOTTOM}, {@link #MOUNTAIN}) of the nearest island. */
@@ -87,7 +93,7 @@ public final class Layout {
                 default -> 0.0;
             };
         }
-        int off = i * r.paramStride;
+        int off = r.paramOffset[i];
         long s = r.shapeSeed[i];
         double edge = ContinentShape.edge(params, r.params, off, s, x, z);
         if (kind == EDGE) {
@@ -100,5 +106,54 @@ public final class Layout {
             case TOP -> ContinentShape.top(params, flat, mountain);
             default -> mountain;
         };
+    }
+
+    /** Seabed surface with the ocean forms of the layout raised on the plain seabed {@code base}. */
+    public double oceanHeight(int x, int z, double base) {
+        RegionLayout r = regionAt(x, z);
+        int b = r.bucket(x, z);
+        double h = base;
+        for (int k = r.oceanStart(b), end = r.oceanEnd(b); k < end; k++) {
+            int i = r.oceanItem(k);
+            double f = OceanShape.height(r.type[i] - RegionLayout.OCEAN_ISLAND, r.params, r.paramOffset[i],
+                    r.shapeSeed[i], x, z, base);
+            if (f > h) {
+                h = f;
+            }
+        }
+        return h;
+    }
+
+    /**
+     * Height that bounds caves from above: the seabed height, except inside sea spires,
+     * where caves would hollow out the thin column (then the bottom of the world).
+     */
+    public double caveTop(int x, int z, double height) {
+        RegionLayout r = regionAt(x, z);
+        int b = r.bucket(x, z);
+        for (int k = r.oceanStart(b), end = r.oceanEnd(b); k < end; k++) {
+            int i = r.oceanItem(k);
+            if (r.type[i] == RegionLayout.SEA_SPIRE && OceanShape.insideSpire(r.params, r.paramOffset[i], x, z)) {
+                return params.worldMinY();
+            }
+        }
+        return height;
+    }
+
+    /** Ocean form whose surface is highest at the column (above the given base), or -1. */
+    public int oceanAt(RegionLayout r, int x, int z, double base) {
+        int b = r.bucket(x, z);
+        int best = -1;
+        double h = base;
+        for (int k = r.oceanStart(b), end = r.oceanEnd(b); k < end; k++) {
+            int i = r.oceanItem(k);
+            double f = OceanShape.height(r.type[i] - RegionLayout.OCEAN_ISLAND, r.params, r.paramOffset[i],
+                    r.shapeSeed[i], x, z, base);
+            if (f > h) {
+                h = f;
+                best = i;
+            }
+        }
+        return best;
     }
 }

@@ -20,6 +20,7 @@ import pl.skyseas.density.ZoneFactorFunction;
 import pl.skyseas.layout.Layout;
 import pl.skyseas.layout.RegionLayout;
 import pl.skyseas.shape.ContinentShape;
+import pl.skyseas.shape.OceanShape;
 import pl.skyseas.shape.SeabedColumn;
 
 /**
@@ -41,6 +42,7 @@ public final class SkySeasCommand {
                 .requires(source -> source.hasPermission(2))
                 .then(Commands.literal("info").executes(SkySeasCommand::info)
                         .then(Commands.literal("cache").executes(SkySeasCommand::infoCache)))
+                .then(locateCommand())
                 .then(Commands.literal("map")
                         .then(Commands.argument("radius", IntegerArgumentType.integer(64, 32768))
                                 .executes(ctx -> map(ctx, 0))
@@ -52,6 +54,79 @@ public final class SkySeasCommand {
                                 .then(Commands.literal("vanilla").executes(ctx -> bench(ctx, true, false)))
                                 .then(Commands.literal("here").executes(ctx -> bench(ctx, false, true))
                                         .then(Commands.literal("vanilla").executes(ctx -> bench(ctx, true, true)))))));
+    }
+
+    /** Locate targets: item type, or -1 for any ocean island; extra filter in {@link #matches}. */
+    private static final String[] LOCATE = {"continent", "ocean_island", "large_island", "atoll", "seamount",
+            "volcano", "sea_spire"};
+    private static final int LOCATE_MAX_RING = 12;
+
+    private static com.mojang.brigadier.builder.LiteralArgumentBuilder<CommandSourceStack> locateCommand() {
+        var node = Commands.literal("locate");
+        for (String target : LOCATE) {
+            node.then(Commands.literal(target).executes(ctx -> locate(ctx, target)));
+        }
+        return node;
+    }
+
+    private static boolean matches(RegionLayout r, int i, String target) {
+        int off = r.paramOffset[i];
+        return switch (target) {
+            case "continent" -> r.type[i] == RegionLayout.CONTINENT;
+            case "ocean_island" -> r.type[i] == RegionLayout.OCEAN_ISLAND;
+            case "large_island" -> r.type[i] == RegionLayout.OCEAN_ISLAND && r.params[off + OceanShape.SIZE_CLASS] == 2;
+            case "atoll" -> r.type[i] == RegionLayout.OCEAN_ISLAND && r.params[off + OceanShape.RING] > 0.0;
+            case "seamount" -> r.type[i] == RegionLayout.SEAMOUNT;
+            case "volcano" -> r.type[i] == RegionLayout.VOLCANO;
+            default -> r.type[i] == RegionLayout.SEA_SPIRE;
+        };
+    }
+
+    /** Nearest item of a type, from the layout alone, searching rings of regions outwards. */
+    private static int locate(CommandContext<CommandSourceStack> ctx, String target) {
+        CommandSourceStack source = ctx.getSource();
+        Layout layout = LayoutAccess.get(source.getLevel().getChunkSource().randomState());
+        if (layout == null) {
+            source.sendFailure(Component.literal("[Sky Seas] not a Sky Seas world"));
+            return 0;
+        }
+        BlockPos pos = BlockPos.containing(source.getPosition());
+        int size = layout.params().layoutRegionSize();
+        int prx = Math.floorDiv(pos.getX(), size);
+        int prz = Math.floorDiv(pos.getZ(), size);
+        double best = Double.MAX_VALUE;
+        int bx = 0;
+        int bz = 0;
+        for (int ring = 0; ring <= LOCATE_MAX_RING; ring++) {
+            if (best < (ring - 1) * (double) size) {
+                break;
+            }
+            for (int rx = prx - ring; rx <= prx + ring; rx++) {
+                for (int rz = prz - ring; rz <= prz + ring; rz++) {
+                    if (Math.max(Math.abs(rx - prx), Math.abs(rz - prz)) != ring) {
+                        continue;
+                    }
+                    RegionLayout r = layout.region(rx, rz);
+                    for (int i = 0; i < r.count; i++) {
+                        if (r.owns(i, size) && matches(r, i, target)) {
+                            double d = Math.hypot(r.cx[i] - pos.getX(), r.cz[i] - pos.getZ());
+                            if (d < best) {
+                                best = d;
+                                bx = r.cx[i];
+                                bz = r.cz[i];
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        if (best == Double.MAX_VALUE) {
+            source.sendFailure(Component.literal("[Sky Seas] no " + target + " within " + LOCATE_MAX_RING * size + " blocks"));
+            return 0;
+        }
+        String msg = String.format(Locale.ROOT, "[Sky Seas] nearest %s: %d, %d (%.0f blocks)", target, bx, bz, best);
+        source.sendSuccess(() -> Component.literal(msg), false);
+        return 1;
     }
 
     private static int info(CommandContext<CommandSourceStack> ctx) {
@@ -88,13 +163,24 @@ public final class SkySeasCommand {
                     .append(" (").append(r.count).append(" islands)");
             if (i >= 0) {
                 String[] characters = {"lowland", "mixed", "highland", "mountainous", "caldera"};
-                String character = characters[(int) r.params[i * r.paramStride + ContinentShape.CHARACTER]];
+                String character = characters[(int) r.params[r.paramOffset[i] + ContinentShape.CHARACTER]];
                 sb.append(String.format(Locale.ROOT, "\n  island: %s continent %016x%s, centre %d,%d, edge %.0f, top %.1f, bottom %.1f",
                         character, r.id[i], (r.flags[i] & RegionLayout.FLAG_STARTER) != 0 ? " (starter)" : "", r.cx[i], r.cz[i],
                         layout.column(pos.getX(), pos.getZ(), Layout.EDGE), layout.column(pos.getX(), pos.getZ(), Layout.TOP),
                         layout.column(pos.getX(), pos.getZ(), Layout.BOTTOM)));
             } else {
                 sb.append("\n  island: none (open sky)");
+            }
+            int o = layout.oceanAt(r, pos.getX(), pos.getZ(), -1000.0);
+            if (o >= 0) {
+                int off = r.paramOffset[o];
+                String kind = RegionLayout.TYPE_NAMES[r.type[o]];
+                if (r.type[o] == RegionLayout.OCEAN_ISLAND) {
+                    kind = new String[]{"small", "medium", "large"}[(int) r.params[off + OceanShape.SIZE_CLASS]]
+                            + (r.params[off + OceanShape.RING] > 0.0 ? " atoll" : " ocean island");
+                }
+                sb.append(String.format(Locale.ROOT, "\n  ocean form: %s, centre %d,%d, radius %.0f",
+                        kind, r.cx[o], r.cz[o], r.params[off + OceanShape.RADIUS]));
             }
         }
 
