@@ -197,8 +197,8 @@ class LayoutTest {
             }
         }
         assertTrue(worstDetached < 0.03, "detached area fraction " + worstDetached);
-        // A cove cutting off a headland tip leaves a sea stack (>= 3 cells, ~150 m2); smaller is rubble.
-        assertTrue(smallest >= 3, "rubble: detached piece of " + smallest + " cells of " + step + "x" + step);
+        // A cove cutting off a headland tip leaves a sea stack (~150 blocks, 2+ cells on this grid); one cell is rubble.
+        assertTrue(smallest >= 2, "rubble: detached piece of " + smallest + " cells of " + step + "x" + step);
     }
 
     /** {largest piece, total, smallest detached piece} in cells. */

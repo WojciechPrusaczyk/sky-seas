@@ -74,6 +74,9 @@ public final class ContinentShape {
     private static final double MICRO_AMP = 1.5;
     /** Warp of step and mesa noises (blocks), so scarps and terraces wander instead of following isolines. */
     private static final double STEP_WARP = 6.0;
+    /** Underside relief (blocks): broad hanging bumps and a little fine roughness. */
+    private static final double UNDERSIDE_AMP = 6.0;
+    private static final double UNDERSIDE_FINE_AMP = 1.5;
     private static final double STEP_WARP_SCALE = 45.0;
 
     /** Mountain mask noise above the threshold by this much reaches full strength. */
@@ -135,8 +138,8 @@ public final class ContinentShape {
         out[off + CRUST] = ShapeMath.lerp(p.continentCrustMin(), p.continentCrustMax(), u(seed, 1));
         double mountains = 0.5 + 0.5 * u(seed, 2);
         out[off + MOUNTAINS] = mountains;
-        out[off + EXTENT] = maxExtent(p, radius);
         placeBlobs(seed, cx, cz, radius, starter, out, off);
+        out[off + EXTENT] = extent(p, out, off);
         out[off + PLATEAU] = starter ? p.starterPlateauRadius() : 0.0;
         out[off + MAX_Y] = p.continentPeakMaxY();
         placeCharacter(p, seed, starter, out, off);
@@ -215,6 +218,22 @@ public final class ContinentShape {
 
     private static double u(long seed, int i) {
         return Hash.unit(Hash.hash(seed, i));
+    }
+
+    /** Farthest this continent's outline can reach from its centre (from its actual blobs). */
+    private static double extent(WorldParams p, double[] prm, int off) {
+        double reach = 0.0;
+        int count = (int) prm[off + BLOB_COUNT];
+        for (int k = 0; k < count; k++) {
+            int o = off + BLOB0 + BLOB_STRIDE * k;
+            double d = Math.hypot(prm[o] - prm[off + CX], prm[o + 1] - prm[off + CZ]);
+            reach = Math.max(reach, d + Math.max(prm[o + 2], prm[o + 3]) * (1.0 + p.continentOutlineNoise()));
+        }
+        double coast = 0.0;
+        for (double a : COAST_AMP) {
+            coast += a;
+        }
+        return reach + prm[off + RADIUS] * p.continentWarp() + BEND_AMP + coast;
     }
 
     /** Farthest the outline of a continent of this radius can reach from its centre. */
@@ -453,9 +472,13 @@ public final class ContinentShape {
      * Underside height: crust under the flat terrain, or under the lowered surface in
      * basins and coastal slopes (thinning to the edge), and cone roots; never below minBottomY.
      */
-    public static double bottom(WorldParams p, double[] prm, int off, double x, double z, double edge, double flatTop,
-                                double mountain) {
-        double b = flatTop + Math.min(0.0, mountain) - prm[off + CRUST] * ShapeMath.smoothstep(0.0, 40.0, edge);
+    public static double bottom(WorldParams p, double[] prm, int off, long seed, double x, double z, double edge,
+                                double flatTop, double mountain) {
+        double inner = ShapeMath.smoothstep(0.0, 40.0, edge);
+        // Gentle bumps hanging from the underside, fading towards the edge.
+        double hanging = UNDERSIDE_AMP * (0.5 + 0.5 * SimplexNoise.noise2(seed + 43, x / 50.0, z / 50.0))
+                + UNDERSIDE_FINE_AMP * SimplexNoise.noise2(seed + 44, x / 18.0, z / 18.0);
+        double b = flatTop + Math.min(0.0, mountain) - (prm[off + CRUST] + hanging * inner) * inner;
         double root = 0.0;
         int roots = (int) prm[off + ROOT_COUNT];
         for (int k = 0; k < roots; k++) {

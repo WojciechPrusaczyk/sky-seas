@@ -123,7 +123,7 @@ Układ to deterministyczny plan wysp liczony raz na region 1024×1024 bloków, w
 
 **Poziomy (kolejność = priorytet)**
 
-1. **Kontynenty.** Siatka z jitterem (komórka 2000 bloków, jeden kandydat na komórkę; przesunięcie w komórce zależy od rozmiaru kontynentu, małe wędrują dalej), promień 200–600 (średnica 400–1200). Odstęp komórek wyklucza kolizje. Kontynent startowy na 0,0.
+1. **Kontynenty.** Siatka z jitterem (komórka 1800 bloków, jeden kandydat na komórkę; przesunięcie w komórce zależy od faktycznego zasięgu kontynentu, małe wędrują dalej, a rzadki rozłożysty kontynent, który się nie mieści, jest proporcjonalnie zmniejszany), promień 230–690 (średnica ok. 460–1380). Odstęp komórek wyklucza kolizje. Kontynent startowy na 0,0.
 2. **Wyspy oceaniczne.** Gęstsza siatka z jitterem, klasa wielkości losowana 70/25/5 (skałki, średnie, duże). Odrzucane, gdy leżą pod rzutem kontynentu z marginesem 16 bloków.
 3. **Klastry: archipelagi i góry Alleluja.** Środek klastra z siatki, wyspy wewnątrz klastra. Wyspa jest odrzucana, gdy jej rzut z marginesem 16 nachodzi na wyspę oceaniczną lub kontynent, gdy przekracza budżet zacienienia regionu (30% powierzchni morza) albo gdy wisi nad inną wyspą klastra.
 4. **Łańcuchy powrotne.** Z wybranych punktów krawędzi kontynentu ścieżka w dół do ok. Y 70: 5–15 wysp, krok pionowy do 12 bloków, przerwa pozioma do 6, promień wyspy co najmniej 4 (zapas ziemi). Omija wyspy oceaniczne.
@@ -203,7 +203,7 @@ Każdy typ: `MapCodec` zarejestrowany w `Registries.DENSITY_FUNCTION_TYPE` przez
 
 **Kształty (pakiet `shape`)**
 
-- **Kontynent.** Sylwetka to suma 3–6 nachodzących na siebie elips (rdzeń i satelity o różnej wielkości, proporcjach i kierunku, każda z zaszumionym obrysem), lekko zawirowana domena i fraktalny detal wybrzeża w kilku skalach (zatoczki, cyple); pole krawędzi ma spadek ok. 1 na blok, więc detal nie odrywa okruchów (test: brak fragmentów < 32×32, odłączone < 3%). Charakter kontynentu (nizinny 20%, mieszany 30%, wyżynny 15%, górski 20% z pasmem gór wzdłuż kręgosłupa kontynentu, kaldera 15% z pierścieniem gór z przełęczami i kotliną) ustala wagi form. Wierzch: baza Y 135–175 i regiony terenu: równiny (co najmniej 35%, obecnie ok. 49% powierzchni), pagórki, wyżyny z uskokami, mesy o pionowych ścianach, rzadkie skupiska skalnych iglic i tarasowe pasma górskie; łagodna mikrorzeźba (±1,5 bloku, fala ok. 40 bloków) i lekko falujące linie uskoków, żeby teren nie wyglądał jak mapa poziomic; szum 3D poza pasem krawędzi tylko na wysokich ścianach (mesy, góry), bo na pagórkach wycina leje; przy części wybrzeża teren opada stokiem zamiast urywać się klifem; płaskowyż pod spawn na kontynencie startowym. Pod płaskim terenem 10–25 bloków skorupy, góry pełne do skorupy. Spód: skorupa + 3–8 stożkowych korzeni ze slotami na gniazda diamentów. Nawisy i łuki: szum 3D tylko w paśmie 24 bloków od brzegu i na stokach. Spód nigdy poniżej Y 113.
+- **Kontynent.** Sylwetka to suma 3–6 nachodzących na siebie elips (rdzeń i satelity o różnej wielkości, proporcjach i kierunku, każda z zaszumionym obrysem), lekko zawirowana domena i fraktalny detal wybrzeża w kilku skalach (zatoczki, cyple); pole krawędzi ma spadek ok. 1 na blok, więc detal nie odrywa okruchów (test: brak fragmentów < 32×32, odłączone < 3%). Charakter kontynentu (nizinny 20%, mieszany 30%, wyżynny 15%, górski 20% z pasmem gór wzdłuż kręgosłupa kontynentu, kaldera 15% z pierścieniem gór z przełęczami i kotliną) ustala wagi form. Wierzch: baza Y 135–175 i regiony terenu: równiny (co najmniej 35%, obecnie ok. 49% powierzchni), pagórki, wyżyny z uskokami, mesy o pionowych ścianach, rzadkie skupiska skalnych iglic i tarasowe pasma górskie; łagodna mikrorzeźba (±1,5 bloku, fala ok. 40 bloków) i lekko falujące linie uskoków, żeby teren nie wyglądał jak mapa poziomic; szum 3D poza pasem krawędzi tylko na wysokich ścianach (mesy, góry), bo na pagórkach wycina leje; przy części wybrzeża teren opada stokiem zamiast urywać się klifem; płaskowyż pod spawn na kontynencie startowym. Pod płaskim terenem 10–25 bloków skorupy, góry pełne do skorupy. Spód: skorupa z delikatnymi zwisami (szum 2D, do ok. 6 bloków, zanika przy krawędzi; liczony raz na kolumnę w `flat_cache`) + 3–8 stożkowych korzeni ze slotami na gniazda diamentów. Nawisy i łuki: szum 3D tylko w paśmie 24 bloków od brzegu i na stokach. Spód nigdy poniżej Y 113.
 - **Archipelag.** Superelipsoidy z zaszumionym promieniem, płaski wierzch, stożkowy spód; rzadkie łuki i mosty jako kapsuły między parą wysp.
 - **Góry Alleluja.** Pionowe kapsuły 40–120 bloków, promień zwężający się ku dołowi + szum, lekkie pochylenie, płaski wierzch pod trawę.
 - **Łańcuchy.** Spłaszczone elipsoidy o promieniu 4–10 w `sky_details`, z gwarantowaną warstwą ziemi na wierzchu.
@@ -334,8 +334,8 @@ Wszystkie liczby z dokumentu designowego są parametrami w configu COMMON (`conf
 | `seabed.duneAmplitude` | 2 | Wydmy (±) |
 | `seabed.canyonDepth` | 8 … 14 | Głębokość kanionów (oceany umiarkowane) od spawnu do Krańca |
 | `seabed.trenchMinY` | −40 | Najgłębsze rowy (pod ciśnienie w Create Deep Seas) |
-| `continents.cellSize` | 2000 | Rozstaw kontynentów |
-| `continents.radius` | 200 … 600 | Promień kontynentów |
+| `continents.cellSize` | 1800 | Rozstaw kontynentów |
+| `continents.radius` | 230 … 690 | Promień kontynentów |
 | `continents.minBottomY` | 113 | Bufor 50 bloków nad wodą |
 | `starter.continentRadius` | 350 | Kontynent startowy (płaskowyż pod spawn: promień 150) |
 | `starter.guaranteeRadius` | 1000 | Promień gwarancji startowych |

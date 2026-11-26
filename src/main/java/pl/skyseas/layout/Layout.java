@@ -96,7 +96,7 @@ public final class Layout {
         double flat = ContinentShape.flatTop(r.params, off, s, x, z);
         double mountain = ContinentShape.mountain(params, r.params, off, s, x, z, edge);
         return switch (kind) {
-            case BOTTOM -> ContinentShape.bottom(params, r.params, off, x, z, edge, flat, mountain);
+            case BOTTOM -> ContinentShape.bottom(params, r.params, off, s, x, z, edge, flat, mountain);
             case TOP -> ContinentShape.top(params, flat, mountain);
             default -> mountain;
         };

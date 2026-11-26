@@ -20,18 +20,11 @@ public final class LayoutGenerator {
         return p.islandReachMargin() + p.continentEdgeNoise() + 4.0;
     }
 
-    /** Largest outline extent of any continent: also bounds the cell jitter, so continents never collide. */
-    static double maxContinentExtent(WorldParams p) {
-        return ContinentShape.maxExtent(p, p.continentRadiusMax());
-    }
 
     public static RegionLayout generate(long seed, WorldParams p, int rx, int rz) {
         int size = p.layoutRegionSize();
         int cell = p.continentCellSize();
         double margin = indexMargin(p);
-        if (cell / 2.0 - maxContinentExtent(p) - margin < 0.0) {
-            throw new IllegalStateException("continent cell too small for the largest continent");
-        }
         int x0 = rx * size;
         int z0 = rz * size;
         int ci0 = Math.floorDiv(x0 + cell / 2, cell);
@@ -60,11 +53,18 @@ public final class LayoutGenerator {
                 boolean starter = ci == 0 && cj == 0;
                 double r = starter ? p.starterContinentRadius()
                         : ShapeMath.lerp(p.continentRadiusMin(), p.continentRadiusMax(), Hash.unit(Hash.hash(s, 3)));
-                // Smaller continents may wander further from the cell centre: less grid-like, still no collisions.
-                double jitter = cell / 2.0 - ContinentShape.maxExtent(p, r) - margin;
+                // The continent's actual reach decides how far it may wander from the cell centre
+                // (less grid-like); a rare sprawling one that does not fit is scaled down. No collisions.
+                int off = n * stride;
+                double limit = cell / 2.0 - margin;
+                ContinentShape.place(p, s, 0, 0, r, starter, params, off);
+                while (params[off + ContinentShape.EXTENT] > limit) {
+                    r *= 0.95;
+                    ContinentShape.place(p, s, 0, 0, r, starter, params, off);
+                }
+                double jitter = limit - params[off + ContinentShape.EXTENT];
                 int x = starter ? 0 : (int) Math.round(ci * (double) cell + (2.0 * Hash.unit(Hash.hash(s, 1)) - 1.0) * jitter);
                 int z = starter ? 0 : (int) Math.round(cj * (double) cell + (2.0 * Hash.unit(Hash.hash(s, 2)) - 1.0) * jitter);
-                int off = n * stride;
                 ContinentShape.place(p, s, x, z, r, starter, params, off);
                 double reach = params[off + ContinentShape.EXTENT] + margin;
                 if (x + reach < x0 || x - reach >= x0 + size || z + reach < z0 || z - reach >= z0 + size) {
