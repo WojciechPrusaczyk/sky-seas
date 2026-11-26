@@ -4,7 +4,7 @@ Nov 25, 2026 · @Wojciech Prusaczyk
 
 ## Wizja i filary
 
-Mod generuje świat do wspólnej gry na serwerze z Create Aeronautics: latające wyspy nad bardzo głębokim oceanem, w wysokościach vanilli (Y −64…320), bez nowych biomów i bez psucia struktur vanilli i modów.
+Mod generuje świat do wspólnej gry na serwerze z Create Aeronautics: latające wyspy nad bardzo głębokim oceanem, w wysokościach vanilli (Y −64…320), bez nowych biomów lądowych i bez psucia struktur vanilli i modów.
 
 **Fantazja gracza:** niebo to dom i warsztat, ocean to skarbiec i zagrożenie. Gracz zaczyna w chmurach i buduje pierwszy statek z tego, co daje niebo, a po najcenniejsze rzeczy schodzi w głębinę.
 
@@ -24,7 +24,7 @@ Pięć vanillowych mechanik wyznacza twarde reguły generatora.
 | Światło nieba liczy się kolumnami; pod wyspę wpada tylko z boku, na ok. 15 bloków | Pod dużą wyspą jest wieczna noc, moby spawnią się w dzień | Czyste niebo nad lądami w oceanie, limit zacienienia morza |
 | Rudy zależą od wysokości Y, nie od rodzaju skały | Vanillowe rozkłady mogą trafić w złą warstwę | Na wyspy dodajemy miedź, cynk oraz mniejsze złoża złota i redstone |
 | Upadek do wody nie zadaje obrażeń, z dowolnej wysokości | Ocean działa jak siatka bezpieczeństwa | Pod wyspami głównie woda, drogi powrotne: łańcuchy małych wysp i kaskady wodospadów |
-| Vanillowe chmury wiszą na stałym Y 192 | Zasłaniałyby widok z terenu mieszkalnego | Teren mieszkalny na Y 135–175; pas chmur przecinają tylko szczyty (shadery i tak mają własne chmury) |
+| Vanillowe chmury wiszą na stałym Y 192 | Zasłaniałyby widok z terenu mieszkalnego | Teren mieszkalny głównie na Y 125–185; pas chmur przecinają tylko szczyty (shadery i tak mają własne chmury) |
 | Biomy są trójwymiarowe | Jedna kolumna może mieć ocean na dole i las na górze | Struktury i moby same trafiają do właściwej warstwy |
 
 ## Układ pionowy świata
@@ -34,8 +34,9 @@ Pięć vanillowych mechanik wyznacza twarde reguły generatora.
 | Strefa | Y | Rola |
 | --- | --- | --- |
 | Najwyższe wyspy | do ok. 305 | Dla najmocniejszych statków; ok. 15 bloków zapasu pod sufitem |
-| Góry na kontynentach | 175–250 | Tylko szczyty przecinają pas chmur (192) |
-| Powierzchnia kontynentów | 135–175 | Teren do mieszkania i budowy |
+| Góry na kontynentach | 175–250, masywy 270–300 | Tylko szczyty przecinają pas chmur (192) |
+| Powierzchnia kontynentów | 125–185 (wyniesione 190–220) | Teren do mieszkania i budowy |
+| Wyspy-wieże, małe i średnie wyspy | od 120 do limitu strefy | Wypełniają niebo między kontynentami |
 | Spód kontynentów | od 113 | 50 bloków powietrza nad wodą |
 | Archipelagi | 120–240 | Na różnych wysokościach |
 | Góry Alleluja | 110–305 | Dolne bryły dostępne od razu, szczyty dla mocnych statków |
@@ -51,14 +52,22 @@ Teren mieszkalny leży poniżej pasa chmur, pod wyspami jest głównie woda, a n
 
 ## Lądy na niebie
 
-Niebo tworzą cztery formy: kontynenty jako baza, archipelagi i góry Alleluja do eksploracji oraz łańcuchy małych wysp jako droga powrotna z morza. Wszystkie biorą powierzchnię z reguł biomu, więc działają z biomami vanilli i modów.
+Niebo ma być gęste i malownicze. Kontynenty są bazą, a między nimi leżą archipelagi, góry Alleluja, wyspy-wieże, małe i średnie wyspy oraz łańcuchy powrotne z morza, tak żeby z każdego miejsca na niebie było coś widać. Wszystkie biorą powierzchnię z reguł biomu, więc działają z biomami vanilli i modów.
 
 | Forma | Skala | Wysokość Y | Rola w grze | Charakter |
 | --- | --- | --- | --- | --- |
-| Kontynent | ok. 460–1380 bloków | teren 135–175, góry do 250, spód od 113 | Start, baza, wioski | Cienka skorupa (10–25 bloków kamienia pod płaskim terenem); kamień w górach, iglicach, łukach, mesach, urwiskach i nawisach; spore płaskie połacie pod budowę; rzeki i jeziora kończące się wodospadami; płytki spód z kilkoma skalnymi korzeniami |
+| Kontynent | średnica ok. 460–1380 bloków; ok. 30% złożonych z 2–4 członów; przerwy między kontynentami 400–800 bloków | teren 125–185 z przechyleniem bryły o 20–40; startowy nisko (baza ok. 140–150); od Pogranicza ok. 15% wyniesionych (baza 190–220); góry do 250, u ok. 20% (częściej dalej od spawnu) masyw ze szczytami 270–300; spód od 113 | Start, baza, wioski | Sylwetki z katalogu zamiast okręgów: wydłużone (proporcje 1:2–1:4), półksiężyc lub podkowa z zatoką, hak, rozgałęziony (palce lądu), nieregularny z elips. Człony kontynentu złożonego łączą przesmyki albo naturalne mosty skalne, z różnicą wysokości 20–60 bloków (urwiska lub stoki). Cienka skorupa (10–25 bloków kamienia pod płaskim terenem); kamień w górach, iglicach, mesach i urwiskach; spore płaskie połacie pod budowę; rzeki i jeziora kończące się wodospadami |
 | Archipelag | wyspy 15–150 bloków, klastry po 10–40 | 120–240 | Eksploracja, nawigacja, trasy dla pilotów | Jeden dominujący biom na klaster, różne wysokości, łuki skalne, naturalne mosty, zwisające pnącza |
 | Góry Alleluja | bryły 20–50 szerokości i 40–120 wysokości, klastry po 15–40 | 110–305 | Slalom dla pilotów, dużo kamienia przy małym cieniu | Wysokie, wąskie bryły z zielonymi wierzchołkami, pnącza na dziesiątki bloków, wodospady spadające z bryły na bryłę |
+| Wyspy-wieże | szerokość 15–40, wysokość 50–150 bloków; 2–4 na region | wierzchołek do limitu strefy | Punkty orientacyjne, slalom | Mała powierzchnia, duża wysokość, płaski zielony wierzchołek; także poza klastrami Alleluja |
+| Małe i średnie wyspy | 10–30 i 30–80 bloków; łącznie 10–20 na region | od 120 do limitu strefy | Wypełniają niebo, przystanki między kontynentami | Ok. połowa jako satelity 100–400 bloków od krawędzi kontynentu, na różnych wysokościach; reszta rozsiana między kontynentami |
 | Łańcuchy powrotne | wyspy 10–40 bloków, po kilka do kilkunastu w łańcuchu | od kilku bloków nad wodą do krawędzi kontynentu | Droga powrotna, zanim gracze mają statek | Normalne małe wyspy z trawą i drzewami, wyglądające jak część archipelagu, a nie rumowisko; rozstawione nieregularnie, na różnych wysokościach. Na każdej jest dość ziemi, żeby dosypać słup albo most do następnej. Najniższa wisi kilka bloków nad wodą |
+
+**Spody wysp.** Bez masywnego kilu. Pod każdą większą wyspą (kontynenty, średnie wyspy, wieże) zwisa 3–8 skalnych iglic długości 10–40 bloków, pod małymi 0–2. W iglicach mogą siedzieć gniazda diamentów.
+
+**Krawędzie bez okruchów.** Szum 3D przy krawędziach tylko wycina, nigdy nie dokłada masy poza obrysem 2D, więc nie ma oderwanych, latających okruchów.
+
+**Gwarancje przy spawnie.** W promieniu ok. 1000 bloków od spawnu leży co najmniej jeden archipelag i jeden klaster gór Alleluja.
 
 **Kaskady wodospadów.** Część rzek z kontynentów spływa do morza kaskadami, z półkami i oczkami wodnymi co ok. 20–30 bloków. Gracz może nimi wpłynąć z powrotem w górę i po drodze złapać oddech, bo na długim, nieprzerwanym wodospadzie skończyłoby mu się powietrze.
 
@@ -92,9 +101,33 @@ Każdy vanillowy biom wodny dostaje własny krajobraz z vanillowych bloków; dno
 
 Miejscami dno to goła skała (deepslate, tuff, basalt) zamiast piasku, żeby rudy były widoczne z łodzi.
 
+**Wyspy i formy w oceanie.** Wysp oceanicznych jest dużo, z wyraźnym udziałem średnich. Formy dna (wulkany, góry podwodne, iglice) są częste i tylko luźno związane z temperaturą wody: wulkany występują w zimnej i umiarkowanej wodzie, gęściej w zimnej.
+
+**Biomy dna.** Oprócz vanillowych biomów wodnych dno dostaje cztery własne biomy z datapacka. Gracze nie potrzebują do nich moda, bo serwer wysyła je jako dane. Strefy mają 300–800 bloków, a temperatura wody tylko przechyla szanse. Dla gry są to oceany, więc wraki, ruiny, monumenty i moby działają w nich normalnie.
+
+| Biom | Gdzie | Woda i atmosfera | Charakter |
+| --- | --- | --- | --- |
+| Pola wulkaniczne | Zimna i umiarkowana woda | Ciemna, szarozielona woda; mniej ryb | Basalt, magma, kominy, grupy stożków, pola kolumn bazaltowych |
+| Las kelpu | Umiarkowana i zimna woda | Zielonkawa woda; dużo ryb | Gęsty kelp sięgający wysoko w toni, skalne grzbiety |
+| Skalne pustkowie | Każda temperatura | Czysta, szara woda | Słupy, łuki, skarpy, głazy, odsłonięte rudy |
+| Głębia | Tylko w rowach, poniżej ok. Y 0 | Prawie czarna woda, bliższa mgła wodna, glow squid | Strome ściany, glow lichen, sculk nad starożytnymi miastami |
+
+**Monumentalne formacje.** Dno nie może być płaskie ani puste; każdy biom dna ma własny zestaw form, a ogólnie:
+
+- słupy i kolumny skalne 20–60 bloków wysokości, w grupach; część sięga połowy głębokości (ok. Y 25–30);
+- łuki skalne o rozpiętości 20–60 bloków;
+- skarpy: podwodne klify 15–40 bloków dzielące dno na tarasy;
+- długie, wyraźne grzbiety;
+- kaniony z nawisami;
+- płaskowyże o płaskich szczytach, 20–40 bloków nad dnem;
+- pola głazów;
+- w polach wulkanicznych kilka stożków razem i pola kolumn bazaltowych;
+- wyraźna rzeźba w średniej skali: pagórki i rynny co 50–150 bloków;
+- skalne rafy na płyciznach.
+
 ## Reguły kompozycji krajobrazu
 
-Dziewięć reguł ma pierwszeństwo przed losowością generatora.
+Dziewięć reguł i reguły widoczności mają pierwszeństwo przed losowością generatora.
 
 1. **Czyste niebo nad lądami w oceanie.** Żadna wyspa nie rzuca cienia na ląd przy poziomie morza; margines ok. 16 bloków, bo światło z boku sięga ok. 15.
 2. **Limit zacienienia.** W danym regionie wyspy zasłaniają najwyżej ok. 30% powierzchni morza.
@@ -104,7 +137,14 @@ Dziewięć reguł ma pierwszeństwo przed losowością generatora.
 6. **Spody wysp jako widok.** Nawisy, dripstone, zwisające korzenie i glow lichen, bo z morza i z pokładu ogląda się je najczęściej.
 7. **Punkty orientacyjne.** Szczyty nad chmurami, wodospady i wyraźne sylwetki widoczne z daleka.
 8. **Naturalne krawędzie.** Krawędzie są nieregularne, z nawisami i urwiskami; żadnych prostych cięć, rytmicznych schodów ani rumowisk psujących widok. Przy części kontynentów do wody schodzi łańcuch małych wysp: odległość do następnej wyspy jest mniejsza niż zapas ziemi na bieżącej.
-9. **Teren mieszkalny poza pasem chmur.** Powierzchnie kontynentów na Y 135–175; pas chmur (192) przecinają tylko szczyty i wysokie bryły.
+9. **Teren mieszkalny poza pasem chmur.** Powierzchnie kontynentów głównie na Y 125–185; pas chmur (192) przecinają szczyty, wysokie bryły i rzadkie wyniesione kontynenty. To reguła miękka, bo shadery i tak mają własne chmury.
+
+**Reguły widoczności.** Ocena „pusto” jest mierzalna: liczą ją `/skyseas map` i `/skyseas audit`.
+
+- **Niebo:** z każdego punktu na Y 150 co najmniej 1 wyspa latająca w promieniu 250 bloków i co najmniej 3 w promieniu 500.
+- **Morze:** z każdego miejsca na powierzchni morza coś na wodzie lub pod nią (wyspa, iglica, góra podwodna, formacja) w promieniu 250 bloków.
+- **Dno:** z każdego punktu dna wyraźna forma w promieniu 150 bloków i co najmniej jedna monumentalna (ponad 30 bloków wysokości) w promieniu ok. 500.
+- **Odstępy:** przerwy między kontynentami 400–800 bloków.
 
 ## Surowce i rudy
 
@@ -121,7 +161,7 @@ Vanillowe zakresy Y prawie same dzielą rudy tak, jak chcemy; na wyspy dodajemy 
 | Złoto | Dno; mniejsze złoża na wyspach, najwięcej w badlands | Vanilla ma dodatkowe złoże w badlands |
 | Redstone | Dno; mniejsze złoża na wyspach, m.in. w rdzeniach gór kontynentów | Miękka blokada: nikt nie utknie, ale dno się opłaca |
 | Lapis | Dno | Vanilla |
-| Diamenty | Wyłącznie pod oceanem + rzadkie gniazda w skalnych korzeniach pod latającymi wyspami | Gniazda tylko statkiem, od strefy Pogranicze |
+| Diamenty | Wyłącznie pod oceanem + rzadkie gniazda w skalnych iglicach pod latającymi wyspami | Gniazda tylko statkiem, od strefy Pogranicze |
 
 Na wyspach część rud wychodzi na ściany urwisk, gór i brył Alleluja, więc żelazo, złoto, redstone i cynk widać z pokładu, a nie tylko w jaskiniach.
 
@@ -164,7 +204,7 @@ Struktury podziemne nie mogą wystawać do wody; wymagany jest strop nad nimi. M
 
 ## Biomy i klimat
 
-Nie dodajemy własnych biomów: generator rozkłada biomy vanilli i modów w trzech wymiarach, według jednej mapy klimatu dla nieba i oceanu.
+Nie dodajemy własnych biomów lądowych (wyjątkiem są cztery biomy dna, patrz Oceany): generator rozkłada biomy vanilli i modów w trzech wymiarach, według jednej mapy klimatu dla nieba i oceanu.
 
 - **Biomy 3D.** W jednej kolumnie leży biom oceaniczny na dole i lądowy na wyspie. Ryby, drowned i struktury oceaniczne działają poprawnie pod wyspą.
 - **Spójny region.** Niebo i ocean korzystają z tej samej mapy klimatu, więc nad zamarzniętym oceanem wiszą śnieżne wyspy.
@@ -208,7 +248,7 @@ Każdy etap korzysta z poprzedniego: surowce z nieba budują sprzęt, który otw
 4. **Płycizny.** Sprzęt do nurkowania z Create (z miedzi), ciepłe rafy, błękitne dziury; alternatywnie zejście cenotą z wyspy oceanicznej.
 5. **Łódź z Create Deep Seas.** Głębokie dno, odsłonięte rudy, diamenty, podwodne wulkany.
 6. **Twierdza pod dnem.** Droga do Endu.
-7. **Mocniejsze statki i kadłuby.** Szczyty gór Alleluja, rowy, gniazda diamentów w korzeniach wysp i dalsze strefy.
+7. **Mocniejsze statki i kadłuby.** Szczyty gór Alleluja, rowy, gniazda diamentów w iglicach pod wyspami i dalsze strefy.
 
 ## Kompatybilność z vanillą i modami
 
