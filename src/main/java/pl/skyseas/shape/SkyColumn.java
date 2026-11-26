@@ -21,7 +21,8 @@ public final class SkyColumn {
         double a = p.continentEdgeNoise();
         if (y >= bottom - a - 4.0 && y <= top + a + 4.0) {
             double band = 1.0 - ShapeMath.smoothstep(0.0, p.continentEdgeBand(), edge);
-            double slope = 0.6 * ShapeMath.smoothstep(4.0, 24.0, mountain);
+            // Only tall walls (mesas, mountains) get 3D detail: on hills it carves crater-like pits.
+            double slope = 0.5 * ShapeMath.smoothstep(20.0, 45.0, mountain);
             double w = Math.max(band, slope);
             if (w > 0.0) {
                 double n = 0.7 * SimplexNoise.noise3(noiseSeed, x / 40.0, y / 24.0, z / 40.0)

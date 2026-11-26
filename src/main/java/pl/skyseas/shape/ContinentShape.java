@@ -71,10 +71,10 @@ public final class ContinentShape {
     /** Caldera continents sit high, so the basin keeps a full crust. */
     private static final double CALDERA_BASE_MIN = 155.0;
     /** Small-scale relief everywhere (blocks): bumps that break up contour-like surfaces. */
-    private static final double MICRO_AMP = 2.0;
-    private static final double MICRO_FINE_AMP = 1.0;
+    private static final double MICRO_AMP = 1.5;
     /** Warp of step and mesa noises (blocks), so scarps and terraces wander instead of following isolines. */
-    private static final double STEP_WARP = 12.0;
+    private static final double STEP_WARP = 6.0;
+    private static final double STEP_WARP_SCALE = 45.0;
 
     /** Mountain mask noise above the threshold by this much reaches full strength. */
     private static final double MOUNTAIN_RAMP = 0.35;
@@ -305,8 +305,7 @@ public final class ContinentShape {
             double dz = z - prm[off + CZ];
             open = ShapeMath.smoothstep(plateau, plateau + 120.0, Math.sqrt(dx * dx + dz * dz));
         }
-        double micro = (MICRO_AMP * SimplexNoise.noise2(seed + 27, x / 22.0, z / 22.0)
-                + MICRO_FINE_AMP * SimplexNoise.noise2(seed + 28, x / 9.0, z / 9.0)) * ShapeMath.smoothstep(0.0, 12.0, edge);
+        double micro = MICRO_AMP * SimplexNoise.noise2(seed + 27, x / 40.0, z / 40.0) * ShapeMath.smoothstep(0.0, 12.0, edge);
         double coastDrop = COAST_DROP * ShapeMath.smoothstep(-0.1, 0.4, SimplexNoise.noise2(seed + 17, x / 200.0, z / 200.0))
                 * (1.0 - ShapeMath.smoothstep(0.0, COAST_DROP_WIDTH, edge)) * open;
         inland *= open;
@@ -318,8 +317,8 @@ public final class ContinentShape {
         double featured = ShapeMath.smoothstep(threshold, threshold + 0.3,
                 SimplexNoise.noise2(seed + 9, x / REGION_SCALE, z / REGION_SCALE)) * inland;
         // Step and mesa noises are read at warped positions, so their edges wander.
-        double sx = x + STEP_WARP * SimplexNoise.noise2(seed + 33, x / 28.0, z / 28.0);
-        double sz = z + STEP_WARP * SimplexNoise.noise2(seed + 34, x / 28.0, z / 28.0);
+        double sx = x + STEP_WARP * SimplexNoise.noise2(seed + 33, x / STEP_WARP_SCALE, z / STEP_WARP_SCALE);
+        double sz = z + STEP_WARP * SimplexNoise.noise2(seed + 34, x / STEP_WARP_SCALE, z / STEP_WARP_SCALE);
 
         double terrain = 0.0;
         if (featured > 0.0) {
@@ -425,8 +424,7 @@ public final class ContinentShape {
         double ridge = 0.65 * r1 * r1 + 0.25 * r2 * r2 + 0.1 * r3;
         double h = mask * prm[off + MOUNTAINS] * ridge * (p.continentPeakMaxY() - prm[off + BASE_Y]);
         // Irregular terraces: the step boundary wanders, so terraces are not contour lines.
-        double steps = (h + 4.0 * SimplexNoise.noise2(seed + 30, x / 50.0, z / 50.0)
-                + 2.0 * SimplexNoise.noise2(seed + 29, x / 17.0, z / 17.0)) / TERRACE_STEP;
+        double steps = (h + 3.0 * SimplexNoise.noise2(seed + 30, x / 60.0, z / 60.0)) / TERRACE_STEP;
         double k = Math.floor(steps);
         double terraced = TERRACE_STEP * (k + ShapeMath.smoothstep(0.3, 0.7, steps - k));
         return Math.max(0.0, ShapeMath.lerp(h, terraced, TERRACE_BLEND));
