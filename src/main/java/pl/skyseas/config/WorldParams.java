@@ -238,7 +238,7 @@ public record WorldParams(
         double seaSpireTopMax) {
 
     /** Bumped whenever a code change alters generated chunks (see CLAUDE.md). */
-    public static final int GENERATOR_VERSION = 10;
+    public static final int GENERATOR_VERSION = 11;
 
     public static final WorldParams DEFAULTS = new WorldParams(
             -64,

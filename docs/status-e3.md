@@ -298,4 +298,4 @@ Każda runda kończy się JUnit, GameTestami, mapą, benchem (`noise` ≤ 1,3× 
 | Wulkany | siatka 800, szansa 0,7, promień 70–140, krawędź Y 15–50, krater 8–18 (woda zimna) |
 | Iglice morskie | siatka 450, szansa 0,6, 1–4 w grupie, promień 3–8, 8–35 nad wodą (woda letnia) |
 | Czyste niebo | margines 16 + 12 (szum nawisów) |
-| `generatorVersion` | 10 |
+| `generatorVersion` | 11 |

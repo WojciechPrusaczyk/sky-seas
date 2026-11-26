@@ -7,7 +7,11 @@ import java.util.Locale;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.Commands;
 import net.minecraft.core.BlockPos;
+import net.minecraft.ChatFormatting;
+import net.minecraft.network.chat.ClickEvent;
 import net.minecraft.network.chat.Component;
+import net.minecraft.network.chat.ComponentUtils;
+import net.minecraft.network.chat.HoverEvent;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.level.chunk.ChunkGenerator;
 import net.minecraft.world.level.levelgen.DensityFunction;
@@ -105,6 +109,45 @@ public final class SkySeasCommand {
         };
     }
 
+    /** Nearest column within 100 blocks of x, z that holds a rock bridge (outside the island outlines), else x, z. */
+    private static int[] bridgeColumn(Layout layout, int x, int z) {
+        for (int ring = 0; ring <= 50; ring++) {
+            for (int dx = -ring; dx <= ring; dx++) {
+                for (int dz = -ring; dz <= ring; dz++) {
+                    if (Math.max(Math.abs(dx), Math.abs(dz)) != ring) {
+                        continue;
+                    }
+                    int cx = x + 2 * dx;
+                    int cz = z + 2 * dz;
+                    if (layout.detailFloor(cx & ~3, cz & ~3) < Layout.NO_SPIRE && layout.column(cx, cz, Layout.EDGE) <= 0.0) {
+                        for (int y = 319; y > (int) layout.params().continentMinBottomY(); y--) {
+                            if (layout.detailDensity(cx, y, cz) > 0.0) {
+                                return new int[]{cx, cz};
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        return new int[]{x, z};
+    }
+
+    /**
+     * Where to stand at x, z: on the island (on the land above a hanging spire), on a rock
+     * bridge, or on an ocean form or the sea.
+     */
+    private static int landingY(Layout layout, int x, int z) {
+        if (layout.column(x, z, Layout.EDGE) > 0.0) {
+            return (int) Math.ceil(layout.column(x, z, Layout.TOP)) + 2;
+        }
+        for (int y = 319; y > (int) layout.params().continentMinBottomY(); y--) {
+            if (layout.detailDensity(x, y, z) > 0.0) {
+                return y + 2;
+            }
+        }
+        return (int) Math.ceil(Math.max(63.0, layout.oceanHeight(x, z, -10.0))) + 2;
+    }
+
     /** Offset of the first rock bridge link of a continent, or -1. */
     private static int bridge(RegionLayout r, int i) {
         int off = r.paramOffset[i];
@@ -175,8 +218,21 @@ public final class SkySeasCommand {
             source.sendFailure(Component.literal("[Sky Seas] no " + target + " within " + LOCATE_MAX_RING * size + " blocks"));
             return 0;
         }
-        String msg = String.format(Locale.ROOT, "[Sky Seas] nearest %s: %d, %d (%.0f blocks)", target, bx, bz, best);
-        source.sendSuccess(() -> Component.literal(msg), false);
+        if (target.equals("rock_bridge")) {
+            // The link is stored in the outline's warped space: find the bridge's real columns nearby.
+            int[] at = bridgeColumn(layout, bx, bz);
+            bx = at[0];
+            bz = at[1];
+        }
+        int ty = landingY(layout, bx, bz);
+        String tp = String.format(Locale.ROOT, "/tp @s %d %d %d", bx, ty, bz);
+        Component coords = ComponentUtils.wrapInSquareBrackets(Component.literal(bx + ", " + ty + ", " + bz))
+                .withStyle(style -> style.withColor(ChatFormatting.GREEN)
+                        .withClickEvent(new ClickEvent(ClickEvent.Action.RUN_COMMAND, tp))
+                        .withHoverEvent(new HoverEvent(HoverEvent.Action.SHOW_TEXT, Component.literal("Teleport: " + tp))));
+        Component msg = Component.literal("[Sky Seas] nearest " + target + ": ").append(coords)
+                .append(String.format(Locale.ROOT, " (%.0f blocks)", best));
+        source.sendSuccess(() -> msg, false);
         return 1;
     }
 

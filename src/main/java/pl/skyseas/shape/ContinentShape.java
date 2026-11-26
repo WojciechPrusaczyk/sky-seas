@@ -778,7 +778,8 @@ public final class ContinentShape {
             // Only tall walls (mesas, mountains) get 3D detail: on hills it carves crater-like pits.
             double w = Math.max(band, 0.5 * ShapeMath.smoothstep(20.0, 45.0, mountain));
             if (bridge) {
-                return w * ShapeMath.smoothstep(2.0, 24.0, -linkEdge);
+                // No carving at the flared abutments, which reach well beyond the bridge's own width.
+                return w * ShapeMath.smoothstep(20.0, 44.0, -linkEdge);
             }
             return w * (1.0 - share * (1.0 - ISTHMUS_DETAIL));
         }
@@ -825,9 +826,10 @@ public final class ContinentShape {
             double vz = prm[o + 3] - prm[o + 1];
             double t = ShapeMath.clamp(((wx - prm[o]) * vx + (wz - prm[o + 1]) * vz) / (vx * vx + vz * vz), 0.0, 1.0);
             double d = Math.hypot(wx - prm[o] - t * vx, wz - prm[o + 1] - t * vz);
-            if (d < prm[o + L_HALF_WIDTH] + 5.0) {
+            double flare = abutment(prm, o, t);
+            if (d < bridgeHalfWidth(prm, o, flare) + 5.0) {
                 double plane = prm[off + TILT_X] * (cx - prm[off + CX]) + prm[off + TILT_Z] * (cz - prm[off + CZ]);
-                floor = Math.min(floor, linkBase(prm, off, o, t) + plane - prm[o + L_THICKNESS] - 3.0);
+                floor = Math.min(floor, linkBase(prm, off, o, t) + plane - bridgeThickness(prm, o, flare) - 3.0);
             }
         }
         return floor;
@@ -835,8 +837,9 @@ public final class ContinentShape {
 
     /**
      * Density (blocks, positive inside) of the rock bridges of a continent at a block: a
-     * slab ramping from one member to the other, thickest along its axis. Each end reaches
-     * {@link #LINK_OVERLAP} blocks into the land.
+     * slab ramping from one member to the other, thickest along its axis. Towards each end
+     * it flares into a wide, thick abutment (an arched underside), so it grows out of the
+     * cliffs instead of touching them; each end reaches {@link #LINK_OVERLAP} blocks into the land.
      */
     public static double bridgeDensity(WorldParams p, double[] prm, int off, long seed, double x, double y, double z) {
         double best = -100.0;
@@ -855,15 +858,38 @@ public final class ContinentShape {
             double vx = prm[o + 2] - prm[o];
             double vz = prm[o + 3] - prm[o + 1];
             double t = ShapeMath.clamp(((wx - prm[o]) * vx + (wz - prm[o + 1]) * vz) / (vx * vx + vz * vz), 0.0, 1.0);
-            double e = prm[o + L_HALF_WIDTH] - Math.hypot(wx - prm[o] - t * vx, wz - prm[o + 1] - t * vz);
+            double flare = abutment(prm, o, t);
+            double half = bridgeHalfWidth(prm, o, flare);
+            double e = half - Math.hypot(wx - prm[o] - t * vx, wz - prm[o + 1] - t * vz);
             if (e <= -2.0) {
                 continue;
             }
             double top = linkBase(prm, off, o, t) + plane;
-            double bottom = top - prm[o + L_THICKNESS] * (0.45 + 0.55 * ShapeMath.clamp(e / prm[o + L_HALF_WIDTH], 0.0, 1.0));
+            double bottom = top - bridgeThickness(prm, o, flare) * (0.45 + 0.55 * ShapeMath.clamp(e / half, 0.0, 1.0));
             best = Math.max(best, Math.min(e, Math.min(top - y, y - bottom)));
         }
         return best;
+    }
+
+    /**
+     * 0 in the middle of a bridge's span, rising to 1 at the coasts it joins (and inside
+     * the land); the flare covers about a third of the span on each side.
+     */
+    private static double abutment(double[] prm, int o, double t) {
+        double len = Math.hypot(prm[o + 2] - prm[o], prm[o + 3] - prm[o + 1]);
+        double span = (prm[o + L_T1] - prm[o + L_T0]) * len;
+        double fromEnd = Math.min(t - prm[o + L_T0], prm[o + L_T1] - t) * len;
+        double f = 1.0 - ShapeMath.smoothstep(0.0, Math.max(10.0, 0.35 * span), fromEnd);
+        return f * f;
+    }
+
+    private static double bridgeHalfWidth(double[] prm, int o, double flare) {
+        return prm[o + L_HALF_WIDTH] * (1.0 + 2.5 * flare) + 4.0 * flare;
+    }
+
+    /** Thickness from the bridge's own to deeper than the cliff rim at the abutments. */
+    private static double bridgeThickness(double[] prm, int o, double flare) {
+        return ShapeMath.lerp(prm[o + L_THICKNESS], EDGE_THICKNESS + 8.0, flare);
     }
 
     /** Base height along a link: a ramp between the members (an isthmus may step in the middle instead). */
