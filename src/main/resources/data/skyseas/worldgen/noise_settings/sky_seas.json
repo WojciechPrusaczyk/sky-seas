@@ -24,7 +24,7 @@
       "xz_scale": 1.0,
       "y_scale": 0.5
     },
-    "continents": -0.6,
+    "continents": "skyseas:climate/continents",
     "depth": "skyseas:depth",
     "erosion": "minecraft:overworld/erosion",
     "final_density": {
@@ -35,8 +35,19 @@
       },
       "input": {
         "type": "minecraft:min",
-        "argument1": "skyseas:oceanic",
-        "argument2": "minecraft:overworld/caves/noodle"
+        "argument1": {
+          "type": "minecraft:max",
+          "argument1": "skyseas:sky/islands",
+          "argument2": "skyseas:oceanic"
+        },
+        "argument2": {
+          "type": "minecraft:range_choice",
+          "input": "minecraft:y",
+          "min_inclusive": -64.0,
+          "max_exclusive": 63.0,
+          "when_in_range": "minecraft:overworld/caves/noodle",
+          "when_out_of_range": 64.0
+        }
       }
     },
     "fluid_level_floodedness": {

@@ -20,7 +20,8 @@ import pl.skyseas.shape.SeabedShape;
 /**
  * E1 acceptance on generated chunks (biomes, noise and surface stages): seabed within
  * the design range, a solid roof of {@code caveRoofThickness} blocks under it (no holes),
- * only water (or vanilla icebergs) between the seabed and sea level, and deterministic output.
+ * only water (or vanilla icebergs) between the seabed and sea level, open air from sea level
+ * up to the lowest sky island, and deterministic output.
  */
 @GameTestHolder(SkySeas.MOD_ID)
 @PrefixGameTestTemplate(false)
@@ -188,7 +189,8 @@ public final class SeabedTests {
                         + "\n" + describeColumn(chunk, x, z, top);
             }
         }
-        for (int y = SEA_LEVEL; y < chunk.getMaxBuildHeight(); y++) {
+        // Sky islands start at continentMinBottomY: the 50 blocks over the sea stay open.
+        for (int y = SEA_LEVEL; y < p.continentMinBottomY(); y++) {
             BlockState state = chunk.getBlockState(pos.setY(y));
             if (!state.isAir() && !isOceanColumn(state)) {
                 return "unexpected block above sea level at " + x + "," + y + "," + z;

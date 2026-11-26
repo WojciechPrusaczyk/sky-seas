@@ -1,0 +1,98 @@
+package pl.skyseas.density;
+
+import com.mojang.serialization.MapCodec;
+import net.minecraft.util.KeyDispatchDataCodec;
+import net.minecraft.world.level.levelgen.DensityFunction;
+import net.minecraft.world.level.levelgen.DensityFunctions;
+import pl.skyseas.config.WorldParams;
+import pl.skyseas.layout.Hash;
+import pl.skyseas.layout.Layout;
+
+/**
+ * {@code skyseas:layout_root}: holds the {@link Layout} of one RandomState. The layout
+ * seed is derived from the bound noise {@code skyseas:layout_seed} (sampled at fixed
+ * points), so no mixin and no global seed are needed. Always computes 0.
+ *
+ * <p>Equality is by the noise holder only: RandomState and NoiseChunk deduplicate equal
+ * functions, so every reference to the root in the router shares one Layout.
+ */
+public final class LayoutRootFunction implements DensityFunction {
+    public static final MapCodec<LayoutRootFunction> DATA_CODEC = NoiseHolder.CODEC.fieldOf("noise")
+            .xmap(LayoutRootFunction::new, LayoutRootFunction::noise);
+    private static final KeyDispatchDataCodec<LayoutRootFunction> CODEC = KeyDispatchDataCodec.of(DATA_CODEC);
+    private static final double[][] SEED_POINTS = {{0, 0, 0}, {1.5e4, 7.0, -3.1e4}, {-2.7e4, 31.0, 1.3e4}, {123.4, -9.0, 567.8}};
+
+    private final NoiseHolder noise;
+    /** Null until the noise is bound by a RandomState. */
+    private final Layout layout;
+
+    public LayoutRootFunction(NoiseHolder noise) {
+        this.noise = noise;
+        this.layout = noise.noise() == null ? null : new Layout(deriveSeed(noise), WorldParams.DEFAULTS);
+    }
+
+    private static long deriveSeed(NoiseHolder noise) {
+        long h = 0x5EED5EEDL;
+        for (double[] pt : SEED_POINTS) {
+            h = Hash.hash(h, Double.doubleToLongBits(noise.getValue(pt[0], pt[1], pt[2])));
+        }
+        return h;
+    }
+
+    public NoiseHolder noise() {
+        return noise;
+    }
+
+    public Layout layout() {
+        return layout;
+    }
+
+    /** The layout behind a reference to the root (unwraps registry holders), or null if unbound. */
+    public static Layout layoutOf(DensityFunction f) {
+        while (f instanceof DensityFunctions.HolderHolder holder) {
+            f = holder.function().value();
+        }
+        return f instanceof LayoutRootFunction root ? root.layout : null;
+    }
+
+    @Override
+    public double compute(FunctionContext ctx) {
+        return 0.0;
+    }
+
+    @Override
+    public void fillArray(double[] array, ContextProvider provider) {
+        java.util.Arrays.fill(array, 0.0);
+    }
+
+    @Override
+    public DensityFunction mapAll(Visitor visitor) {
+        NoiseHolder bound = visitor.visitNoise(noise);
+        return visitor.apply(bound.equals(noise) ? this : new LayoutRootFunction(bound));
+    }
+
+    @Override
+    public double minValue() {
+        return 0.0;
+    }
+
+    @Override
+    public double maxValue() {
+        return 0.0;
+    }
+
+    @Override
+    public KeyDispatchDataCodec<? extends DensityFunction> codec() {
+        return CODEC;
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        return o instanceof LayoutRootFunction other && other.noise.equals(noise);
+    }
+
+    @Override
+    public int hashCode() {
+        return noise.hashCode();
+    }
+}

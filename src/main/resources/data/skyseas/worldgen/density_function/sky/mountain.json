@@ -1,0 +1,7 @@
+{
+  "type": "minecraft:flat_cache",
+  "argument": {
+    "type": "skyseas:sky_mountain",
+    "root": "skyseas:layout/root"
+  }
+}

@@ -1,0 +1,11 @@
+{
+  "type": "minecraft:interpolated",
+  "argument": {
+    "type": "skyseas:sky_islands",
+    "root": "skyseas:layout/root",
+    "edge": "skyseas:sky/edge",
+    "top": "skyseas:sky/top",
+    "bottom": "skyseas:sky/bottom",
+    "mountain": "skyseas:sky/mountain"
+  }
+}
