@@ -4,6 +4,8 @@ import pl.skyseas.config.WorldParams;
 import pl.skyseas.shape.ContinentShape;
 import pl.skyseas.shape.OceanShape;
 import pl.skyseas.shape.ShaftShape;
+import pl.skyseas.shape.ShapeMath;
+import pl.skyseas.shape.SimplexNoise;
 import pl.skyseas.shape.SkyFormShape;
 
 /**
@@ -213,6 +215,118 @@ public final class Layout {
             }
         }
         return ceiling;
+    }
+
+    /** Climate column kinds for {@link #climateColumn}. */
+    public static final int CLIMATE_TYPE = 0;
+    public static final int CLIMATE_BOTTOM = 1;
+    public static final int CLIMATE_TOP = 2;
+    public static final int CLIMATE_TEMPERATURE = 3;
+    public static final int CLIMATE_VEGETATION = 4;
+    public static final int CLIMATE_EROSION = 5;
+    public static final int CLIMATE_MOUNTAIN = 6;
+    /** Climate column value: no sky island in reach (type) or no cluster climate point. */
+    public static final double NO_CLIMATE = -10.0;
+    /** Warm water around the guaranteed island: full up to this far beyond its reach, gone at WARM_OUTER. */
+    private static final double WARM_INNER = 40.0;
+    private static final double WARM_OUTER = 160.0;
+    private static final double WARM_RAGGED = 70.0;
+
+    /**
+     * One climate value of the sky islands whose reach (outline + island reach margin)
+     * contains the column, including islands built per block. Type and cluster values come
+     * from the one with the largest edge distance; bottom is the lowest of all of them and
+     * top the highest of those whose outline contains the column. Type and cluster values
+     * are {@link #NO_CLIMATE} where there is none.
+     */
+    public double climateColumn(int x, int z, int kind) {
+        RegionLayout r = regionAt(x, z);
+        int b = r.bucket(x, z);
+        int best = -1;
+        double margin = -params.islandReachMargin();
+        double bestEdge = margin;
+        double bottom = NO_BOTTOM;
+        double top = NO_TOP;
+        boolean column = false;
+        for (int k = r.skyStart(b), end = r.skyEnd(b); k < end; k++) {
+            int i = r.skyItem(k);
+            if (r.type[i] == RegionLayout.SKY_BRIDGE) {
+                continue;
+            }
+            double e = edge(r, i, x, z);
+            if (e < margin) {
+                continue;
+            }
+            if (e >= bestEdge) {
+                bestEdge = e;
+                best = i;
+            }
+            if ((r.flags[i] & RegionLayout.FLAG_DETAIL) != 0) {
+                bottom = Math.min(bottom, r.minY[i]);
+                top = e > 0.0 ? Math.max(top, r.maxY[i]) : top;
+            } else {
+                column = true; // the nearest island of column() is the best non-detail item in reach
+            }
+        }
+        if (best < 0) {
+            return switch (kind) {
+                case CLIMATE_BOTTOM -> NO_BOTTOM;
+                case CLIMATE_TOP -> NO_TOP;
+                case CLIMATE_MOUNTAIN -> 0.0;
+                default -> NO_CLIMATE;
+            };
+        }
+        return switch (kind) {
+            case CLIMATE_TYPE -> r.type[best];
+            case CLIMATE_BOTTOM -> column ? Math.min(bottom, column(x, z, BOTTOM)) : bottom;
+            case CLIMATE_TOP -> column && column(x, z, EDGE) > 0.0 ? Math.max(top, column(x, z, TOP)) : top;
+            case CLIMATE_MOUNTAIN -> r.type[best] == RegionLayout.CONTINENT ? column(x, z, MOUNTAIN) : 0.0;
+            default -> {
+                float c = r.climate[3 * best + kind - CLIMATE_TEMPERATURE];
+                yield Float.isNaN(c) ? NO_CLIMATE : c;
+            }
+        };
+    }
+
+    /** {x, z, reach} of the guaranteed large ocean island, or empty; found once. */
+    private volatile double[] warmSpot;
+
+    /** 1 around the guaranteed island near spawn (its sea gets warm, for a reef), fading to 0. */
+    public double warmBias(int x, int z) {
+        double[] w = warmSpot;
+        if (w == null) {
+            w = findWarmSpot();
+            warmSpot = w;
+        }
+        if (w.length == 0) {
+            return 0.0;
+        }
+        double dx = x - w[0];
+        double dz = z - w[1];
+        if (dx * dx + dz * dz > (w[2] + WARM_OUTER + WARM_RAGGED) * (w[2] + WARM_OUTER + WARM_RAGGED)) {
+            return 0.0;
+        }
+        // A ragged edge: warm ocean has its own water colour, so a circle would show.
+        double d = Math.sqrt(dx * dx + dz * dz) - w[2]
+                + WARM_RAGGED * SimplexNoise.noise2(seed + 0x3A2L, x / 90.0, z / 90.0);
+        return 1.0 - ShapeMath.smoothstep(WARM_INNER, WARM_OUTER, d);
+    }
+
+    private double[] findWarmSpot() {
+        int size = params.layoutRegionSize();
+        int r0 = Math.floorDiv(-1200, size);
+        int r1 = Math.floorDiv(1200, size);
+        for (int rx = r0; rx <= r1; rx++) {
+            for (int rz = r0; rz <= r1; rz++) {
+                RegionLayout r = region(rx, rz);
+                for (int i = 0; i < r.count; i++) {
+                    if (r.type[i] == RegionLayout.OCEAN_ISLAND && (r.flags[i] & RegionLayout.FLAG_GUARANTEED) != 0) {
+                        return new double[]{r.cx[i], r.cz[i], r.radius[i]};
+                    }
+                }
+            }
+        }
+        return new double[0];
     }
 
     /** True if the column is within the item's reach radius plus a margin. */

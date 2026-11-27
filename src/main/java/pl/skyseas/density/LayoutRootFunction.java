@@ -6,6 +6,7 @@ import net.minecraft.util.KeyDispatchDataCodec;
 import net.minecraft.world.level.levelgen.DensityFunction;
 import net.minecraft.world.level.levelgen.DensityFunctions;
 import pl.skyseas.config.WorldParams;
+import pl.skyseas.layout.ClimateProbe;
 import pl.skyseas.layout.Hash;
 import pl.skyseas.layout.Layout;
 
@@ -20,7 +21,9 @@ import pl.skyseas.layout.Layout;
 public final class LayoutRootFunction implements DensityFunction {
     public static final MapCodec<LayoutRootFunction> DATA_CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
             NoiseHolder.CODEC.fieldOf("noise").forGetter(LayoutRootFunction::noise),
-            DensityFunction.HOLDER_HELPER_CODEC.fieldOf("temperature").forGetter(LayoutRootFunction::temperature)
+            DensityFunction.HOLDER_HELPER_CODEC.fieldOf("temperature").forGetter(LayoutRootFunction::temperature),
+            DensityFunction.HOLDER_HELPER_CODEC.optionalFieldOf("vegetation", DensityFunctions.zero()).forGetter(LayoutRootFunction::vegetation),
+            DensityFunction.HOLDER_HELPER_CODEC.optionalFieldOf("erosion", DensityFunctions.zero()).forGetter(LayoutRootFunction::erosion)
     ).apply(i, LayoutRootFunction::new));
     private static final KeyDispatchDataCodec<LayoutRootFunction> CODEC = KeyDispatchDataCodec.of(DATA_CODEC);
     private static final double[][] SEED_POINTS = {{0, 0, 0}, {1.5e4, 7.0, -3.1e4}, {-2.7e4, 31.0, 1.3e4}, {123.4, -9.0, 567.8}};
@@ -31,14 +34,32 @@ public final class LayoutRootFunction implements DensityFunction {
      * noise. Sampled outside chunk generation (no per-chunk caches), so it is thread-safe.
      */
     private final DensityFunction temperature;
+    private final DensityFunction vegetation;
+    private final DensityFunction erosion;
     /** Null until the noise is bound by a RandomState. */
     private final Layout layout;
 
-    public LayoutRootFunction(NoiseHolder noise, DensityFunction temperature) {
+    public LayoutRootFunction(NoiseHolder noise, DensityFunction temperature, DensityFunction vegetation, DensityFunction erosion) {
         this.noise = noise;
         this.temperature = temperature;
-        this.layout = noise.noise() == null ? null : new Layout(deriveSeed(noise), WorldParams.DEFAULTS,
-                (x, z) -> temperature.compute(new SinglePointContext(x, 0, z)));
+        this.vegetation = vegetation;
+        this.erosion = erosion;
+        this.layout = noise.noise() == null ? null : new Layout(deriveSeed(noise), WorldParams.DEFAULTS, new ClimateProbe() {
+            @Override
+            public double temperature(int x, int z) {
+                return temperature.compute(new SinglePointContext(x, 0, z));
+            }
+
+            @Override
+            public double vegetation(int x, int z) {
+                return vegetation.compute(new SinglePointContext(x, 0, z));
+            }
+
+            @Override
+            public double erosion(int x, int z) {
+                return erosion.compute(new SinglePointContext(x, 0, z));
+            }
+        });
     }
 
     private static long deriveSeed(NoiseHolder noise) {
@@ -55,6 +76,14 @@ public final class LayoutRootFunction implements DensityFunction {
 
     public DensityFunction temperature() {
         return temperature;
+    }
+
+    public DensityFunction vegetation() {
+        return vegetation;
+    }
+
+    public DensityFunction erosion() {
+        return erosion;
     }
 
     public Layout layout() {
@@ -86,7 +115,8 @@ public final class LayoutRootFunction implements DensityFunction {
     public DensityFunction mapAll(Visitor visitor) {
         NoiseHolder bound = visitor.visitNoise(noise);
         // Bind once (RandomState); later visitors (NoiseChunk) keep this layout and the cache-free temperature.
-        return visitor.apply(bound.equals(noise) ? this : new LayoutRootFunction(bound, temperature.mapAll(visitor)));
+        return visitor.apply(bound.equals(noise) ? this : new LayoutRootFunction(bound, temperature.mapAll(visitor),
+                vegetation.mapAll(visitor), erosion.mapAll(visitor)));
     }
 
     @Override

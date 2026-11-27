@@ -1,0 +1,11 @@
+{
+  "type": "skyseas:climate_vegetation",
+  "input": "skyseas:climate/vegetation",
+  "height": "skyseas:seabed_height",
+  "island": "skyseas:climate/sky_type",
+  "bottom": "skyseas:climate/sky_bottom",
+  "top": "skyseas:climate/sky_top",
+  "point": "skyseas:climate/sky_vegetation",
+  "mountain": "skyseas:climate/sky_mountain",
+  "warm": "skyseas:climate/warm_bias"
+}

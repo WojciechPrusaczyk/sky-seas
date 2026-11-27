@@ -1,0 +1,7 @@
+{
+  "type": "minecraft:flat_cache",
+  "argument": {
+    "type": "skyseas:warm_bias",
+    "root": "skyseas:layout/root"
+  }
+}

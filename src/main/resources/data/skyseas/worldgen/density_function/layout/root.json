@@ -1,5 +1,7 @@
 {
   "type": "skyseas:layout_root",
   "noise": "skyseas:layout_seed",
-  "temperature": "skyseas:climate/temperature"
+  "temperature": "skyseas:climate/temperature",
+  "vegetation": "skyseas:climate/vegetation",
+  "erosion": "minecraft:overworld/erosion"
 }

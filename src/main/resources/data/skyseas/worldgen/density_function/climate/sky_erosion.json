@@ -1,0 +1,7 @@
+{
+  "type": "minecraft:flat_cache",
+  "argument": {
+    "type": "skyseas:sky_climate_erosion",
+    "root": "skyseas:layout/root"
+  }
+}

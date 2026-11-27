@@ -23,7 +23,7 @@ Serwerowy mod do Minecrafta 1.21.1 (NeoForge), który generuje świat latającyc
 1. **Wydajność przede wszystkim.** Zero alokacji w `compute()` i `fillArray`; bez streamów, lambd, boxingu i iteratorów kolekcji w gorących ścieżkach; cache 2D (`cache_2d`, `flat_cache`), `interpolated` dla dużych form, szybkie wyjścia po zakresie Y.
 2. **Determinizm.** Ten sam seed i parametry dają te same chunki, niezależnie od liczby wątków i kolejności generacji. Żadnego globalnego stanu zależnego od kolejności.
 3. **Rozszerzamy vanillę.** `NoiseBasedChunkGenerator` + `multi_noise` z presetem `minecraft:overworld`. Nie piszemy generatora od zera.
-4. **Tylko serwer.** Żadnych bloków, itemów, encji, pakietów sieciowych ani wpisów w rejestrach, które wymagają moda po stronie klienta. Biomy z datapacka wbudowanego w jar są dozwolone (klient dostaje je jako dane); własne są tylko cztery biomy dna z designu.
+4. **Tylko serwer.** Żadnych bloków, itemów, encji, pakietów sieciowych ani wpisów w rejestrach, które wymagają moda po stronie klienta. Żadnych własnych biomów (decyzja 2026-11-27): regiony dna to formy moda, nie biomy.
 5. **Testowalność.** Pakiety `pl.skyseas.layout` i `pl.skyseas.shape` nie importują klas Minecrafta i mają testy JUnit.
 6. **Mixiny w ostateczności.** Każdy mixin uzasadnij w komentarzu i zapytaj przed dodaniem.
 

@@ -1,0 +1,11 @@
+{
+  "type": "skyseas:climate_depth",
+  "input": 0.0,
+  "height": "skyseas:seabed_height",
+  "island": "skyseas:climate/sky_type",
+  "bottom": "skyseas:climate/sky_bottom",
+  "top": "skyseas:climate/sky_top",
+  "point": 0.0,
+  "mountain": "skyseas:climate/sky_mountain",
+  "warm": "skyseas:climate/warm_bias"
+}

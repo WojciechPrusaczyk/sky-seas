@@ -15,6 +15,7 @@ final class RegionBuilder {
     private int[] paramOffset = new int[16];
     private int[] flags = new int[16];
     private float[] zone = new float[16];
+    private float[] climate = new float[48];
     private double[] params = new double[256];
     private int n;
     private int pn;
@@ -34,6 +35,7 @@ final class RegionBuilder {
             paramOffset = Arrays.copyOf(paramOffset, c);
             flags = Arrays.copyOf(flags, c);
             zone = Arrays.copyOf(zone, c);
+            climate = Arrays.copyOf(climate, 3 * c);
         }
         if (pn + len > params.length) {
             params = Arrays.copyOf(params, Math.max(2 * params.length, pn + len));
@@ -49,9 +51,19 @@ final class RegionBuilder {
         paramOffset[n] = pn;
         flags[n] = itemFlags;
         zone[n] = (float) zoneFactor;
+        climate[3 * n] = Float.NaN;
+        climate[3 * n + 1] = Float.NaN;
+        climate[3 * n + 2] = Float.NaN;
         System.arraycopy(prm, off, params, pn, len);
         pn += len;
         n++;
+    }
+
+    /** Climate point (temperature, vegetation, erosion) of the item added last: a thematic cluster's. */
+    void climate(double t, double v, double e) {
+        climate[3 * n - 3] = (float) t;
+        climate[3 * n - 2] = (float) v;
+        climate[3 * n - 1] = (float) e;
     }
 
     /**
@@ -65,7 +77,7 @@ final class RegionBuilder {
         return new RegionLayout(rx, rz, size, n, Arrays.copyOf(type, n), Arrays.copyOf(id, n), Arrays.copyOf(cx, n),
                 Arrays.copyOf(cz, n), Arrays.copyOf(radius, n), Arrays.copyOf(minY, n), Arrays.copyOf(maxY, n),
                 Arrays.copyOf(shapeSeed, n), Arrays.copyOf(params, pn), Arrays.copyOf(paramOffset, n),
-                Arrays.copyOf(flags, n), Arrays.copyOf(zone, n), bucketSize, sky[0], sky[1], ocean[0], ocean[1]);
+                Arrays.copyOf(flags, n), Arrays.copyOf(zone, n), Arrays.copyOf(climate, 3 * n), bucketSize, sky[0], sky[1], ocean[0], ocean[1]);
     }
 
     /** Two-pass CSR build: {start, items}. */

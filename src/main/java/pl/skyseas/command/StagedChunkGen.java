@@ -50,6 +50,8 @@ public final class StagedChunkGen {
     private final RandomState random;
     private final Registry<Biome> biomes;
     private final MultiNoiseBiomeSource biomeSource;
+    private final java.util.concurrent.ConcurrentHashMap<Long, net.minecraft.core.Holder<net.minecraft.world.level.biome.Biome>> edgeBiomes =
+            new java.util.concurrent.ConcurrentHashMap<>();
     private final long biomeZoomSeed;
     private final Aquifer.FluidPicker fluidPicker;
 
@@ -119,10 +121,17 @@ public final class StagedChunkGen {
         return new BiomeManager((qx, qy, qz) -> {
             int dx = qx - minQx;
             int dz = qz - minQz;
-            return dx >= 0 && dx < 4 && dz >= 0 && dz < 4
-                    ? chunk.getNoiseBiome(qx, qy, qz)
-                    : biomeSource.getNoiseBiome(qx, qy, qz, random.sampler());
+            if (dx >= 0 && dx < 4 && dz >= 0 && dz < 4) {
+                return chunk.getNoiseBiome(qx, qy, qz);
+            }
+            // In a real WorldGenRegion these come stored from neighbours (paid in their biome stage), so compute each once.
+            long key = ((long) qx & 0x3FFFFFL) | (((long) qz & 0x3FFFFFL) << 22) | (((long) qy & 0xFFFFFL) << 44);
+            return edgeBiomes.computeIfAbsent(key, k -> biomeSource.getNoiseBiome(qx, qy, qz, random.sampler()));
         }, biomeZoomSeed);
+    }
+
+    public MultiNoiseBiomeSource biomeSource() {
+        return biomeSource;
     }
 
     public RandomState randomState() {

@@ -51,6 +51,8 @@ public final class RegionLayout {
     public final int[] flags;
     /** Zone factor at the centre. */
     public final float[] zone;
+    /** Per item {temperature, vegetation, erosion} the climate is pulled toward (thematic clusters), NaN for none. */
+    public final float[] climate;
 
     final int bucketSize;
     final int buckets;
@@ -62,7 +64,7 @@ public final class RegionLayout {
 
     RegionLayout(int rx, int rz, int regionSize, int count, byte[] type, long[] id, int[] cx, int[] cz,
                  float[] radius, short[] minY, short[] maxY, long[] shapeSeed, double[] params, int[] paramOffset,
-                 int[] flags, float[] zone, int bucketSize, int[] skyStart, int[] skyItems, int[] oceanStart,
+                 int[] flags, float[] zone, float[] climate, int bucketSize, int[] skyStart, int[] skyItems, int[] oceanStart,
                  int[] oceanItems) {
         this.rx = rx;
         this.rz = rz;
@@ -81,6 +83,7 @@ public final class RegionLayout {
         this.paramOffset = paramOffset;
         this.flags = flags;
         this.zone = zone;
+        this.climate = climate;
         this.bucketSize = bucketSize;
         this.buckets = regionSize / bucketSize;
         this.skyStart = skyStart;

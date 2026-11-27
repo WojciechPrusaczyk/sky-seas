@@ -14,6 +14,7 @@ import pl.skyseas.density.LayoutRootFunction;
 import pl.skyseas.density.RoofGuardFunction;
 import pl.skyseas.density.SeabedDerivedFunction;
 import pl.skyseas.density.SeabedHeightFunction;
+import pl.skyseas.density.ClimateFunction;
 import pl.skyseas.density.SkyColumnFunction;
 import pl.skyseas.density.SkyDetailsFunction;
 import pl.skyseas.density.SkyIslandsFunction;
@@ -38,6 +39,9 @@ public final class SkySeasRegistries {
             DENSITY_FUNCTION_TYPES.register(kind.id, () -> kind.dataCodec);
         }
         for (SeabedDerivedFunction.Kind kind : SeabedDerivedFunction.Kind.values()) {
+            DENSITY_FUNCTION_TYPES.register(kind.id, () -> kind.dataCodec);
+        }
+        for (ClimateFunction.Kind kind : ClimateFunction.Kind.values()) {
             DENSITY_FUNCTION_TYPES.register(kind.id, () -> kind.dataCodec);
         }
         DENSITY_FUNCTION_TYPES.register("layout_root", () -> LayoutRootFunction.DATA_CODEC);
