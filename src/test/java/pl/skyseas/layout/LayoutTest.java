@@ -350,6 +350,61 @@ class LayoutTest {
         assertTrue(land > 1000, "too little ocean land: " + land);
     }
 
+    /**
+     * Return chains: every island has a higher neighbour within one step (top at most 12
+     * higher, outlines at most 6 apart) or hangs next to a continent; the lowest islands
+     * sit a few blocks above the sea; the starter has a chain; islands seen from several
+     * regions are the same.
+     */
+    @Test
+    void returnChains() {
+        for (long seed : SEEDS) {
+            Layout layout = new Layout(seed, P, CLIMATE);
+            java.util.Map<Long, double[]> islands = new java.util.HashMap<>();
+            for (int rx = -5; rx <= 5; rx++) {
+                for (int rz = -5; rz <= 5; rz++) {
+                    RegionLayout r = layout.region(rx, rz);
+                    for (int i = 0; i < r.count; i++) {
+                        if (r.type[i] != RegionLayout.CHAIN) {
+                            continue;
+                        }
+                        int o = r.paramOffset[i];
+                        double[] v = {r.params[o + SkyFormShape.CX], r.params[o + SkyFormShape.CZ],
+                                r.params[o + SkyFormShape.RADIUS], r.params[o + SkyFormShape.TOP]};
+                        double[] old = islands.putIfAbsent(r.id[i], v);
+                        assertTrue(old == null || java.util.Arrays.equals(old, v), "chain island differs between regions");
+                    }
+                }
+            }
+            int lowest = 0;
+            int nearSpawn = 0;
+            int orphans = 0;
+            for (double[] a : islands.values()) {
+                assertTrue(a[3] >= 66.0 && a[3] <= P.skyForms().skyMaxY(), "chain island top " + a[3]);
+                lowest += a[3] < 72.0 ? 1 : 0;
+                nearSpawn += Math.hypot(a[0], a[1]) < 1500.0 ? 1 : 0;
+                // Neighbours of islands near the scanned border may lie outside it.
+                boolean step = Math.abs(a[0]) > 5000.0 || Math.abs(a[1]) > 5000.0;
+                for (double[] b : islands.values()) {
+                    double gap = Math.hypot(a[0] - b[0], a[1] - b[1]) - a[2] - b[2];
+                    step |= b[3] > a[3] && b[3] - a[3] <= 12.0 && gap <= 6.0;
+                }
+                // The first island hangs off a coast (edge noise and detail included).
+                boolean coast = layout.column((int) Math.round(a[0]), (int) Math.round(a[1]), Layout.EDGE) > -(a[2] + 14.0);
+                orphans += step || coast ? 0 : 1;
+                if (!step && !coast) {
+                    System.out.printf("LayoutTest: orphan chain island %.0f,%.0f r %.1f top %.1f, edge at centre %.1f%n",
+                            a[0], a[1], a[2], a[3], layout.column((int) a[0], (int) a[1], Layout.EDGE));
+                }
+            }
+            System.out.printf("LayoutTest: seed %d chain islands %d, lowest %d, near spawn %d, without a step up %d%n",
+                    seed, islands.size(), lowest, nearSpawn, orphans);
+            assertTrue(nearSpawn >= LayoutGenerator.CHAIN_MIN, "no chain near spawn");
+            assertTrue(lowest >= 3, "too few chain ends: " + lowest);
+            assertEquals(0, orphans, "chain islands without a step up");
+        }
+    }
+
     /** Every ocean form type appears; size classes roughly as designed; no large islands in the Haven. */
     @Test
     void oceanFormsAndClasses() {

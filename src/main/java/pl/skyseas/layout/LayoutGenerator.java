@@ -25,6 +25,8 @@ import pl.skyseas.shape.SkyFormShape;
  *       candidates depend only on its seed; continents and ocean land reject single
  *       candidates without shifting the others.</li>
  * </ol>
+ * Return chains (small islands stepping down from a continent's coast to just above the
+ * sea) depend only on their continent; ocean land gives way to them as it does to continents.
  * Sky forms of levels 3 and 4 never overlap continents, ocean land, clusters of other
  * corners or each other (footprint plus a gap), so no island hangs above another.
  */
@@ -36,6 +38,23 @@ public final class LayoutGenerator {
     private static final long SPIRE_SALT = 0x53504952L;
     private static final long SINGLE_SALT = 0x534E474CL;
     private static final long CLUSTER_SALT = 0x434C5354L;
+    private static final long CHAIN_SALT = 0x4348414EL;
+    /** Chains per continent: one with this chance, a second with the next (the starter always has one). */
+    private static final double CHAIN_CHANCE = 0.5;
+    private static final double CHAIN_SECOND_CHANCE = 0.15;
+    static final int CHAIN_MIN = 5;
+    static final int CHAIN_MAX = 15;
+    /** Vertical step between neighbouring chain islands (tops) and the horizontal gap between outlines. */
+    static final double CHAIN_STEP_MAX = 12.0;
+    static final double CHAIN_GAP_MIN = 2.0;
+    static final double CHAIN_GAP_MAX = 6.0;
+    static final double CHAIN_RADIUS_MIN = 5.0;
+    static final double CHAIN_RADIUS_MAX = 11.0;
+    /** Top of the lowest island: a few blocks above the sea. */
+    static final double CHAIN_LOW_MIN = 67.0;
+    static final double CHAIN_LOW_MAX = 71.0;
+    /** Farthest a chain island reaches from its continent's coast. */
+    static final double CHAIN_REACH = CHAIN_MAX * (2.0 * CHAIN_RADIUS_MAX + CHAIN_GAP_MAX) + 40.0;
     /**
      * Sky form candidates centred within this distance of the region are checked against
      * continents and ocean land (forms touching the region and the ends of its bridges).
@@ -84,12 +103,15 @@ public final class LayoutGenerator {
         int z0 = rz * size;
         RegionBuilder out = new RegionBuilder();
         double skyCheck = CHECK_RANGE + skyReach(p) + p.clearSkyMargin() + p.continentEdgeNoise();
+        // Chains reach out from their continent: ocean forms near the region must see them all.
         Continents continents = continents(seed, p, x0, z0, size,
-                Math.max(maxOceanReach(p) + p.clearSkyMargin(), skyCheck), out);
+                Math.max(maxOceanReach(p) + p.clearSkyMargin(), skyCheck) + CHAIN_REACH, out);
         double[] prm = new double[Math.max(OceanShape.STRIDE, SkyFormShape.STRIDE)];
-        // Ocean land is collected beyond the region too: sky forms near it must keep clear of it.
+        // Ocean land is collected beyond the region too (oceanExtra): sky forms near it must keep clear of it.
         double oceanExtra = skyCheck + maxOceanReach(p);
+        Chains chains = chains(p, x0, z0, size, oceanExtra + maxOceanReach(p) + p.clearSkyMargin(), continents);
         Land land = new Land();
+        land.chains = chains;
         oceanForms(seed, p, climate, x0, z0, size, oceanExtra, continents, land, prm, out, RegionLayout.OCEAN_ISLAND,
                 p.oceanIslandCellSize(), p.oceanIslandChance(), ISLAND_SALT);
         oceanForms(seed, p, climate, x0, z0, size, oceanExtra, continents, land, prm, out, RegionLayout.SEAMOUNT,
@@ -103,6 +125,7 @@ public final class LayoutGenerator {
         for (int c = 0; c < clusters.length; c += CLUSTER_STRIDE) {
             cluster(p, x0, z0, size, continents, land, clusters, c, prm, out);
         }
+        chains.add(p, x0, z0, size, prm, out);
         return out.build(rx, rz, size, p.layoutBucketSize(), indexMargin(p), OCEAN_INDEX_MARGIN);
     }
 
@@ -263,7 +286,8 @@ public final class LayoutGenerator {
         double reach = OceanShape.reach(kind, prm, 0);
         boolean inside = !(x + reach < x0 || x - reach >= x0 + size || z + reach < z0 || z - reach >= z0 + size);
         double landRadius = OceanShape.landRadius(kind, prm, 0);
-        if ((!inside && landRadius <= 0.0) || (landRadius > 0.0 && underContinent(p, continents, x, z, landRadius))) {
+        if ((!inside && landRadius <= 0.0) || (landRadius > 0.0 && (underContinent(p, continents, x, z, landRadius)
+                || land.chains.near(x, z, landRadius + p.clearSkyMargin())))) {
             return;
         }
         if (landRadius > 0.0) {
@@ -277,6 +301,7 @@ public final class LayoutGenerator {
 
     /** Ocean land discs (centre, radius) near the region, for the clear-sky rule of sky forms. */
     private static final class Land {
+        Chains chains;
         double[] v = new double[96];
         int n;
 
@@ -702,6 +727,149 @@ public final class LayoutGenerator {
                     bs, flags | RegionLayout.FLAG_DETAIL, ZoneField.factorAtDistance(p, Math.hypot(mx, mz)),
                     prm, 0, SkyFormShape.BRIDGE_STRIDE);
         }
+    }
+
+    /** Return chain islands of the continents near the region: {x, z, radius, top} and seeds. */
+    private static final class Chains {
+        double[] v = new double[64];
+        long[] seed = new long[16];
+        int n;
+
+        void put(double x, double z, double r, double top, long s) {
+            if (4 * n + 4 > v.length) {
+                v = java.util.Arrays.copyOf(v, 2 * v.length);
+                seed = java.util.Arrays.copyOf(seed, 2 * seed.length);
+            }
+            v[4 * n] = x;
+            v[4 * n + 1] = z;
+            v[4 * n + 2] = r;
+            v[4 * n + 3] = top;
+            seed[n++] = s;
+        }
+
+        /** True if a chain island's footprint comes within {@code clear} blocks of the point. */
+        boolean near(double x, double z, double clear) {
+            for (int i = 0; i < n; i++) {
+                double d = v[4 * i + 2] * SkyFormShape.FOOTPRINT + clear;
+                double dx = x - v[4 * i];
+                double dz = z - v[4 * i + 1];
+                if (dx * dx + dz * dz < d * d) {
+                    return true;
+                }
+            }
+            return false;
+        }
+
+        /** Adds the islands that touch the region to the layout. */
+        void add(WorldParams p, int x0, int z0, int size, double[] prm, RegionBuilder out) {
+            for (int i = 0; i < n; i++) {
+                double x = v[4 * i];
+                double z = v[4 * i + 1];
+                double r = v[4 * i + 2];
+                double reach = r * SkyFormShape.FOOTPRINT + indexMargin(p);
+                if (x + reach < x0 || x - reach >= x0 + size || z + reach < z0 || z - reach >= z0 + size) {
+                    continue;
+                }
+                double depth = islandDepth(true, r, Hash.unit(Hash.hash(seed[i], 1)));
+                SkyFormShape.place(x, z, r, v[4 * i + 3], depth, SkyFormShape.islandTaper(r, depth), true, prm, 0);
+                addSky(p, out, RegionLayout.CHAIN, seed[i], prm, RegionLayout.FLAG_DETAIL);
+            }
+        }
+    }
+
+    /**
+     * Return chains of the continents whose chains may come within {@code extra} blocks of
+     * the region. A chain starts at a coast point and steps outwards and down to a few
+     * blocks above the sea; it depends only on its continent, so every region sees it whole.
+     */
+    private static Chains chains(WorldParams p, int x0, int z0, int size, double extra, Continents continents) {
+        Chains out = new Chains();
+        for (int j = 0; j < continents.count; j++) {
+            int off = j * continents.stride;
+            double[] c = continents.params;
+            long cs = Hash.hash(continents.seed[j], CHAIN_SALT);
+            double ccx = c[off + ContinentShape.CX];
+            double ccz = c[off + ContinentShape.CZ];
+            boolean starter = ccx == 0.0 && ccz == 0.0;
+            double roll = Hash.unit(Hash.hash(cs, 1));
+            int count = starter ? 1 : roll < CHAIN_SECOND_CHANCE ? 2 : roll < CHAIN_CHANCE ? 1 : 0;
+            double far = c[off + ContinentShape.EXTENT] + CHAIN_REACH + extra;
+            if (count == 0 || ccx + far < x0 || ccx - far >= x0 + size || ccz + far < z0 || ccz - far >= z0 + size) {
+                continue;
+            }
+            for (int k = 0; k < count; k++) {
+                long ks = Hash.hash(cs, 10 + k);
+                double a0 = (Hash.unit(Hash.hash(ks, 1)) + 0.5 * k) * 2.0 * Math.PI;
+                // A coast too low for a chain (or none on the ray): try the next of four directions.
+                for (int t = 0; t < 4 && !chain(p, continents, j, Hash.hash(ks, 100 + t), a0 + 0.5 * Math.PI * t, out); t++) {
+                    // next direction
+                }
+            }
+        }
+        return out;
+    }
+
+    /** Lays out one chain; false if the coast on this ray does not allow one. */
+    private static boolean chain(WorldParams p, Continents continents, int j, long s, double angle, Chains out) {
+        int off = j * continents.stride;
+        double[] c = continents.params;
+        long cseed = continents.seed[j];
+        double ux = Math.cos(angle);
+        double uz = Math.sin(angle);
+        double ccx = c[off + ContinentShape.CX];
+        double ccz = c[off + ContinentShape.CZ];
+        // Coast along the ray from the centre: last point inside the outline, walking in from the extent.
+        double d = c[off + ContinentShape.EXTENT];
+        while (d > 10.0 && ContinentShape.edge(p, c, off, cseed, ccx + ux * d, ccz + uz * d) <= 0.0) {
+            d -= 4.0;
+        }
+        if (d <= 10.0) {
+            return false;
+        }
+        double coastTop = ContinentShape.column(p, c, off, cseed, ccx + ux * (d - 10.0), ccz + uz * (d - 10.0), ContinentShape.TOP);
+        double low = ShapeMath.lerp(CHAIN_LOW_MIN, CHAIN_LOW_MAX, Hash.unit(Hash.hash(s, 1)));
+        // Steps of at most stepMax plus the jitter; a coast too high for 15 steps gets a longer first drop.
+        double stepMax = CHAIN_STEP_MAX - 0.75;
+        if (coastTop < low + 3.0 * stepMax) {
+            return false;
+        }
+        int n = Math.min(Math.max((int) Math.ceil((coastTop - low) / stepMax), CHAIN_MIN), CHAIN_MAX);
+        double step = (coastTop - low) / n;
+        if (step > stepMax) {
+            step = stepMax;
+            coastTop = low + n * step;
+        }
+        double px = ccx + ux * d;
+        double pz = ccz + uz * d;
+        double pr = 0.0;
+        double heading = angle;
+        for (int i = 0; i < n; i++) {
+            long is = Hash.hash(s, 10 + i);
+            double r = ShapeMath.lerp(CHAIN_RADIUS_MIN, CHAIN_RADIUS_MAX, Hash.unit(Hash.hash(is, 1)));
+            double gap = ShapeMath.lerp(CHAIN_GAP_MIN, CHAIN_GAP_MAX, Hash.unit(Hash.hash(is, 2)));
+            // Irregular: islands also step sideways, but never back towards the continent.
+            heading = angle + ShapeMath.clamp(heading - angle + 0.9 * (Hash.unit(Hash.hash(is, 3)) - 0.5), -1.1, 1.1);
+            double dist = pr + r + gap;
+            double x = px + Math.cos(heading) * dist;
+            double z = pz + Math.sin(heading) * dist;
+            if (i == 0) {
+                // The first island hangs just off the coast, its outline clear of the cliff.
+                for (int g = 0; g < 20 && ContinentShape.edge(p, c, off, cseed, x, z) > -(r + gap); g++) {
+                    x += ux * 2.0;
+                    z += uz * 2.0;
+                }
+                for (int g = 0; g < 20 && ContinentShape.edge(p, c, off, cseed, x, z) < -(r + gap + 2.0); g++) {
+                    x -= ux * 2.0;
+                    z -= uz * 2.0;
+                }
+            }
+            double top = i == n - 1 ? low : coastTop - step * (i + 1) + 0.75 * (Hash.unit(Hash.hash(is, 4)) - 0.5);
+            out.put(x, z, r, top, Hash.hash(is, 5));
+            px = x;
+            pz = z;
+            pr = r;
+        }
+        return true;
     }
 
     /** Places one cluster form into prm; returns its top. */
