@@ -432,7 +432,7 @@ Wdrożenie idzie w dziesięciu etapach; każdy kończy się działającym świat
    - Runda 1: kontynenty (sylwetki, złożone, wysokości i przechylenie, wyniesione, masywy, iglice pod spodem, krawędzie bez okruchów, przerwy 400–800).
    - Runda 2: wypełnienie nieba (małe i średnie wyspy, wieże, archipelagi, góry Alleluja, gwarancja archipelagu i klastra Alleluja, reguła widoczności nieba).
    - Runda 2b (decyzje `docs/decisions/2026-11-27-sky-heights-density.md`): wysokości od wody do 305, wyspy zatopione i niskie kontynenty, gęstsze niebo w rojach i większych klastrach, nakładanie i zlewanie małych wysp.
-   - Runda 3 (z zakresem rundy 4, zrobiona 2026-11-27): prowincje dna (`SeabedProvinces`, `WorldParams.SeabedForms`) zamiast stref biomów dna i `seabed_details`; wyspy oceaniczne z klifami, ostrogami i załamanym stokiem; łańcuchy, cenoty, błękitne dziury (`skyseas:shafts`, `skyseas:shaft_near`, `skyseas:shaft_flood`), gwarantowana duża wyspa z cenotą, spawn, `/skyseas audit`. Szczegóły i odstępstwa: `docs/status-e3.md`, „Runda 3: wykonanie”.
+   - Runda 3 (z zakresem rundy 4, zrobiona 2026-11-27): prowincje dna (`SeabedProvinces`, `WorldParams.SeabedForms`) zamiast stref biomów dna i `seabed_details`; łańcuchy, cenoty, błękitne dziury (`skyseas:shafts`, `skyseas:shaft_near`, `skyseas:shaft_flood`), gwarantowana duża wyspa z cenotą, spawn, `/skyseas audit`. Szczegóły i odstępstwa: `docs/status-e3.md`, „Runda 3: wykonanie”.
    - Akceptacja etapu: audyt pokazuje 0 wysp nad lądem w oceanie, łańcuchy w limitach kroku, szyby kończą się w komorach, reguły widoczności spełnione; etap `noise` ≤ 1,3× vanilli.
    - Zrealizowane w rundzie 1:
      - sylwetki z katalogu; złożone 29% (kaldera nigdy nie jest złożona, więc pozostałe charaktery częściej);

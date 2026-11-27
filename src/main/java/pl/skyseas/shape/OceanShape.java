@@ -39,8 +39,6 @@ public final class OceanShape {
     private static final double OUTLINE_NOISE = 0.22;
     private static final double SHELF_NOISE = 2.5;
     private static final double VOLCANO_RIB = 2.5;
-    /** Spurs lengthen the island slope by up to this fraction. */
-    private static final double SPUR_REACH = 0.9;
 
     private OceanShape() {
     }
@@ -115,7 +113,7 @@ public final class OceanShape {
         double r = prm[off + RADIUS];
         return switch (kind) {
             case ISLAND -> r * (1.0 + 1.5 * OUTLINE_NOISE) + shoreWidth(r) + 1.4 * prm[off + SHELF_WIDTH]
-                    + (1.0 + SPUR_REACH) * prm[off + SLOPE_WIDTH] + 2.0;
+                    + prm[off + SLOPE_WIDTH] + 2.0;
             case SPIRE -> r * (1.0 + 1.5 * OUTLINE_NOISE) + 7.0;
             default -> r + 2.0;
         };
@@ -180,10 +178,8 @@ public final class OceanShape {
             double ring = prm[off + RING];
             double hills = 0.5 + 0.5 * SimplexNoise.noise2(seed + 2, x / Math.max(12.0, 0.4 * r), z / Math.max(12.0, 0.4 * r));
             if (ring <= 0.0) {
-                // Cliffs up from the beach, then a rolling top instead of a dome.
-                double cliff = ShapeMath.smoothstep(0.5, Math.max(2.5, 0.12 * r), t);
-                double core = ShapeMath.smoothstep(0.0, Math.max(4.0, 0.5 * r), t);
-                return SEA - 0.5 + top * (0.45 * cliff + 0.55 * core) * (0.55 + 0.45 * hills);
+                double core = ShapeMath.smoothstep(0.0, Math.max(3.0, 0.35 * r), t);
+                return SEA - 0.5 + top * core * (0.55 + 0.45 * hills);
             }
             // Atoll: low ring with passes, lagoon inside.
             double ringTop = SEA - 0.5 + top * ShapeMath.smoothstep(0.0, 0.5 * ring, Math.min(t, ring - t + 0.5 * ring))
@@ -205,16 +201,7 @@ public final class OceanShape {
         if (u < shore + w) {
             return shelf;
         }
-        // Spurs: ridges running down the slope (angular ridged noise), lengthening it in places.
-        double d0 = Math.max(d, 1.0);
-        double ax = 1.1 * (x - prm[off + CX]) / d0;
-        double az = 1.1 * (z - prm[off + CZ]) / d0;
-        double spur = 1.0 - Math.abs(SimplexNoise.noise2(seed + 7, ax, az));
-        double slope = prm[off + SLOPE_WIDTH] * (1.0 + SPUR_REACH * spur * spur);
-        double v = ShapeMath.clamp((u - shore - w) / slope, 0.0, 1.0);
-        // A steep drop-off below the shelf edge, a break, then a long foot.
-        double fall = 0.6 * ShapeMath.smoothstep(0.0, 0.25, v) + 0.4 * ShapeMath.smoothstep(0.35, 1.0, v);
-        return ShapeMath.lerp(shelf, base, fall);
+        return ShapeMath.lerp(shelf, base, ShapeMath.smoothstep(shore + w, shore + w + prm[off + SLOPE_WIDTH], u));
     }
 
     private static double seamount(double[] prm, int off, long seed, double x, double z, double d, double base) {

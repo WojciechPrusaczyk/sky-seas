@@ -310,7 +310,7 @@ Korekta po locie (`generatorVersion` 14): wyraźniejsze roje i otwarte przestrze
 
 ### Runda 3: wykonanie (2026-11-27, z zakresem rundy 4)
 
-Twoje uwagi po rundzie 2b: dno płaskie i nudne, wyspy oceaniczne jak pachołki, za mało odkrywek, kanciaste jaskinie i plasterki tuneli, brak większych jaskiń, trawa na iglicach pod wyspami. Zakres rundy 4 dołączony do tej rundy; magma i rudy zostają w E5.
+Twoje uwagi po rundzie 2b: dno płaskie i nudne (wyspy oceaniczne jak pachołki na płaskim dnie; kształt samych wysp zostaje bez zmian), za mało odkrywek, kanciaste jaskinie i plasterki tuneli, brak większych jaskiń, trawa na iglicach pod wyspami. Zakres rundy 4 dołączony do tej rundy; magma i rudy zostają w E5.
 
 **Zrobione:**
 - **Prowincje dna** (`SeabedProvinces`, parametry `WorldParams.SeabedForms`): wypaczone komórki Voronoia ok. 800 bloków, mieszane na 90 blokach, każda z jedną prowincją:
@@ -322,7 +322,6 @@ Twoje uwagi po rundzie 2b: dno płaskie i nudne, wyspy oceaniczne jak pachołki,
   - skaliste grzbiety z lasem filarów.
 
   Poza równinami dochodzi rzeźba w średniej skali. Dno leży w Y −46…24 (miękkie granice; niebo zaczyna się od Y 30).
-- **Wyspy oceaniczne:** klify od plaży i pagórkowaty wierzch zamiast kopuły; ostrogi schodzące stokiem; stok ze stromym spadkiem pod półką, załamaniem i długą stopą.
 - **Jaskinie:** komora musi mieć 18–30 bloków miejsca pod stropem (mniej plasterków). Studnie krasowe i sale były już w poprzednim commicie rundy.
 - **Iglice pod wyspami:** wierzchołek osadzony w bryle wyspy, więc bez trawy (poprzedni commit rundy).
 - **Łańcuchy powrotne:**
