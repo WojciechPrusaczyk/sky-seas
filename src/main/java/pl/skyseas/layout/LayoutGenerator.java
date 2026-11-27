@@ -188,6 +188,8 @@ public final class LayoutGenerator {
                 if (x + reach < x0 || x - reach >= x0 + size || z + reach < z0 || z - reach >= z0 + size) {
                     continue;
                 }
+                // Rivers only for continents in the layout: their walk costs a few thousand column samples.
+                ContinentShape.placeRivers(p, s, c.params, off);
                 out.add(RegionLayout.CONTINENT, s, x, z, extent, (int) Math.floor(p.continentMinBottomY()),
                         (int) Math.ceil(c.params[off + ContinentShape.MAX_Y] + p.continentEdgeNoise()), s,
                         starter ? RegionLayout.FLAG_STARTER : 0,
@@ -898,7 +900,7 @@ public final class LayoutGenerator {
         if (d <= 10.0) {
             return false;
         }
-        double coastTop = ContinentShape.column(p, c, off, cseed, ccx + ux * (d - 10.0), ccz + uz * (d - 10.0), ContinentShape.TOP);
+        double coastTop = ContinentShape.column(p, c, off, cseed, ccx + ux * (d - 10.0), ccz + uz * (d - 10.0), ContinentShape.TERRAIN);
         double low = ShapeMath.lerp(CHAIN_LOW_MIN, CHAIN_LOW_MAX, Hash.unit(Hash.hash(s, 1)));
         // Steps of at most stepMax plus the jitter; a coast too high for 15 steps gets a longer first drop.
         double stepMax = CHAIN_STEP_MAX - 0.75;

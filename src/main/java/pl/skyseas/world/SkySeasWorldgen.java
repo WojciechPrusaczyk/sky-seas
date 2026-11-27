@@ -27,6 +27,8 @@ public final class SkySeasWorldgen {
             PLACEMENTS.register("depth_chance", () -> () -> DepthChance.CODEC);
     public static final DeferredHolder<PlacementModifierType<?>, PlacementModifierType<IslandUnderside>> ISLAND_UNDERSIDE =
             PLACEMENTS.register("island_underside", () -> () -> IslandUnderside.CODEC);
+    public static final DeferredHolder<Feature<?>, Feature<NoneFeatureConfiguration>> RIVER =
+            FEATURES.register("river", RiverFeature::new);
     public static final DeferredHolder<Feature<?>, Feature<NoneFeatureConfiguration>> CASCADE =
             FEATURES.register("cascade", CascadeFeature::new);
     public static final DeferredHolder<Feature<?>, Feature<NoneFeatureConfiguration>> FROZEN_SEA =

@@ -490,6 +490,23 @@ public final class Layout {
     }
 
     /** Ocean form whose surface is highest at the column (above the given base), or -1. */
+    /**
+     * Parameter offsets (in {@code regionAt(x0, z0).params}) of the continents indexed in the
+     * 16x16 chunk at x0, z0; returns how many were written to {@code out}.
+     */
+    public int continentsInChunk(int x0, int z0, int[] out) {
+        RegionLayout r = regionAt(x0, z0);
+        int b = r.bucket(x0 + 8, z0 + 8);
+        int n = 0;
+        for (int k = r.skyStart(b), end = r.skyEnd(b); k < end && n < out.length; k++) {
+            int i = r.skyItem(k);
+            if (r.type[i] == RegionLayout.CONTINENT) {
+                out[n++] = r.paramOffset[i];
+            }
+        }
+        return n;
+    }
+
     /** Fields of a spire record filled by {@link #spiresInChunk}. */
     public static final int SPIRE_X = 0;
     public static final int SPIRE_Z = 1;

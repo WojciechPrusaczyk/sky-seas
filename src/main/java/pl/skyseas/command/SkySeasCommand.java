@@ -70,7 +70,7 @@ public final class SkySeasCommand {
     private static final String[] LOCATE = {"continent", "elongated", "crescent", "hook", "branched", "composite",
             "rock_bridge", "elevated", "massif", "hanging_spire", "archipelago", "hallelujah", "tower", "sky_island",
             "sky_bridge", "ocean_island", "large_island", "atoll", "seamount",
-            "volcano", "sea_spire", "chain", "cenote", "blue_hole"};
+            "volcano", "sea_spire", "chain", "cenote", "blue_hole", "river", "river_mouth"};
     private static final int LOCATE_MAX_RING = 12;
 
     private static com.mojang.brigadier.builder.LiteralArgumentBuilder<CommandSourceStack> locateCommand() {
@@ -96,6 +96,9 @@ public final class SkySeasCommand {
                 }
                 case "massif" -> {
                     return r.params[off + ContinentShape.MASSIF_PEAK] > 0.0;
+                }
+                case "river", "river_mouth" -> {
+                    return r.params[off + ContinentShape.RIVER_COUNT] > 0;
                 }
                 case "hanging_spire" -> {
                     return r.params[off + ContinentShape.SPIRE_COUNT] > 0.0;
@@ -186,6 +189,13 @@ public final class SkySeasCommand {
             }
             case "massif" -> new double[]{q[off + ContinentShape.MASSIF_X], q[off + ContinentShape.MASSIF_Z]};
             case "hanging_spire" -> new double[]{q[off + ContinentShape.SPIRE0], q[off + ContinentShape.SPIRE0 + 1]};
+            case "river", "river_mouth" -> {
+                // First river: a point a third down its course, or its mouth.
+                int o = off + ContinentShape.RIVER0;
+                int k = target.equals("river") ? (int) q[o] / 3 : (int) q[o] - 1;
+                int p = o + ContinentShape.RIVER_HEADER + ContinentShape.RIVER_POINT * k;
+                yield new double[]{q[p], q[p + 1]};
+            }
             default -> new double[]{r.cx[i], r.cz[i]};
         };
     }

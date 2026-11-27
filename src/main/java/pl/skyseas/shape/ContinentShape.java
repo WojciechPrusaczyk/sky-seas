@@ -25,6 +25,8 @@ public final class ContinentShape {
     public static final int MOUNTAIN = 3;
     /** Weight 0..1 of the 3D detail noise (edge band, tall walls; none on rock bridges). */
     public static final int DETAIL = 4;
+    /** Terrain top without river channels (rivers exist only in layouts that hold the continent). */
+    public static final int TERRAIN = 5;
 
     public static final int CX = 0;
     public static final int CZ = 1;
@@ -97,7 +99,20 @@ public final class ContinentShape {
     public static final int SPIRE0 = LINK0 + LINK_STRIDE * MAX_LINKS;
     public static final int SPIRE_STRIDE = 6;
     public static final int MAX_SPIRES = 8;
-    public static final int STRIDE = SPIRE0 + SPIRE_STRIDE * MAX_SPIRES;
+    /**
+     * Rivers: a count, then per river a header (point count, bounding box min x, max x,
+     * min z, max z incl. banks) and points (x, z, water level, half width). The water fills
+     * blocks below the level; each segment carries the level of its downstream point, so
+     * levels step down along the river.
+     */
+    public static final int RIVER_COUNT = SPIRE0 + SPIRE_STRIDE * MAX_SPIRES;
+    public static final int RIVER0 = RIVER_COUNT + 1;
+    public static final int MAX_RIVERS = 3;
+    public static final int RIVER_HEADER = 5;
+    public static final int RIVER_POINT = 4;
+    public static final int MAX_RIVER_POINTS = 140;
+    public static final int RIVER_STRIDE = RIVER_HEADER + RIVER_POINT * MAX_RIVER_POINTS;
+    public static final int STRIDE = RIVER0 + RIVER_STRIDE * MAX_RIVERS;
 
     public static final int IRREGULAR = 0;
     public static final int ELONGATED = 1;
@@ -688,6 +703,236 @@ public final class ContinentShape {
         prm[off + SPIRE_COUNT] = count;
     }
 
+    private static final double RIVER_STEP = 8.0;
+    /** Slope of the banks above the water (blocks up per block out). */
+    private static final double RIVER_BANK_SLOPE = 0.6;
+    /** Deepest cut of the water level below the original terrain; deeper rivers are dropped. */
+    private static final double RIVER_MAX_CUT = 14.0;
+    /** Extra pull towards the coast per block of edge distance lost (blocks of height). */
+    private static final double RIVER_EDGE_PULL = 0.35;
+    private static final double RIVER_TURN = 0.6;
+    /** Beyond this distance past the half width the banks are above any terrain the river cuts. */
+    private static final double RIVER_REACH = 1.0 + (RIVER_MAX_CUT + 1.0) / RIVER_BANK_SLOPE;
+
+    /**
+     * Rivers of a continent (call after {@link #place}): 1-3 by size, each from a high spot
+     * away from the coast (not on a mountain) down the terrain to the coast, where it falls
+     * off the island. The water level never rises downstream and never sits more than
+     * {@link #RIVER_MAX_CUT} below the terrain; a walk that does not reach the coast is dropped.
+     */
+    public static void placeRivers(WorldParams p, long seed, double[] prm, int off) {
+        prm[off + RIVER_COUNT] = 0;
+        double r = prm[off + RADIUS];
+        int want = r < 300.0 ? 1 : (r < 480.0 ? 2 : 3);
+        int count = 0;
+        for (int attempt = 0; attempt < 4 * want && count < want; attempt++) {
+            if (walkRiver(p, seed, prm, off, count, 2000 + 100 * attempt)) {
+                count++;
+                prm[off + RIVER_COUNT] = count;
+            }
+        }
+    }
+
+    private static boolean walkRiver(WorldParams p, long seed, double[] prm, int off, int index, int salt) {
+        int o = off + RIVER0 + RIVER_STRIDE * index;
+        double cx = prm[off + CX];
+        double cz = prm[off + CZ];
+        // Source: the highest of a few interior spots off the mountains and away from other rivers.
+        double sx = 0.0;
+        double sz = 0.0;
+        double sTop = -1.0e9;
+        for (int k = 0; k < 12; k++) {
+            double x = cx + ShapeMath.lerp(prm[off + BOX_MIN_X], prm[off + BOX_MAX_X], u(seed, salt + 2 * k));
+            double z = cz + ShapeMath.lerp(prm[off + BOX_MIN_Z], prm[off + BOX_MAX_Z], u(seed, salt + 2 * k + 1));
+            if (column(p, prm, off, seed, x, z, EDGE) < 70.0 || column(p, prm, off, seed, x, z, MOUNTAIN) > 30.0
+                    || nearRiver(prm, off, index, x, z, 150.0)) {
+                continue;
+            }
+            double t = column(p, prm, off, seed, x, z, TOP);
+            if (t > sTop) {
+                sTop = t;
+                sx = x;
+                sz = z;
+            }
+        }
+        if (sTop < -1.0e8) {
+            return false;
+        }
+        double heading = Math.atan2(sz - cz, sx - cx);
+        double x = sx;
+        double z = sz;
+        double top = sTop;
+        double edge = column(p, prm, off, seed, x, z, EDGE);
+        double level = Math.floor(top - riverDepth(0.0));
+        int n = 0;
+        setPoint(prm, o, n++, x, z, level, 5.0);
+        while (n < MAX_RIVER_POINTS) {
+            double best = Double.MAX_VALUE;
+            double bx = 0.0;
+            double bz = 0.0;
+            double bTop = 0.0;
+            double bEdge = 0.0;
+            double bHeading = 0.0;
+            for (int k = -3; k <= 3; k++) {
+                double a = heading + k * Math.PI / 8.0;
+                double nx = x + RIVER_STEP * Math.cos(a);
+                double nz = z + RIVER_STEP * Math.sin(a);
+                double e = column(p, prm, off, seed, nx, nz, EDGE);
+                double t = e > 0.0 ? column(p, prm, off, seed, nx, nz, TOP) : top - 20.0;
+                double score = t - top + RIVER_EDGE_PULL * (e - edge) + RIVER_TURN * Math.abs(k)
+                        + (nearRiver(prm, off, index, nx, nz, 40.0) ? 100.0 : 0.0);
+                if (score < best) {
+                    best = score;
+                    bx = nx;
+                    bz = nz;
+                    bTop = t;
+                    bEdge = e;
+                    bHeading = a;
+                }
+            }
+            if (best >= 100.0) {
+                return false;
+            }
+            x = bx;
+            z = bz;
+            heading = bHeading;
+            double frac = Math.min(1.0, n / 60.0);
+            double half = n < 2 ? 5.0 : 3.0 + 3.0 * frac;
+            if (bEdge <= 2.0) {
+                // The mouth: just past the rim, so the channel cuts through it.
+                for (int k = 0; k < 6 && column(p, prm, off, seed, x, z, EDGE) > -2.0; k++) {
+                    x += 2.0 * Math.cos(heading);
+                    z += 2.0 * Math.sin(heading);
+                }
+                setPoint(prm, o, n++, x, z, level, half);
+                finishRiver(prm, o, n);
+                return n >= 6;
+            }
+            level = Math.min(level, Math.floor(bTop - riverDepth(frac)));
+            if (bTop - level > RIVER_MAX_CUT) {
+                return false;
+            }
+            top = bTop;
+            edge = bEdge;
+            setPoint(prm, o, n++, x, z, level, half);
+        }
+        return false;
+    }
+
+    /** Water depth at the axis by position along the river (0 source .. 1 lower course). */
+    private static double riverDepth(double frac) {
+        return 2.0 + 2.0 * frac;
+    }
+
+    private static void setPoint(double[] prm, int o, int n, double x, double z, double level, double half) {
+        int q = o + RIVER_HEADER + RIVER_POINT * n;
+        prm[q] = x;
+        prm[q + 1] = z;
+        prm[q + 2] = level;
+        prm[q + 3] = half;
+    }
+
+    private static void finishRiver(double[] prm, int o, int n) {
+        double reach = RIVER_REACH;
+        double minX = Double.MAX_VALUE;
+        double maxX = -Double.MAX_VALUE;
+        double minZ = Double.MAX_VALUE;
+        double maxZ = -Double.MAX_VALUE;
+        for (int i = 0; i < n; i++) {
+            int q = o + RIVER_HEADER + RIVER_POINT * i;
+            minX = Math.min(minX, prm[q] - prm[q + 3] - reach);
+            maxX = Math.max(maxX, prm[q] + prm[q + 3] + reach);
+            minZ = Math.min(minZ, prm[q + 1] - prm[q + 3] - reach);
+            maxZ = Math.max(maxZ, prm[q + 1] + prm[q + 3] + reach);
+        }
+        prm[o] = n;
+        prm[o + 1] = minX;
+        prm[o + 2] = maxX;
+        prm[o + 3] = minZ;
+        prm[o + 4] = maxZ;
+    }
+
+    private static boolean nearRiver(double[] prm, int off, int rivers, double x, double z, double distance) {
+        for (int r = 0; r < rivers; r++) {
+            int o = off + RIVER0 + RIVER_STRIDE * r;
+            for (int i = 0, n = (int) prm[o]; i < n; i++) {
+                int q = o + RIVER_HEADER + RIVER_POINT * i;
+                if (Math.abs(prm[q] - x) < distance && Math.abs(prm[q + 1] - z) < distance
+                        && Math.hypot(prm[q] - x, prm[q + 1] - z) < distance) {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
+    /**
+     * Terrain top with the river channels cut in: a rounded bed below the water level
+     * inside the half width, banks rising gently from one block above the water. Columns
+     * outside every river's bounding box return {@code top} after one box test per river.
+     */
+    public static double riverTop(double[] prm, int off, double x, double z, double top) {
+        double result = top;
+        for (int r = 0, rivers = (int) prm[off + RIVER_COUNT]; r < rivers; r++) {
+            int o = off + RIVER0 + RIVER_STRIDE * r;
+            if (x < prm[o + 1] || x > prm[o + 2] || z < prm[o + 3] || z > prm[o + 4]) {
+                continue;
+            }
+            int n = (int) prm[o];
+            for (int i = 0; i + 1 < n; i++) {
+                int a = o + RIVER_HEADER + RIVER_POINT * i;
+                int b = a + RIVER_POINT;
+                double half = prm[b + 3];
+                double lim = half + RIVER_REACH;
+                if (Math.min(prm[a], prm[b]) - lim > x || Math.max(prm[a], prm[b]) + lim < x
+                        || Math.min(prm[a + 1], prm[b + 1]) - lim > z || Math.max(prm[a + 1], prm[b + 1]) + lim < z) {
+                    continue;
+                }
+                double d = segmentDistance(x, z, prm[a], prm[a + 1], prm[b], prm[b + 1]);
+                result = Math.min(result, channel(d, prm[b + 2], half));
+            }
+        }
+        return result;
+    }
+
+    /** Channel surface at distance d from the axis for water level {@code level} and half width {@code half}. */
+    private static double channel(double d, double level, double half) {
+        if (d < half) {
+            double q = d / half;
+            return level - riverDepth(Math.min(1.0, (half - 3.0) / 3.0)) * (1.0 - q * q);
+        }
+        return level + 1.0 + (d - half) * RIVER_BANK_SLOPE;
+    }
+
+    /**
+     * Water level (block Y; water fills the blocks below it) of the river channel at a
+     * column, or {@code NaN} outside every channel. The lowest segment covering the column wins.
+     */
+    public static double riverLevel(double[] prm, int off, double x, double z) {
+        double level = Double.NaN;
+        for (int r = 0, rivers = (int) prm[off + RIVER_COUNT]; r < rivers; r++) {
+            int o = off + RIVER0 + RIVER_STRIDE * r;
+            if (x < prm[o + 1] || x > prm[o + 2] || z < prm[o + 3] || z > prm[o + 4]) {
+                continue;
+            }
+            int n = (int) prm[o];
+            for (int i = 0; i + 1 < n; i++) {
+                int a = o + RIVER_HEADER + RIVER_POINT * i;
+                int b = a + RIVER_POINT;
+                double half = prm[b + 3] + 0.5;
+                if (Math.min(prm[a], prm[b]) - half > x || Math.max(prm[a], prm[b]) + half < x
+                        || Math.min(prm[a + 1], prm[b + 1]) - half > z || Math.max(prm[a + 1], prm[b + 1]) + half < z) {
+                    continue;
+                }
+                if (segmentDistance(x, z, prm[a], prm[a + 1], prm[b], prm[b + 1]) < half
+                        && !(prm[b + 2] >= level)) {
+                    level = prm[b + 2];
+                }
+            }
+        }
+        return level;
+    }
+
     /**
      * Density (blocks, positive inside) of the spire at {@code o} at a block: a cone
      * hanging from the crust, concave towards the tip and leaning a little, with rough
@@ -797,8 +1042,9 @@ public final class ContinentShape {
             }
             return w * (1.0 - share * (1.0 - ISTHMUS_DETAIL));
         }
-        if (kind == TOP) {
-            return Math.min(flat + mountain, prm[off + MAX_Y]);
+        if (kind == TOP || kind == TERRAIN) {
+            double top = Math.min(flat + mountain, prm[off + MAX_Y]);
+            return kind == TOP ? riverTop(prm, off, x, z, top) : top;
         }
         return Math.max(bottom(p, prm, off, seed, x, z, edge, flat, mountain), p.continentMinBottomY());
     }
