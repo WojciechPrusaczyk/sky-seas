@@ -134,7 +134,7 @@ public final class OceanShape {
         return kind == ISLAND ? SEA + prm[off + TOP] : prm[off + TOP];
     }
 
-    private static double shoreWidth(double r) {
+    static double shoreWidth(double r) {
         return ShapeMath.clamp(0.3 * r, 4.0, 20.0);
     }
 

@@ -8,6 +8,8 @@ import net.neoforged.neoforge.registries.DeferredRegister;
 import pl.skyseas.SkySeas;
 import pl.skyseas.density.CaveTopFunction;
 import pl.skyseas.density.KarstFunction;
+import pl.skyseas.density.ShaftFloodFunction;
+import pl.skyseas.density.ShaftFunction;
 import pl.skyseas.density.LayoutRootFunction;
 import pl.skyseas.density.RoofGuardFunction;
 import pl.skyseas.density.SeabedDerivedFunction;
@@ -31,6 +33,10 @@ public final class SkySeasRegistries {
         DENSITY_FUNCTION_TYPES.register("cave_top", () -> CaveTopFunction.DATA_CODEC);
         DENSITY_FUNCTION_TYPES.register("roof_guard", () -> RoofGuardFunction.DATA_CODEC);
         DENSITY_FUNCTION_TYPES.register("karst", () -> KarstFunction.DATA_CODEC);
+        DENSITY_FUNCTION_TYPES.register("shaft_flood", () -> ShaftFloodFunction.DATA_CODEC);
+        for (ShaftFunction.Kind kind : ShaftFunction.Kind.values()) {
+            DENSITY_FUNCTION_TYPES.register(kind.id, () -> kind.dataCodec);
+        }
         for (SeabedDerivedFunction.Kind kind : SeabedDerivedFunction.Kind.values()) {
             DENSITY_FUNCTION_TYPES.register(kind.id, () -> kind.dataCodec);
         }

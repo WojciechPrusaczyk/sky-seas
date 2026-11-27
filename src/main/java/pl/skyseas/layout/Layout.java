@@ -3,6 +3,7 @@ package pl.skyseas.layout;
 import pl.skyseas.config.WorldParams;
 import pl.skyseas.shape.ContinentShape;
 import pl.skyseas.shape.OceanShape;
+import pl.skyseas.shape.ShaftShape;
 import pl.skyseas.shape.SkyFormShape;
 
 /**
@@ -298,6 +299,9 @@ public final class Layout {
         double h = base;
         for (int k = r.oceanStart(b), end = r.oceanEnd(b); k < end; k++) {
             int i = r.oceanItem(k);
+            if (r.type[i] == RegionLayout.SHAFT) {
+                continue;
+            }
             double f = OceanShape.height(r.type[i] - RegionLayout.OCEAN_ISLAND, r.params, r.paramOffset[i],
                     r.shapeSeed[i], x, z, base);
             if (f > h) {
@@ -305,6 +309,54 @@ public final class Layout {
             }
         }
         return h;
+    }
+
+    /** 1 if a shaft (cenote, blue hole, with its chamber) may reach the column, else 0. */
+    public double shaftNear(int x, int z) {
+        RegionLayout r = regionAt(x, z);
+        int b = r.bucket(x, z);
+        for (int k = r.oceanStart(b), end = r.oceanEnd(b); k < end; k++) {
+            int i = r.oceanItem(k);
+            if (r.type[i] == RegionLayout.SHAFT) {
+                double dx = x - r.cx[i];
+                double dz = z - r.cz[i];
+                double d = r.radius[i] + 1.0;
+                if (dx * dx + dz * dz < d * d) {
+                    return 1.0;
+                }
+            }
+        }
+        return 0.0;
+    }
+
+    /** Density of the shafts at a block (negative inside), {@link ShaftShape#NONE} away from them. */
+    public double shaftDensity(int x, int y, int z) {
+        RegionLayout r = regionAt(x, z);
+        int b = r.bucket(x, z);
+        double best = ShaftShape.NONE;
+        for (int k = r.oceanStart(b), end = r.oceanEnd(b); k < end; k++) {
+            int i = r.oceanItem(k);
+            if (r.type[i] == RegionLayout.SHAFT && y >= r.minY[i] && y <= r.maxY[i]) {
+                best = Math.min(best, ShaftShape.density(r.params, r.paramOffset[i], r.shapeSeed[i], x, y, z));
+            }
+        }
+        return best;
+    }
+
+    /**
+     * Aquifer floodedness at a block: 1 (flooded) in and around blue holes, -1 (left to
+     * vanilla, mostly dry) in and around cenotes, else {@code input}.
+     */
+    public double shaftFlood(int x, int y, int z, double input) {
+        RegionLayout r = regionAt(x, z);
+        int b = r.bucket(x, z);
+        for (int k = r.oceanStart(b), end = r.oceanEnd(b); k < end; k++) {
+            int i = r.oceanItem(k);
+            if (r.type[i] == RegionLayout.SHAFT && ShaftShape.inside(r.params, r.paramOffset[i], x, y, z)) {
+                return ShaftShape.cenote(r.params, r.paramOffset[i]) ? -1.0 : 1.0;
+            }
+        }
+        return input;
     }
 
     /**
@@ -330,6 +382,9 @@ public final class Layout {
         double h = base;
         for (int k = r.oceanStart(b), end = r.oceanEnd(b); k < end; k++) {
             int i = r.oceanItem(k);
+            if (r.type[i] == RegionLayout.SHAFT) {
+                continue;
+            }
             double f = OceanShape.height(r.type[i] - RegionLayout.OCEAN_ISLAND, r.params, r.paramOffset[i],
                     r.shapeSeed[i], x, z, base);
             if (f > h) {

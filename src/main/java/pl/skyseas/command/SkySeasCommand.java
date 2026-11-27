@@ -25,6 +25,7 @@ import pl.skyseas.layout.Layout;
 import pl.skyseas.layout.RegionLayout;
 import pl.skyseas.shape.ContinentShape;
 import pl.skyseas.shape.OceanShape;
+import pl.skyseas.shape.ShaftShape;
 import pl.skyseas.shape.SeabedColumn;
 import pl.skyseas.shape.SkyFormShape;
 
@@ -53,6 +54,8 @@ public final class SkySeasCommand {
                                 .executes(ctx -> map(ctx, 0))
                                 .then(Commands.argument("scale", IntegerArgumentType.integer(1, 64))
                                         .executes(ctx -> map(ctx, IntegerArgumentType.getInteger(ctx, "scale"))))))
+                .then(Commands.literal("audit")
+                        .then(Commands.argument("radius", IntegerArgumentType.integer(64, 32768)).executes(SkySeasCommand::audit)))
                 .then(Commands.literal("bench")
                         .then(Commands.argument("chunks", IntegerArgumentType.integer(1, MAX_BENCH_CHUNKS))
                                 .executes(ctx -> bench(ctx, false, false))
@@ -65,7 +68,7 @@ public final class SkySeasCommand {
     private static final String[] LOCATE = {"continent", "elongated", "crescent", "hook", "branched", "composite",
             "rock_bridge", "elevated", "massif", "hanging_spire", "archipelago", "hallelujah", "tower", "sky_island",
             "sky_bridge", "ocean_island", "large_island", "atoll", "seamount",
-            "volcano", "sea_spire"};
+            "volcano", "sea_spire", "chain", "cenote", "blue_hole"};
     private static final int LOCATE_MAX_RING = 12;
 
     private static com.mojang.brigadier.builder.LiteralArgumentBuilder<CommandSourceStack> locateCommand() {
@@ -112,6 +115,9 @@ public final class SkySeasCommand {
             case "seamount" -> r.type[i] == RegionLayout.SEAMOUNT;
             case "volcano" -> r.type[i] == RegionLayout.VOLCANO;
             case "sea_spire" -> r.type[i] == RegionLayout.SEA_SPIRE;
+            case "chain" -> r.type[i] == RegionLayout.CHAIN;
+            case "cenote" -> r.type[i] == RegionLayout.SHAFT && ShaftShape.cenote(r.params, off);
+            case "blue_hole" -> r.type[i] == RegionLayout.SHAFT && !ShaftShape.cenote(r.params, off);
             default -> false;
         };
     }
@@ -325,6 +331,19 @@ public final class SkySeasCommand {
                 layout.cache().size(), layout.params().layoutCacheRegions(), layout.cache().computed(),
                 layout.cache().bytes() / 1024.0);
         ctx.getSource().sendSuccess(() -> Component.literal(msg), false);
+        return 1;
+    }
+
+    private static int audit(CommandContext<CommandSourceStack> ctx) {
+        CommandSourceStack source = ctx.getSource();
+        int radius = IntegerArgumentType.getInteger(ctx, "radius");
+        BlockPos pos = BlockPos.containing(source.getPosition());
+        if (!LayoutAudit.start(source.getLevel(), pos.getX(), pos.getZ(), radius,
+                msg -> source.sendSuccess(() -> Component.literal(msg), true))) {
+            source.sendFailure(Component.literal("[Sky Seas] an audit is already running"));
+            return 0;
+        }
+        source.sendSuccess(() -> Component.literal("[Sky Seas] auditing: radius " + radius), false);
         return 1;
     }
 

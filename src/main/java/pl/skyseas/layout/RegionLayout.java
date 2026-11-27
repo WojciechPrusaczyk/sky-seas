@@ -21,8 +21,10 @@ public final class RegionLayout {
     public static final byte SEAMOUNT = 8;
     public static final byte VOLCANO = 9;
     public static final byte SEA_SPIRE = 10;
+    /** Cenote or blue hole of an ocean island (in the ocean index; params: see ShaftShape). */
+    public static final byte SHAFT = 11;
     public static final String[] TYPE_NAMES = {"continent", "archipelago", "hallelujah", "chain", "tower", "sky_island",
-            "sky_bridge", "ocean_island", "seamount", "volcano", "sea_spire"};
+            "sky_bridge", "ocean_island", "seamount", "volcano", "sea_spire", "shaft"};
     public static final int FLAG_STARTER = 1;
     /** Sky form built per block in {@code sky_details} (small islands, bridges), not interpolated. */
     public static final int FLAG_DETAIL = 2;

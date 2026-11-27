@@ -62,6 +62,42 @@ public final class SeabedProvinces {
         return mine / total;
     }
 
+    /**
+     * Province of the column if one cell alone covers it (no border blend), else -1;
+     * most columns take this fast path instead of six {@link #weight} calls.
+     */
+    private static int solo(WorldParams p, long seed, double x, double z) {
+        WorldParams.SeabedForms f = p.seabedForms();
+        double cell = f.provinceScale();
+        double wx = x + 0.3 * cell * SimplexNoise.noise2(seed + 12, x / (0.6 * cell), z / (0.6 * cell));
+        double wz = z + 0.3 * cell * SimplexNoise.noise2(seed + 13, x / (0.6 * cell), z / (0.6 * cell));
+        int ci = (int) Math.floor(wx / cell);
+        int cj = (int) Math.floor(wz / cell);
+        double d1 = Double.MAX_VALUE;
+        double d2 = Double.MAX_VALUE;
+        int bi = 0;
+        int bj = 0;
+        for (int di = -1; di <= 1; di++) {
+            for (int dj = -1; dj <= 1; dj++) {
+                double d = distance(seed, cell, ci + di, cj + dj, wx, wz);
+                if (d < d1) {
+                    d2 = d1;
+                    d1 = d;
+                    bi = ci + di;
+                    bj = cj + dj;
+                } else if (d < d2) {
+                    d2 = d;
+                }
+            }
+        }
+        return d2 - d1 >= f.provinceBlend() ? provinceOf(f, seed, bi, bj) : -1;
+    }
+
+    /** Weight of a province: exact 0/1 on the fast path, else blended. */
+    private static double weight(WorldParams p, long seed, double x, double z, int province, int solo) {
+        return solo >= 0 ? (solo == province ? 1.0 : 0.0) : weight(p, seed, x, z, province);
+    }
+
     /** Plains weight 0..1 at a column. */
     public static double plains(WorldParams p, long seed, double x, double z) {
         return weight(p, seed, x, z, PLAINS);
@@ -110,14 +146,15 @@ public final class SeabedProvinces {
     /** Seabed height with the province forms raised on the E1 seabed {@code base}. */
     public static double height(WorldParams p, long seed, double x, double z, double base) {
         WorldParams.SeabedForms f = p.seabedForms();
-        double q = 1.0 - plains(p, seed, x, z);
+        int solo = solo(p, seed, x, z);
+        double q = 1.0 - weight(p, seed, x, z, PLAINS, solo);
         if (q <= 0.0) {
             return base;
         }
         double h = base + q * f.midAmplitude() * (0.65 * SimplexNoise.noise2(seed + 20, x / 110.0, z / 110.0)
                 + 0.35 * SimplexNoise.noise2(seed + 21, x / 55.0, z / 55.0));
 
-        double wh = weight(p, seed, x, z, HILLS);
+        double wh = weight(p, seed, x, z, HILLS, solo);
         if (wh > 0.0) {
             double hills = f.hillAmplitude() * SimplexNoise.noise2(seed + 22, x / 160.0, z / 160.0);
             double ridge = 1.0 - Math.abs(SimplexNoise.noise2(seed + 23, x / 280.0, z / 280.0));
@@ -125,7 +162,7 @@ public final class SeabedProvinces {
             h += wh * (hills + f.mountainAmplitude() * ridge * ridge * ridge * ranges);
         }
 
-        double wt = weight(p, seed, x, z, PLATEAUS);
+        double wt = weight(p, seed, x, z, PLATEAUS, solo);
         if (wt > 0.0) {
             double u = 0.5 * (SimplexNoise.noise2(seed + 25, x / 320.0, z / 320.0) + 1.0) * f.terraceSteps();
             double level = Math.floor(u);
@@ -136,7 +173,7 @@ public final class SeabedProvinces {
             h += wt * (terrace + mesa - 0.5 * f.terraceStep());
         }
 
-        double wc = weight(p, seed, x, z, CANYONS);
+        double wc = weight(p, seed, x, z, CANYONS, solo);
         if (wc > 0.0) {
             double cut = ShapeMath.smoothstep(0.1, 0.45, wc);
             double wx = x + 35.0 * SimplexNoise.noise2(seed + 27, x / 300.0, z / 300.0);
@@ -156,12 +193,12 @@ public final class SeabedProvinces {
             h = hc;
         }
 
-        double wv = weight(p, seed, x, z, VOLCANIC);
+        double wv = weight(p, seed, x, z, VOLCANIC, solo);
         if (wv > 0.0) {
             // Cone fields stand on a broad volcanic swell.
             h += wv * 6.0 * (1.0 + SimplexNoise.noise2(seed + 33, x / 260.0, z / 260.0));
         }
-        double wr = weight(p, seed, x, z, ROCKY);
+        double wr = weight(p, seed, x, z, ROCKY, solo);
         if (wr > 0.0) {
             double crag = 1.0 - Math.abs(SimplexNoise.noise2(seed + 34, x / 48.0, z / 48.0));
             h += wr * 12.0 * crag * crag * crag;

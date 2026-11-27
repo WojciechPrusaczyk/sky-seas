@@ -428,7 +428,9 @@ class LayoutTest {
                             atolls++;
                         }
                         if (c == 2) {
-                            assertTrue(Math.hypot(r.cx[i], r.cz[i]) > P.zoneRadii()[0], "large island in the Haven");
+                            // The only large island of the Haven is the guaranteed one near spawn.
+                            assertTrue(Math.hypot(r.cx[i], r.cz[i]) > P.zoneRadii()[0] || Math.hypot(r.cx[i], r.cz[i]) < 1000.0,
+                                    "large island in the Haven");
                         }
                     }
                 }

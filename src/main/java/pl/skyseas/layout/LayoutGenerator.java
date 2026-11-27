@@ -3,6 +3,7 @@ package pl.skyseas.layout;
 import pl.skyseas.config.WorldParams;
 import pl.skyseas.shape.ContinentShape;
 import pl.skyseas.shape.OceanShape;
+import pl.skyseas.shape.ShaftShape;
 import pl.skyseas.shape.ShapeMath;
 import pl.skyseas.shape.SimplexNoise;
 import pl.skyseas.shape.SkyFormShape;
@@ -112,6 +113,7 @@ public final class LayoutGenerator {
         Chains chains = chains(p, x0, z0, size, oceanExtra + maxOceanReach(p) + p.clearSkyMargin(), continents);
         Land land = new Land();
         land.chains = chains;
+        guaranteedIsland(seed, p, x0, z0, size, oceanExtra, land, prm, out);
         oceanForms(seed, p, climate, x0, z0, size, oceanExtra, continents, land, prm, out, RegionLayout.OCEAN_ISLAND,
                 p.oceanIslandCellSize(), p.oceanIslandChance(), ISLAND_SALT);
         oceanForms(seed, p, climate, x0, z0, size, oceanExtra, continents, land, prm, out, RegionLayout.SEAMOUNT,
@@ -266,6 +268,53 @@ public final class LayoutGenerator {
         }
     }
 
+    private static final long GUARANTEE_SALT = 0x47524E54L;
+    /** Distance from spawn of the guaranteed large island with a cenote. */
+    private static final double GUARANTEED_ISLAND_DISTANCE = 720.0;
+    private static final double GUARANTEED_ISLAND_RADIUS_MAX = 105.0;
+
+    /**
+     * The large ocean island with a cenote guaranteed near spawn (the Haven has no large
+     * islands of its own). Laid out from the continents and chains around spawn only, so
+     * every region sees the same one: the first of eight directions clear of them.
+     */
+    private static void guaranteedIsland(long seed, WorldParams p, int x0, int z0, int size, double extra, Land land,
+                                         double[] prm, RegionBuilder out) {
+        double far = GUARANTEED_ISLAND_DISTANCE + 300.0 + extra;
+        if (x0 > far || x0 + size < -far || z0 > far || z0 + size < -far) {
+            return;
+        }
+        int half = p.layoutRegionSize();
+        Continents near = continents(seed, p, -half, -half, 2 * half, CHAIN_REACH + 1000.0, new RegionBuilder());
+        Chains chains = chains(p, -half, -half, 2 * half, 1000.0, near);
+        long g = Hash.hash(seed ^ GUARANTEE_SALT, 1);
+        long s = g;
+        for (int k = 0; k < 64; k++) {
+            s = Hash.hash(g, 10 + k);
+            if (ShapeMath.lerp(p.oceanIslandRadius()[2], p.oceanIslandRadius()[3], Hash.unit(Hash.hash(s, 0)))
+                    <= GUARANTEED_ISLAND_RADIUS_MAX) {
+                break;
+            }
+        }
+        double a0 = Hash.unit(Hash.hash(g, 2)) * 2.0 * Math.PI;
+        for (int t = 0; t < 8; t++) {
+            double a = a0 + t * Math.PI / 4.0;
+            double x = Math.cos(a) * GUARANTEED_ISLAND_DISTANCE;
+            double z = Math.sin(a) * GUARANTEED_ISLAND_DISTANCE;
+            OceanShape.placeIsland(p, s, x, z, 2, false, prm, 0);
+            double landRadius = OceanShape.landRadius(OceanShape.ISLAND, prm, 0);
+            if (underContinent(p, near, x, z, landRadius) || chains.near(x, z, landRadius + p.clearSkyMargin())) {
+                continue;
+            }
+            Land none = new Land();
+            none.chains = new Chains();
+            addOcean(p, x0, z0, size, near, none, prm, out, RegionLayout.OCEAN_ISLAND, 0, s,
+                    ZoneField.factorAtDistance(p, GUARANTEED_ISLAND_DISTANCE));
+            land.add(x, z, landRadius);
+            return;
+        }
+    }
+
     /** Island-rich and empty stretches of sea: 0.25 .. 1.5 times the base chance. */
     private static double density(long seed, double x, double z) {
         double n = SimplexNoise.noise2(seed, x / DENSITY_SCALE, z / DENSITY_SCALE);
@@ -296,6 +345,16 @@ public final class LayoutGenerator {
         if (inside) {
             out.add(type, id, (int) Math.round(x), (int) Math.round(z), reach, p.worldMinY(),
                     (int) Math.ceil(OceanShape.maxY(kind, prm, 0)), id, 0, zone, prm, 0, OceanShape.STRIDE);
+            if (type == RegionLayout.OCEAN_ISLAND) {
+                double[] sh = new double[ShaftShape.STRIDE];
+                for (int k = 0, n = ShaftShape.count(prm, 0, id); k < n; k++) {
+                    ShaftShape.shaft(prm, 0, id, k, sh);
+                    long ks = Hash.hash(id, 320 + k);
+                    out.add(RegionLayout.SHAFT, ks, (int) Math.round(sh[0]), (int) Math.round(sh[1]), ShaftShape.reach(sh),
+                            (int) Math.floor(ShaftShape.minY(sh)), (int) Math.ceil(ShaftShape.maxY(sh)), ks, 0, zone, sh, 0,
+                            ShaftShape.STRIDE);
+                }
+            }
         }
     }
 
