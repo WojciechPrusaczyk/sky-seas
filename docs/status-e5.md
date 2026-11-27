@@ -34,3 +34,10 @@ Census (r = 5 chunków):
 - Spody wysp (`skyseas:island_underside`: powietrze tuż pod spodem wyspy przy spodzie z układu): hanging roots, cave vines, glow lichen, pointed dripstone. Census przy spawnie: ok. 3,9 tys. korzeni, 7,5 tys. pnączy, 3,5 tys. glow lichen.
 - `skyseas:frozen_sea` w zamarzniętych oceanach, raz na chunk: lodowy sufit (packed ice, 3 bloki) z kieszenią powietrza w środku (35%) albo korzeń góry lodowej: packed ice z rdzeniem z blue ice, 20–45 bloków pod wodę pod małą czapą (12%). Census przy −1024, −1024: 12,8 tys. bloków packed ice nad wodą i 26,6 tys. pod.
 - `generatorVersion` 21.
+
+## Poprawka: kanciaste jaskinie („sześciany”)
+
+- Przyczyna: w `oceanic` jaskinie były obcięte od dołu przez `max(caves, 1 − cave_mask)` (wzór ze spec). Gdzie maska = 1, obcięcie wynosi dokładnie 0, więc cała jaskinia miała gęstość równą 0, czyli leżała na samym progu bryła/powietrze. Po interpolacji powietrze zostawało tylko tam, gdzie wszystkie narożniki komórki miały równe 0: jednoblokowe linie wzdłuż krawędzi komórek (co 4 bloki) i pełne prostopadłościany komórek (4×8×4). Odtworzone z seedem świata testowego w (524…532, −16…0, −476…−464), bez Noisium.
+- Poprawka: `max(caves, 1 − 2·cave_mask)`, czyli −1 przy pełnej masce; jaskinie zachowują własny gradient. W tym samym miejscu po poprawce są zwykłe, zaokrąglone jaskinie. Spec zaktualizowana.
+- Carvery nie miały z tym nic wspólnego (usunięte w rundzie 1 i tak zostaje).
+- `generatorVersion` 22.

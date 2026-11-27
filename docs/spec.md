@@ -181,7 +181,7 @@ Kształt świata to jeden `final_density` w `noise_settings`: maksimum z wysp na
 ```text
 oceanic   = seabed(x,y,z)                         # >0 skała pod dnem i wyspy oceaniczne
 caves     = vanilla_caves(x,y,z)                  # cheese, spaghetti, noodle, entrances z overworld
-oceanicCv = min(oceanic, max(caves, 1 - cave_mask))   # jaskinie tylko tam, gdzie pozwala maska
+oceanicCv = min(oceanic, max(caves, 1 - 2 * cave_mask))   # jaskinie tylko tam, gdzie pozwala maska; przy pełnej masce dolne ograniczenie −1, nie 0
 sky       = sky_islands(x,y,z)                    # >0 duże bryły na niebie
 large     = interpolated(max(sky, oceanicCv))
 small     = sky_details(x,y,z)                    # łańcuchy, małe wyspy, mostki; per blok, odrzucanie po obrysie
