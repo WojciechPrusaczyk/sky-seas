@@ -5,6 +5,7 @@ import pl.skyseas.shape.ContinentShape;
 import pl.skyseas.shape.OceanShape;
 import pl.skyseas.shape.ShaftShape;
 import pl.skyseas.shape.ShapeMath;
+import pl.skyseas.shape.SimplexNoise;
 import pl.skyseas.shape.SkyFormShape;
 
 /**
@@ -229,6 +230,7 @@ public final class Layout {
     /** Warm water around the guaranteed island: full up to this far beyond its reach, gone at WARM_OUTER. */
     private static final double WARM_INNER = 40.0;
     private static final double WARM_OUTER = 160.0;
+    private static final double WARM_RAGGED = 70.0;
 
     /**
      * One climate value of the sky islands whose reach (outline + island reach margin)
@@ -299,7 +301,14 @@ public final class Layout {
         if (w.length == 0) {
             return 0.0;
         }
-        double d = Math.hypot(x - w[0], z - w[1]) - w[2];
+        double dx = x - w[0];
+        double dz = z - w[1];
+        if (dx * dx + dz * dz > (w[2] + WARM_OUTER + WARM_RAGGED) * (w[2] + WARM_OUTER + WARM_RAGGED)) {
+            return 0.0;
+        }
+        // A ragged edge: warm ocean has its own water colour, so a circle would show.
+        double d = Math.sqrt(dx * dx + dz * dz) - w[2]
+                + WARM_RAGGED * SimplexNoise.noise2(seed + 0x3A2L, x / 90.0, z / 90.0);
         return 1.0 - ShapeMath.smoothstep(WARM_INNER, WARM_OUTER, d);
     }
 

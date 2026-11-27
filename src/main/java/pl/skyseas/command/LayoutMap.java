@@ -138,6 +138,7 @@ final class LayoutMap {
         if (seabed != null) {
             ImageIO.write(seabedImage(seabed, x0, z0, size, scale), "png",
                     dir.resolve(file.getFileName().toString().replace("map-", "seabed-")).toFile());
+            biomeImage(level, layout, seabed, x0, z0, size, scale, dir.resolve(file.getFileName().toString().replace("map-", "biomes-")));
         }
         return String.format(java.util.Locale.ROOT,
                 "[Sky Seas] map: %dx%d px, %d blocks/px, centre %d,%d, land %.1f%%, sky visibility %.2f%% of %d points, "
@@ -145,6 +146,49 @@ final class LayoutMap {
                 size, size, scale, centerX, centerZ, 100.0 * land / ((double) size * size),
                 points == 0 ? 100.0 : 100.0 * (points - blind) / points, points, ms,
                 layout.cache().size(), file.toAbsolutePath());
+    }
+
+    /**
+     * Surface biomes as the player sees them from above: on sky islands (top of the highest
+     * island in reach), on ocean land, else in the water at Y 40. Colours are hashed from the
+     * biome id; a legend with pixel counts goes to a .txt next to the png.
+     */
+    private static void biomeImage(ServerLevel level, Layout layout, SeabedHeightFunction seabed, int x0, int z0, int size,
+                                   int scale, Path file) throws IOException {
+        var source = level.getChunkSource().getGenerator().getBiomeSource();
+        var sampler = level.getChunkSource().randomState().sampler();
+        java.util.Map<String, int[]> legend = new java.util.TreeMap<>();
+        BufferedImage img = new BufferedImage(size, size, BufferedImage.TYPE_INT_RGB);
+        for (int py = 0; py < size; py++) {
+            int z = z0 + py * scale;
+            for (int px = 0; px < size; px++) {
+                int x = x0 + px * scale;
+                double top = layout.climateColumn(x, z, Layout.CLIMATE_TOP);
+                int y;
+                if (top > Layout.NO_TOP) {
+                    y = (int) top + 1;
+                } else {
+                    double h = seabed.compute(new DensityFunction.SinglePointContext(x, 0, z));
+                    y = h >= 63.0 ? (int) h + 1 : 40;
+                }
+                String id = source.getNoiseBiome(x >> 2, y >> 2, z >> 2, sampler).unwrapKey()
+                        .map(k -> k.location().toString()).orElse("?");
+                int[] e = legend.get(id);
+                if (e == null) {
+                    int hash = id.hashCode() * 0x9E3779B1;
+                    e = new int[]{(hash >>> 8) & 0xFFFFFF, 0};
+                    legend.put(id, e);
+                }
+                e[1]++;
+                img.setRGB(px, py, e[0]);
+            }
+        }
+        ImageIO.write(img, "png", file.toFile());
+        StringBuilder sb = new StringBuilder();
+        for (var en : legend.entrySet()) {
+            sb.append(String.format(java.util.Locale.ROOT, "#%06X %7d %s%n", en.getValue()[0], en.getValue()[1], en.getKey()));
+        }
+        Files.writeString(Path.of(file.toString().replace(".png", ".txt")), sb.toString());
     }
 
     /** Seabed heights (deep blue to sand) with hillshade from the north-west; land above sea level grey. */

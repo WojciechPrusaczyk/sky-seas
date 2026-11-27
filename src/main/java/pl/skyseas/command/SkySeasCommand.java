@@ -264,7 +264,13 @@ public final class SkySeasCommand {
                 .append(" (generatorVersion ").append(WorldParams.GENERATOR_VERSION).append(')')
                 .append("\n  biome: ").append(level.getBiome(pos).getRegisteredName());
 
-        DensityFunction finalDensity = level.getChunkSource().randomState().router().finalDensity();
+        var router = level.getChunkSource().randomState().router();
+        DensityFunction.SinglePointContext here = new DensityFunction.SinglePointContext(pos.getX(), pos.getY(), pos.getZ());
+        sb.append(String.format(Locale.ROOT, "\n  climate: temperature %.3f, vegetation %.3f, continents %.3f, erosion %.3f, "
+                        + "ridges %.3f, depth %.3f", router.temperature().compute(here), router.vegetation().compute(here),
+                router.continents().compute(here), router.erosion().compute(here), router.ridges().compute(here),
+                router.depth().compute(here)));
+        DensityFunction finalDensity = router.finalDensity();
         SeabedHeightFunction seabed = RouterLookup.find(finalDensity, SeabedHeightFunction.class);
         ZoneFactorFunction zone = RouterLookup.find(finalDensity, ZoneFactorFunction.class);
         if (seabed != null && zone != null) {
@@ -304,6 +310,16 @@ public final class SkySeasCommand {
             } else {
                 sb.append("\n  island: none (open sky)");
             }
+            double point = layout.climateColumn(pos.getX(), pos.getZ(), Layout.CLIMATE_TEMPERATURE);
+            double type = layout.climateColumn(pos.getX(), pos.getZ(), Layout.CLIMATE_TYPE);
+            sb.append(String.format(Locale.ROOT, "\n  climate reach: %s, sky Y %.0f..%.0f%s, warm sea %.2f",
+                    type == Layout.NO_CLIMATE ? "open sea" : RegionLayout.TYPE_NAMES[(int) type],
+                    layout.climateColumn(pos.getX(), pos.getZ(), Layout.CLIMATE_BOTTOM),
+                    layout.climateColumn(pos.getX(), pos.getZ(), Layout.CLIMATE_TOP),
+                    point == Layout.NO_CLIMATE ? "" : String.format(Locale.ROOT, ", cluster point t %.2f v %.2f e %.2f", point,
+                            layout.climateColumn(pos.getX(), pos.getZ(), Layout.CLIMATE_VEGETATION),
+                            layout.climateColumn(pos.getX(), pos.getZ(), Layout.CLIMATE_EROSION)),
+                    layout.warmBias(pos.getX(), pos.getZ())));
             int o = layout.oceanAt(r, pos.getX(), pos.getZ(), -1000.0);
             if (o >= 0) {
                 int off = r.paramOffset[o];
