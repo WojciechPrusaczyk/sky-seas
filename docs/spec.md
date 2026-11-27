@@ -127,7 +127,7 @@ Układ to deterministyczny plan wysp liczony raz na region 1024×1024 bloków, w
 2. **Formy oceaniczne.** Wyspy oceaniczne (klasy 70/25/5 według designu, gęstość ok. 2× względem E3a, większy udział średnich), góry podwodne, wulkany, iglice morskie, formacje monumentalne i strefy biomów dna. Formy wystające nad wodę są odrzucane pod rzutem kontynentu z marginesem 16 bloków (+ szum nawisów).
 3. **Wyspy pojedyncze.** Wyspy-wieże (2–4 na region) oraz małe i średnie wyspy (10–20 na region; ok. połowa jako satelity 100–400 bloków od krawędzi kontynentu, reszta rozsiana). Odrzucane, gdy ich rzut z marginesem 16 nachodzi na ląd w oceanie lub inną wyspę na niebie, albo gdy przekraczają budżet zacienienia.
 4. **Klastry: archipelagi i góry Alleluja.** Środek klastra z siatki, wyspy wewnątrz klastra. Wyspa jest odrzucana, gdy jej rzut z marginesem 16 nachodzi na ląd w oceanie lub kontynent, gdy przekracza budżet zacienienia albo gdy wisi nad inną wyspą klastra.
-5. **Łańcuchy powrotne.** Z wybranych punktów krawędzi kontynentu ścieżka w dół do ok. Y 70: 5–15 wysp, krok pionowy do 12 bloków, przerwa pozioma do 6, promień wyspy co najmniej 4 (zapas ziemi). Omijają wyspy oceaniczne.
+5. **Łańcuchy powrotne.** Z wybranych punktów krawędzi kontynentu ścieżka w dół do ok. Y 70: 5–15 wysp, krok pionowy do 12 bloków, przerwa pozioma do 6, promień wyspy co najmniej 4 (zapas ziemi). Zależą tylko od swojego kontynentu (poziom 1½); to wyspy oceaniczne ustępują łańcuchom, tak jak kontynentom, bo odwrotna kolejność nie byłaby deterministyczna między regionami.
 6. **Elementy specjalne.** Cenoty (1–2 na dużej wyspie oceanicznej), błękitne dziury (płycizny), iglice pod spodami wysp z gniazdami diamentów (szansa wg strefy), ujścia kaskad (krawędzie kontynentów).
 
 **Zacienienie (decyzja 2026-11-27).** Limit 30% zniesiony; test raportuje udział morza w cieniu. Twarde jest tylko czyste niebo nad lądami w oceanie.
@@ -432,8 +432,7 @@ Wdrożenie idzie w dziesięciu etapach; każdy kończy się działającym świat
    - Runda 1: kontynenty (sylwetki, złożone, wysokości i przechylenie, wyniesione, masywy, iglice pod spodem, krawędzie bez okruchów, przerwy 400–800).
    - Runda 2: wypełnienie nieba (małe i średnie wyspy, wieże, archipelagi, góry Alleluja, gwarancja archipelagu i klastra Alleluja, reguła widoczności nieba).
    - Runda 2b (decyzje `docs/decisions/2026-11-27-sky-heights-density.md`): wysokości od wody do 305, wyspy zatopione i niskie kontynenty, gęstsze niebo w rojach i większych klastrach, nakładanie i zlewanie małych wysp.
-   - Runda 3: dno (gęstsze wyspy i formy, strefy biomów dna, formacje monumentalne, `seabed_details`, reguły widoczności morza i dna).
-   - Runda 4: domknięcie (łańcuchy, cenoty, błękitne dziury, gwarancje startowe, spawn, `/skyseas audit`).
+   - Runda 3 (z zakresem rundy 4, zrobiona 2026-11-27): prowincje dna (`SeabedProvinces`, `WorldParams.SeabedForms`) zamiast stref biomów dna i `seabed_details`; wyspy oceaniczne z klifami, ostrogami i załamanym stokiem; łańcuchy, cenoty, błękitne dziury (`skyseas:shafts`, `skyseas:shaft_near`, `skyseas:shaft_flood`), gwarantowana duża wyspa z cenotą, spawn, `/skyseas audit`. Szczegóły i odstępstwa: `docs/status-e3.md`, „Runda 3: wykonanie”.
    - Akceptacja etapu: audyt pokazuje 0 wysp nad lądem w oceanie, łańcuchy w limitach kroku, szyby kończą się w komorach, reguły widoczności spełnione; etap `noise` ≤ 1,3× vanilli.
    - Zrealizowane w rundzie 1:
      - sylwetki z katalogu; złożone 29% (kaldera nigdy nie jest złożona, więc pozostałe charaktery częściej);

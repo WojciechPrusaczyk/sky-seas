@@ -308,7 +308,74 @@ Korekta po locie (`generatorVersion` 14): wyraźniejsze roje i otwarte przestrze
 - basaltu, magmy, tuffu, kelpu, kominów i glow lichen (E5): pola wulkaniczne będą kamiennymi stożkami;
 - łańcuchów, cenot, błękitnych dziur i automatycznego spawnu.
 
-### Runda 4: domknięcie E3
+### Runda 3: wykonanie (2026-11-27, z zakresem rundy 4)
+
+Twoje uwagi po rundzie 2b: dno płaskie i nudne, wyspy oceaniczne jak pachołki, za mało odkrywek, kanciaste jaskinie i plasterki tuneli, brak większych jaskiń, trawa na iglicach pod wyspami. Zakres rundy 4 dołączony do tej rundy; magma i rudy zostają w E5.
+
+**Zrobione:**
+- **Prowincje dna** (`SeabedProvinces`, parametry `WorldParams.SeabedForms`): wypaczone komórki Voronoia ok. 800 bloków, mieszane na 90 blokach, każda z jedną prowincją:
+  - równiny z wydmami (ok. 10%);
+  - wzgórza i podwodne pasma górskie;
+  - sieci wąwozów z półkami: główne do ok. Y −45, boczne do ok. Y −34;
+  - pola stożków wulkanicznych różnej wielkości, z kraterami, na szerokim wyniesieniu;
+  - skarpy z tarasami i płaskowyżami;
+  - skaliste grzbiety z lasem filarów.
+
+  Poza równinami dochodzi rzeźba w średniej skali. Dno leży w Y −46…24 (miękkie granice; niebo zaczyna się od Y 30).
+- **Wyspy oceaniczne:** klify od plaży i pagórkowaty wierzch zamiast kopuły; ostrogi schodzące stokiem; stok ze stromym spadkiem pod półką, załamaniem i długą stopą.
+- **Jaskinie:** komora musi mieć 18–30 bloków miejsca pod stropem (mniej plasterków). Studnie krasowe i sale były już w poprzednim commicie rundy.
+- **Iglice pod wyspami:** wierzchołek osadzony w bryle wyspy, więc bez trawy (poprzedni commit rundy).
+- **Łańcuchy powrotne:**
+  - 5–15 wysp o promieniu 5–11;
+  - krok do 12 (z rozrzutem), przerwa 2–6, najniższa wyspa na Y 67–71;
+  - łańcuch ma 50% kontynentów (15% ma dwa), startowy zawsze.
+- **Cenoty i błękitne dziury:**
+  - **Cenoty:** 1–2 na dużej wyspie, szyb o średnicy 6–14 do suchej komory na Y −8…4.
+  - **Błękitne dziury:** 50% wysp średnich i dużych, szyb o średnicy 8–20 z półki do zalanej komory.
+  - **Zalanie:** jest nadpisywane wokół szybów, bo aquifer czyta je tylko w środkach swoich komórek.
+- **Gwarancje startowe:** duża wyspa z cenotą ok. 720 bloków od spawnu, w kierunku wolnym od kontynentów i łańcucha; łańcuch z kontynentu startowego.
+- **Spawn:** środek płaskowyżu startowego (w teście Y 145).
+- **`/skyseas audit <promień>`:** widoczność, zacienienie morza, niebo nad lądem oceanicznym, kroki łańcuchów, otwarte szyby; CSV w `run/skyseas/audit/`.
+- **Mapa** zapisuje też cieniowany obraz dna (`seabed-*.png`); `/skyseas locate chain|cenote|blue_hole`.
+
+**Pomiary:**
+- **JUnit:**
+  - równiny 9,6% powierzchni;
+  - płaskich okien 64×64 (rozrzut < 6) 5,7% bez vanillowej rzeźby;
+  - łańcuchy bez kroku w górę: 0 (trzy seedy);
+  - szyby: 43 cenoty i 121 błękitnych dziur, wszystkie otwarte do komory;
+  - cenota przy spawnie w czterech seedach.
+- **GameTesty 7/7:** płaskie arkusze w jaskiniach 331 z 26 903 bloków (wcześniej 444 z 21 498).
+- **Sonda w grze:**
+  - cenota sucha od wierzchu do komory;
+  - błękitna dziura zalana od Y 63 do komory na ok. Y 4.
+- **Audyt (promień 4000):**
+  - 0 punktów nieba nad lądem oceanicznym;
+  - 129 wysp łańcuchów, 0 bez kroku;
+  - 55 szybów, 0 zamkniętych;
+  - widoczność nieba 99,06%;
+  - morze pod formami nieba 33,7% (limit zniesiony 2026-11-27, raportowany).
+- **Bench (noise / biomes / surface względem vanilli):**
+
+  | Obszar | noise | biomes | surface |
+  | --- | --- | --- | --- |
+  | spawn | 1,19× | 1,98× | 1,38× |
+  | wyspa z cenotą | 1,16× | 2,56× | 0,86× |
+  | daleki ocean | 1,15× | 2,35× | 0,97× |
+
+  Wiersze „wyspa z cenotą” i „daleki ocean” zmierzono przed przyspieszeniem prowincji, które obniżyło koszt `biomes` przy spawnie z 2,36× do 1,98×.
+
+**Odstępstwa:**
+- **Prowincje zamiast stref biomów dna i 3D `seabed_details`:** podwodnych łuków, nawisów kanionów i pól głazów nie ma. Prowincje są czysto 2D, więc strop i jaskinie podążają za dnem.
+- **Wąwozy do ok. Y −45, nie do bedrocka:** poniżej Y −54 vanilla ma na sztywno poziom lawy aquiferów, a komórki aquifera pod nim robią suche kieszenie w otwartej wodzie powyżej. Wąwozy schodzą ok. 50–70 bloków pod otaczające dno.
+- **Łańcuchy:** to wyspy oceaniczne ustępują łańcuchom (spec mówiła odwrotnie); wynik dla gracza ten sam.
+- **Cenota bez gwarantowanego jeziorka na dnie:** woda w komorze zależy od vanillowego aquifera.
+- **Ciepła rafa przy spawnie:** przeniesiona do E4, bo wymaga biasu temperatury (klimat). Rafa i tak powstaje w ciepłych oceanach.
+- **Skrzynia bonusowa:** nie pojawia się, bo nasz spawn anuluje vanillowe ustawianie.
+- **Szyby i spawn:** sprawdzane JUnitem, sondą w grze i audytem, bez osobnych GameTestów.
+- **Etap `biomes`:** 2–2,5× vanilli przez koszt prowincji w `seabed_height` (poza kryterium, które dotyczy `noise`).
+
+### Runda 4: domknięcie E3 (włączona do rundy 3)
 
 **Zakres:**
 - **Łańcuchy powrotne:** 5–15 wysp, krok do 12, przerwa do 6, zapas ziemi, najniższa kilka bloków nad wodą.
