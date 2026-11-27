@@ -257,6 +257,24 @@ Każda runda kończy się JUnit, GameTestami, mapą, benchem (`noise` ≤ 1,3× 
 - jednego dominującego biomu na klaster (E4);
 - pnączy, wodospadów z bryły na bryłę i dekoracji spodów (E5).
 
+### Runda 2b: wysokości i gęstość nieba (po locie, decyzje 2026-11-27)
+
+Zrobione (szczegóły w spec, „Zrealizowane w rundzie 2b”): limity stref zniesione, wyspy od wody do 305 w pasmach wysokości, 10% zatopionych, niskie kontynenty, wyspy w rojach (szum gęstości), więcej i większe klastry, małe i średnie wyspy nakładają się i zlewają. `generatorVersion` 13.
+
+Pomiary:
+
+| Co | Wynik |
+| --- | --- |
+| Formy na region | wieże 2,8, wyspy pojedyncze 29,0 (było 10,0), wyspy archipelagów 9,8 (było 3,2), bryły Alleluja 5,6 (było 1,6), mosty 0,22 |
+| Wysokości wysp | zatopione 9,8%, wierzch < 150: 47%, > 230: 37% |
+| Kontynenty | niskie 9,5%, wyniesione 13,5% |
+| Zacienienie | 31,2% (kontynenty 18,7%), najgorszy region 70% (bez limitu) |
+| Widoczność nieba | 99,1% / 99,1% (JUnit), 99,32% (mapa 16 km) |
+| Bench noise (400 chunków) | spawn 1,08×, góry −3400,−3400 1,13× (limit 1,3×); biomes 1,20–1,35×; surface 1,24–1,67× |
+| Testy | JUnit 38/38, GameTesty 7/7 |
+
+Gwarantowane klastry (seed serwera): archipelag 430,212,−12; Alleluja −524,299,107.
+
 ### Runda 3: dno
 
 **Zakres:**
@@ -315,10 +333,8 @@ Każda runda kończy się JUnit, GameTestami, mapą, benchem (`noise` ≤ 1,3× 
 2. **Współrzędne „latających bloków”:** podasz osobno. Runda 1 usuwa obie znalezione przyczyny (sekcja 1); test w grze pokaże, czy coś zostało.
 4. **Łuki na krawędziach kontynentów:** przy interpolacji 4×8×4 szum, który je rzeźbił, odcinał kawałki. Teraz krawędź ma wnęki i nawisy, ale nie łuki. Jeśli łuki są potrzebne, zrobię je jako osobne formy per blok w `sky_details`, tak jak mosty skalne.
 5. **Krawędź 16 i skorupa 16–28** (design mówił 10–25): to minimum, przy którym interpolacja nie rozbija płyty.
-3. **Limit zacienienia 30%:** koliduje (liczby w sekcji 1): w najgorszym regionie same kontynenty zasłaniają 65%. Propozycje:
-   - (a) limit 30% liczony w oknie 3×3 regionów (ok. 3 km), a nie w jednym regionie; dziś najgorsze okno trzeba jeszcze zmierzyć, całość wynosi 22%;
-   - (b) limit dotyczy tylko tego, co dokładają formy poziomów 3–5, np. ≤ 10% powierzchni morza w regionie (dziś ok. 3,6% średnio).
-   Do Twojej decyzji; do tego czasu formy nie są usuwane z powodu zacienienia.
+3. **Limit zacienienia 30%:** zniesiony 2026-11-27 (raportowany).
+6. **Zatopione wyspy i niskie kontynenty nad podwodnymi górami** mogą się z nimi zlać; do przejrzenia w rundzie oceanu.
 
 ## 7. Bieżące parametry (`WorldParams.DEFAULTS`, wybór)
 
@@ -326,7 +342,7 @@ Każda runda kończy się JUnit, GameTestami, mapą, benchem (`noise` ≤ 1,3× 
 | --- | --- |
 | Świat | Y −64…320, morze 63 (bez zmian) |
 | Dno | baza −5…−20 wg strefy; rzeźba ±12 (typowo ±8–10); wydmy ±2; kaniony 8–14; rowy do −40 |
-| Kontynenty | siatka 1700; przerwa pudełek 240–600 (brzeg–brzeg 400–800); startowy 350 (płaskowyż 150, baza 140–150, bez przechylenia); teren 125–185, przechylenie 20–40; wyniesione 15% od Pogranicza, 190–220; złożone 30% (różnica członów 20–60, mosty 6–10 szer., przesmyki 20–40); szczyty do 250, masywy 10→30% do 270–300; skorupa 16–28, krawędź 16; iglice 3–8 × 10–40; szum krawędzi 8 w pasie 32; spód ≥ 113 |
+| Kontynenty | siatka 1700; przerwa pudełek 240–600 (brzeg–brzeg 400–800); startowy 350 (płaskowyż 150, baza 140–150, bez przechylenia); teren 100–200, przechylenie 20–40; wyniesione 15% od Pogranicza, 200–240; niskie ok. 10%, 70–90; złożone 30% (różnica członów 20–60, mosty 6–10 szer., przesmyki 20–40); szczyty do 250, masywy 10→30% do 270–300; skorupa 16–28, krawędź 16; iglice 3–8 × 10–40; szum krawędzi 8 w pasie 32; spód ≥ 30 |
 | Wyspy oceaniczne | siatka 300; szansa 0,8 × gęstość 0,25–1,5; promienie 2,5/15/75/200; szczyt nad wodą 1–8 / 4–18 / 10–40; szelf Y 35–60, szerokość 6–20 / 20–60 / 45–130; zbocze 45–90 |
 | Atole | szansa 0,5 w ciepłej wodzie (temperatura ≥ 0,55); laguna Y 52–59 |
 | Góry podwodne | siatka 900, szansa 0,5, promień 60–150, szczyt Y 40–58 (woda umiarkowana) |

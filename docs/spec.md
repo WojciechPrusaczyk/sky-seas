@@ -130,7 +130,7 @@ Układ to deterministyczny plan wysp liczony raz na region 1024×1024 bloków, w
 5. **Łańcuchy powrotne.** Z wybranych punktów krawędzi kontynentu ścieżka w dół do ok. Y 70: 5–15 wysp, krok pionowy do 12 bloków, przerwa pozioma do 6, promień wyspy co najmniej 4 (zapas ziemi). Omijają wyspy oceaniczne.
 6. **Elementy specjalne.** Cenoty (1–2 na dużej wyspie oceanicznej), błękitne dziury (płycizny), iglice pod spodami wysp z gniazdami diamentów (szansa wg strefy), ujścia kaskad (krawędzie kontynentów).
 
-**Budżet zacienienia (decyzja z E3).** Limit 30% powierzchni morza dotyczy form z poziomów 3–5 i jest liczony w oknie wokół komórki formy, łącznie z cieniem kontynentów; kontynentów nie przycinamy. Budżet każdej komórki zależy tylko od jej położenia i poziomów wcześniejszych, więc nie tworzy zależności od kolejności. Jeśli gęstość z designu koliduje z limitem, implementacja zgłasza liczby i proponuje korektę limitu zamiast po cichu usuwać formy.
+**Zacienienie (decyzja 2026-11-27).** Limit 30% zniesiony; test raportuje udział morza w cieniu. Twarde jest tylko czyste niebo nad lądami w oceanie.
 
 W obrębie poziomu każda komórka siatki ma najwyżej jednego kandydata, więc nie ma konfliktów wewnątrz poziomu. Decyzje poziomu N czytają wyłącznie gotowe poziomy 1..N−1 z sąsiedztwa 3×3 regionów.
 
@@ -211,8 +211,8 @@ Każdy typ: `MapCodec` zarejestrowany w `Registries.DENSITY_FUNCTION_TYPE` przez
 
 **Kształty (pakiet `shape`)**
 
-- **Kontynent.** Sylwetka z katalogu: wydłużona (proporcje 1:2–1:4), półksiężyc lub podkowa z zatoką, hak, rozgałęziona (palce lądu) albo nieregularna; budowana z nachodzących na siebie elips z zaszumionym obrysem (rdzeń i satelity rozmieszczone według sylwetki), z lekko zawirowaną domeną i fraktalnym detalem wybrzeża; pole krawędzi ma spadek ok. 1 na blok, więc detal nie odrywa okruchów (test: brak fragmentów < 32×32, odłączone < 3%). Kontynent złożony (ok. 30%): 2–4 człony o różnych sylwetkach i bazach różniących się o 20–60 bloków, połączone przesmykiem albo mostem skalnym, z urwiskiem lub stokiem między nimi. Wysokość: baza 125–185 z przechyleniem całej bryły o 20–40 bloków; startowy 140–150; od Pogranicza ok. 15% wyniesionych (baza 190–220). Charakter kontynentu (nizinny 20%, mieszany 30%, wyżynny 15%, górski 20% z pasmem gór wzdłuż kręgosłupa, kaldera 15% z pierścieniem gór z przełęczami i kotliną) ustala wagi form; ok. 20% kontynentów (częściej dalej od spawnu) ma masyw ze szczytami 270–300. Wierzch: regiony terenu (równiny co najmniej 35%, obecnie ok. 49%), pagórki, wyżyny z uskokami, mesy o pionowych ścianach, rzadkie skupiska iglic, tarasowe góry; łagodna mikrorzeźba (±1,5 bloku, fala ok. 40) i lekko falujące linie uskoków; przy części wybrzeża stok zamiast klifu; płaskowyż pod spawn na startowym. Pod płaskim terenem 16–28 bloków skorupy z delikatnymi zwisami (szum 2D do ok. 6 bloków); przy brzegu krawędź jest klifem grubości co najmniej 16 bloków (komórki interpolacji mają 8 bloków wysokości, cieńsze płyty rozpadają się na grudki). Pod spodem 3–8 zwisających iglic skalnych długości 10–40 bloków (sloty na gniazda diamentów), bez masywnego kilu; na nisko położonych kontynentach krótsze albo żadne, bo czubek musi zostać nad Y 113. Iglice i mosty skalne liczy `sky_details` per blok. Szum 3D tylko wycina (amplituda 8, pas 32 bloków od brzegu i wysokie ściany gór); przy brzegu wycina tylko ścianę klifu (wnęki, nawisy), a wierzch i spód krawędzi zostają całe. Jego gradient jest mniejszy niż spadek odległości od powierzchni, więc nie odcina kawałków; łuki na krawędziach kontynentów nie powstają. Test JUnit sprawdza spójność brył w 3D z odtworzoną interpolacją 4×8×4, GameTest na wygenerowanych chunkach. Spód nigdy poniżej Y 113.
-- **Wyspa-wieża.** Pionowa bryła o szerokości 15–40 i wysokości 50–150 bloków, z zaszumionym promieniem zwężającym się ku dołowi, płaskim zielonym wierzchołkiem (do limitu strefy) i iglicami pod spodem.
+- **Kontynent.** Sylwetka z katalogu: wydłużona (proporcje 1:2–1:4), półksiężyc lub podkowa z zatoką, hak, rozgałęziona (palce lądu) albo nieregularna; budowana z nachodzących na siebie elips z zaszumionym obrysem (rdzeń i satelity rozmieszczone według sylwetki), z lekko zawirowaną domeną i fraktalnym detalem wybrzeża; pole krawędzi ma spadek ok. 1 na blok, więc detal nie odrywa okruchów (test: brak fragmentów < 32×32, odłączone < 3%). Kontynent złożony (ok. 30%): 2–4 człony o różnych sylwetkach i bazach różniących się o 20–60 bloków, połączone przesmykiem albo mostem skalnym, z urwiskiem lub stokiem między nimi. Wysokość: baza 100–200 z przechyleniem całej bryły o 20–40 bloków; startowy 140–150; od Pogranicza ok. 15% wyniesionych (baza 200–240); ok. 10% niskich (baza 70–90). Charakter kontynentu (nizinny 20%, mieszany 30%, wyżynny 15%, górski 20% z pasmem gór wzdłuż kręgosłupa, kaldera 15% z pierścieniem gór z przełęczami i kotliną) ustala wagi form; ok. 20% kontynentów (częściej dalej od spawnu) ma masyw ze szczytami 270–300. Wierzch: regiony terenu (równiny co najmniej 35%, obecnie ok. 49%), pagórki, wyżyny z uskokami, mesy o pionowych ścianach, rzadkie skupiska iglic, tarasowe góry; łagodna mikrorzeźba (±1,5 bloku, fala ok. 40) i lekko falujące linie uskoków; przy części wybrzeża stok zamiast klifu; płaskowyż pod spawn na startowym. Pod płaskim terenem 16–28 bloków skorupy z delikatnymi zwisami (szum 2D do ok. 6 bloków); przy brzegu krawędź jest klifem grubości co najmniej 16 bloków (komórki interpolacji mają 8 bloków wysokości, cieńsze płyty rozpadają się na grudki). Pod spodem 3–8 zwisających iglic skalnych długości 10–40 bloków (sloty na gniazda diamentów), bez masywnego kilu; na nisko położonych kontynentach krótsze albo żadne, bo czubek musi zostać nad Y 70. Iglice i mosty skalne liczy `sky_details` per blok. Szum 3D tylko wycina (amplituda 8, pas 32 bloków od brzegu i wysokie ściany gór); przy brzegu wycina tylko ścianę klifu (wnęki, nawisy), a wierzch i spód krawędzi zostają całe. Jego gradient jest mniejszy niż spadek odległości od powierzchni, więc nie odcina kawałków; łuki na krawędziach kontynentów nie powstają. Test JUnit sprawdza spójność brył w 3D z odtworzoną interpolacją 4×8×4, GameTest na wygenerowanych chunkach. Spód nigdy poniżej Y 30; ok. 10% kontynentów leży nisko (baza 70–90), z klifami do morza i bez zbocza wybrzeża.
+- **Wyspa-wieża.** Pionowa bryła o szerokości 15–40 i wysokości 50–150 bloków, z zaszumionym promieniem zwężającym się ku dołowi, płaskim zielonym wierzchołkiem (Y 160–305) i iglicami pod spodem.
 - **Mała i średnia wyspa.** Spłaszczona bryła 10–30 lub 30–80 bloków z płaskim wierzchem, zaszumionym obrysem i stożkowym spodem z 0–2 (mała) lub 3–8 (średnia) iglicami; małe liczone w `sky_details`, średnie w `sky_islands`.
 - **Archipelag.** Superelipsoidy z zaszumionym promieniem, płaski wierzch, stożkowy spód; rzadkie łuki i mosty jako kapsuły między parą wysp.
 - **Góry Alleluja.** Pionowe kapsuły 40–120 bloków, promień zwężający się ku dołowi + szum, lekkie pochylenie, płaski wierzch pod trawę.
@@ -346,7 +346,7 @@ Wszystkie liczby z dokumentu designowego są parametrami w configu COMMON (`conf
 | `layout.regionSize` | 1024 | Bok regionu układu (bloki) |
 | `layout.cacheRegions` | 512 | Maksymalna liczba regionów w cache |
 | `zones.radii` | 1500, 4000, 8000 | Progi stref Przystań / Pogranicze / Dzicz |
-| `zones.maxIslandY` | 200, 240, 280, 305 | Najwyższe wyspy w strefach (pod udźwig statków); limit wierzchu form na niebie poza kontynentami |
+| `skyForms.maxY` | 305 | Najwyższy wierzch formy na niebie poza kontynentami (limity stref zniesione 2026-11-27) |
 | `seabed.baseY` | −5 … −20 | Baza dna od spawnu do Krańca |
 | `seabed.relief` | ±12 (typowo ±8–10), min. siła 0,6 | Wieloskalowa rzeźba dna względem bazy |
 | `seabed.duneAmplitude` | 2 | Wydmy (±) |
@@ -356,26 +356,30 @@ Wszystkie liczby z dokumentu designowego są parametrami w configu COMMON (`conf
 | `continents.boxGap` | 240 … 600 | Przerwa między pudełkami obrysu sąsiadów; brzeg–brzeg wychodzi 400–800 |
 | `continents.crust` | 16 … 28 | Skorupa pod płaskim terenem; krawędź klifu 16 |
 | `continents.edgeNoise`, `continents.edgeBand` | 8; 32 | Szum 3D przy brzegu: amplituda (tylko wycina), szerokość pasa |
-| `continents.baseY` | 125 … 185; startowy 140 … 150 | Baza terenu kontynentów |
+| `continents.baseY` | 100 … 200; startowy 140 … 150 | Baza terenu kontynentów |
 | `continents.tilt` | 20 … 40 | Przechylenie bryły (bloki różnicy między krańcami) |
 | `continents.compositeShare` | 0,30 | Udział kontynentów złożonych (2–4 człony, różnica wysokości 20–60) |
-| `continents.elevatedShare`, `continents.elevatedBaseY` | 0,15 (od Pogranicza); 190 … 220 | Kontynenty wyniesione nad chmury |
+| `continents.elevatedShare`, `continents.elevatedBaseY` | 0,15 (od Pogranicza); 200 … 240 | Kontynenty wyniesione nad chmury |
+| `continents.lowShare`, `continents.lowBaseY` | 0,17 (z kontynentów niewyniesionych poza kalderami; wynik ok. 10%); 70 … 90 | Niskie kontynenty z klifami i spodem w morzu |
 | `continents.massifShare`, `continents.massifPeakY` | 0,20 (rośnie z odległością); 270 … 300 | Masywy górskie |
 | `islands.hangingSpires` | 3 … 8 (małe wyspy 0 … 2), długość 10 … 40 | Iglice pod spodami wysp |
 | `towers.perRegion`, `towers.size` | 2 … 4; szerokość 15 … 40, wysokość 50 … 150 | Wyspy-wieże |
 | `skyIslands.perRegion`, `skyIslands.size` | 10 … 20; 10 … 30 i 30 … 80 | Małe i średnie wyspy (ok. połowa jako satelity 100 … 400 od kontynentu) |
-| `skyForms.cellSize`, `skyForms.cellChance`, `skyForms.towerShare` | 192; 0,86; 0,25 | Siatka wież i wysp pojedynczych (wynik: ok. 3,2 wieży i 10 wysp na region) |
-| `clusters.archipelagoChance`, `clusters.hallelujahChance`, `clusters.radius` | 0,35; 0,25; 220 … 420 | Klastry na narożnikach siatki kontynentów |
+| `skyForms.cellSize`, `skyForms.cellChance`, `skyForms.densityMin`, `skyForms.towerShare` | 112; 1,0; 0,1; 0,15 | Siatka wież i wysp pojedynczych; szansa na komórkę z szumu gęstości (fala 1500) między 0,1 a 1,0 (wynik: ok. 2,8 wieży i 29 wysp na region) |
+| `skyForms.heightScale`, `skyForms.sunkShare`, `skyForms.sunkTop`, `skyForms.islandTopMin`, `skyForms.towerTopMin` | 900; 0,1; 64 … 75; 80; 160 | Pasma wysokości wysp (szum), wyspy zatopione |
+| `skyForms.detailRadiusMax`, `skyForms.detailOverlap`, `skyForms.continentOverlap` | 40; 0,6; 0,3 | Wyspy liczone per blok: mogą się nakładać (środki ≥ 0,6 sumy promieni w klastrze) i wchodzić do 30% promienia na brzeg kontynentu |
+| `clusters.archipelagoChance`, `clusters.hallelujahChance`, `clusters.radius` | 0,45; 0,30; 300 … 480 | Klastry na narożnikach siatki kontynentów (archipelag 20–60 wysp, Alleluja 20–50 brył) |
+| `clusters.edgeChance`, `clusters.edgeRadius` | 0,30; 200 … 260 | Klastry na środkach boków siatki |
 | `clusters.guaranteeDistance`, `clusters.guaranteeRadius` | 650; 230 | Gwarantowany archipelag i klaster Alleluja przy spawnie |
 | `ocean.islandDensity` | ok. 2× wartości z E3a | Gęstość wysp oceanicznych |
 | `seabedBiomes.zoneScale` | 300 … 800 | Wielkość stref biomów dna |
 | `visibility.sky` | 1 wyspa w 250, 3 w 500 (z Y 150) | Reguła widoczności nieba |
 | `visibility.sea` | coś w 250 | Reguła widoczności morza |
 | `visibility.seabed` | forma w 150, monumentalna (> 30 bloków) w 500 | Reguła widoczności dna |
-| `continents.minBottomY` | 113 | Bufor 50 bloków nad wodą |
+| `continents.minBottomY` | 30 | Nic z form na niebie poniżej (dno sięga Y 9); bufor 50 bloków zniesiony 2026-11-27 |
 | `starter.continentRadius` | 350 | Kontynent startowy (płaskowyż pod spawn: promień 150) |
 | `starter.guaranteeRadius` | 1000 | Promień gwarancji startowych |
-| `shading.maxFraction` | 0,30 | Limit zacienienia morza w regionie |
+| `shading.maxFraction` | — | Zniesiony 2026-11-27; zacienienie tylko raportowane |
 | `clearSky.margin` | 16 | Margines czystego nieba nad lądem w oceanie |
 | `clusters.minCorridor` | 32 | Minimalna szerokość głównego przelotu przez klaster (pod rozmiar statku) |
 | `chains.maxStep`, `chains.maxGap` | 12, 6 | Krok pionowy i przerwa w łańcuchach powrotnych |
@@ -405,7 +409,7 @@ Testowanie opiera się na trzech filarach: komendach, które pokazują układ be
 
 **Testy automatyczne**
 
-- **JUnit (bez Minecrafta):** determinizm (ten sam seed daje identyczny region niezależnie od kolejności zapytań i liczby wątków); reguły (zero wysp nad wyspą oceaniczną z marginesem, limit zacienienia, spód kontynentu ≥ 113, kroki łańcuchów, gwarancje startowe, reguły widoczności, przerwy między kontynentami 400–800, brak oderwanych okruchów w 3D); granice kształtów (zakres Y deskryptora obejmuje całą bryłę); czas liczenia regionu.
+- **JUnit (bez Minecrafta):** determinizm (ten sam seed daje identyczny region niezależnie od kolejności zapytań i liczby wątków); reguły (zero wysp nad wyspą oceaniczną z marginesem, raport zacienienia, nic z nieba poniżej Y 30, duże formy bez nakładania, rozkład wysokości wysp, kroki łańcuchów, gwarancje startowe, reguły widoczności, przerwy między kontynentami 400–800, brak oderwanych okruchów w 3D); granice kształtów (zakres Y deskryptora obejmuje całą bryłę); czas liczenia regionu.
 - **GameTesty:** generują wycinek świata o znanym seedzie i sprawdzają: brak jaskiń w stropie poza wejściami, szyby kończą się w komorze, struktury podziemne leżą pod dnem, rudy wysp istnieją, po generacji kaskad nie zostają zaplanowane ticki płynów.
 
 **Testy ręczne (po Twojej stronie):** lista seedów testowych; lot statkiem z Create Aeronautics (korytarze, wysokości stref); zanurzenie łodzią z Create Deep Seas (rowy, ciśnienie); start serwera z pełną paczką modów; połączenie klientem bez moda.
@@ -427,9 +431,10 @@ Wdrożenie idzie w dziesięciu etapach; każdy kończy się działającym świat
    - Runda 0 (zrobiona, E3a): wyspy oceaniczne, szelfy, atole, góry podwodne, wulkany, iglice morskie, `/skyseas locate`.
    - Runda 1: kontynenty (sylwetki, złożone, wysokości i przechylenie, wyniesione, masywy, iglice pod spodem, krawędzie bez okruchów, przerwy 400–800).
    - Runda 2: wypełnienie nieba (małe i średnie wyspy, wieże, archipelagi, góry Alleluja, gwarancja archipelagu i klastra Alleluja, reguła widoczności nieba).
+   - Runda 2b (decyzje `docs/decisions/2026-11-27-sky-heights-density.md`): wysokości od wody do 305, wyspy zatopione i niskie kontynenty, gęstsze niebo w rojach i większych klastrach, nakładanie i zlewanie małych wysp.
    - Runda 3: dno (gęstsze wyspy i formy, strefy biomów dna, formacje monumentalne, `seabed_details`, reguły widoczności morza i dna).
    - Runda 4: domknięcie (łańcuchy, cenoty, błękitne dziury, gwarancje startowe, spawn, `/skyseas audit`).
-   - Akceptacja etapu: audyt pokazuje 0 wysp nad lądem w oceanie, zacienienie ≤ 30% (albo uzgodnioną korektę), łańcuchy w limitach kroku, szyby kończą się w komorach, reguły widoczności spełnione; etap `noise` ≤ 1,3× vanilli.
+   - Akceptacja etapu: audyt pokazuje 0 wysp nad lądem w oceanie, łańcuchy w limitach kroku, szyby kończą się w komorach, reguły widoczności spełnione; etap `noise` ≤ 1,3× vanilli.
    - Zrealizowane w rundzie 1:
      - sylwetki z katalogu; złożone 29% (kaldera nigdy nie jest złożona, więc pozostałe charaktery częściej);
      - wysokości i przechylenie; wyniesione 13,5% poza Przystanią; masywy 22%;
@@ -457,6 +462,14 @@ Wdrożenie idzie w dziesięciu etapach; każdy kończy się działającym świat
      - reguła widoczności nieba liczona po odległości poziomej (`Layout.skyVisible`), na mapie jako punkty co 50 bloków;
      - budżet zacienienia nie jest egzekwowany, tylko raportowany (liczby w `docs/status-e3.md`, decyzja 1.7);
      - `/skyseas locate archipelago|hallelujah|tower|sky_island|sky_bridge`; parametry form w `WorldParams.SkyForms` (rekord przekroczył limit parametrów konstruktora JVM).
+   - Zrealizowane w rundzie 2b (`generatorVersion` 13):
+     - limity stref zniesione; wierzch wysp z szumu pasma wysokości (fala 900) z rozrzutem; 10% wysp zatopionych (wierzch 64–75, głębokość przycięta, żeby spód został ≥ 36); wieże 160–305, bryły Alleluja od Y 70; iglice ≥ Y 70;
+     - kontynenty: baza 100–200, wyniesione 200–240, niskie 70–90 (`continentLowShare` 0,17, wynik 9,5%); `continentMinBottomY` 30; zbocze wybrzeża tylko przy bazie > 123 (stała `COAST_DROP_FLOOR`, zachowuje dotychczasowe wybrzeża, a niskie kontynenty mają klify); wewnątrz obrysu gęstość co najmniej 2 zamiast 1 (zmiana bazy odsłoniła 1–2-blokowe okruchy na czubkach wybrzeży);
+     - poziom 3: siatka 112, szansa z szumu gęstości (fala 1500) od 0,1 do 1,0; 15% wież; wszystkie wyspy pojedyncze per blok (`FLAG_DETAIL`), nakładają się na siebie, na wieże i do 30% promienia na kontynenty; wieże dalej bez nakładania (rzut priorytetu) i omijają dyski klastrów;
+     - poziom 4: klastry narożne 45%/30%, promień 300–480; klastry na środkach boków siatki (30%, promień 200–260); rangi klastrów: duże formy klastra niższej rangi omijają dyski wyższych (gwarantowane > narożne > boczne); wyspy archipelagu < 40 per blok i nakładają się (środki ≥ 0,6 sumy promieni), duże formy z odstępem 16;
+     - nowa kolumna `sky_detail_ceiling` (flat_cache): `sky_details` liczy bloki między podłogą a sufitem detali, bo nakładające się wyspy mogą leżeć na dowolnych wysokościach w jednej kolumnie;
+     - noodle poniżej Y 63 tylko w gałęzi oceanu: `max(sky, min(oceanic, noodle<63))` (inaczej wycinał kawałki z zatopionych wysp);
+     - testy: JUnit `largeSkyFormsDoNotOverlap`, `skyFormHeights` (zatopione 5–15%, rozrzut wysokości), udział niskich kontynentów 5–15%, bryły 3D od Y 24; GameTesty: okno od Y 29 (kawałki sięgające dna to dno albo formy oceaniczne), pomijane kawałki z samego lodu i śniegu (vanillowe góry lodowe), okno wyspy zatopionej, skan dna od powierzchni formy oceanicznej.
    - Zrealizowane w rundzie 0: dwa indeksy kubełkowe na region (niebo, ocean) i parametry o zmiennej długości; `ClimateProbe`; `skyseas:cave_top` (bez jaskiń w iglicach morskich); ochrona stropu obejmuje też wierzchni blok dna (GameTest złapał dziurę na stromym zboczu szelfu); `continents` = 0,5 nad lądem wysp oceanicznych od Y 62 (tymczasowo, do E4).
 5. **E4 — Klimat i biomy 3D.** Wszystkie funkcje klimatu, chłodzenie z wysokością, klastry tematyczne, biomy jaskiniowe; pliki czterech biomów dna, ich tagi i nakładka na źródło biomów w warstwie oceanu.
    - Akceptacja: lądowe biomy na wyspach, oceaniczne w wodzie, deep dark tylko pod grubą skałą, rafy w warm ocean.
