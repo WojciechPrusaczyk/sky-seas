@@ -45,6 +45,15 @@ final class Census {
                                 continue;
                             }
                             String id = s.getBlock().builtInRegistryHolder().key().location().getPath();
+                            if (s.is(net.minecraft.world.level.block.Blocks.BUBBLE_COLUMN)) {
+                                BlockState below = chunk.getBlockState(pos.set((cx << 4) + x, y - 1, (cz << 4) + z));
+                                if (!below.is(net.minecraft.world.level.block.Blocks.BUBBLE_COLUMN)) {
+                                    String base = "bubble_base:" + below.getBlock().builtInRegistryHolder().key().location().getPath()
+                                            + (s.getValue(net.minecraft.world.level.block.BubbleColumnBlock.DRAG_DOWN) ? ":down" : ":up");
+                                    counts.computeIfAbsent(base, k -> new long[2])[1]++;
+                                }
+                                pos.set((cx << 4) + x, y, (cz << 4) + z);
+                            }
                             counts.computeIfAbsent(id, k -> new long[2])[y >= SEA_LEVEL ? 0 : 1]++;
                             if (y >= SEA_LEVEL && !s.getFluidState().isEmpty() && !s.getFluidState().isSource()
                                     && (s.getFluidState().is(Fluids.FLOWING_WATER) || s.getFluidState().is(Fluids.FLOWING_LAVA))) {

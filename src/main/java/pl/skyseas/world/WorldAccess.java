@@ -24,6 +24,12 @@ public final class WorldAccess {
         return LayoutAccess.seabed(randomState(level));
     }
 
+    /** Zone factor (0 at spawn .. 1 at the plateau) at a column, or -1 outside Sky Seas. */
+    public static double zone(WorldGenLevel level, int x, int z) {
+        var f = LayoutAccess.zone(randomState(level));
+        return f == null ? -1.0 : f.compute(new DensityFunction.SinglePointContext(x, 0, z));
+    }
+
     public static double seabedHeight(SeabedHeightFunction seabed, int x, int z) {
         return seabed.compute(new DensityFunction.SinglePointContext(x, 0, z));
     }

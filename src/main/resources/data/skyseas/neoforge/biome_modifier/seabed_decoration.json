@@ -1,0 +1,9 @@
+{
+  "type": "neoforge:add_features",
+  "biomes": "#minecraft:is_ocean",
+  "features": [
+    "skyseas:seabed/vent",
+    "skyseas:seabed/glow_lichen"
+  ],
+  "step": "underground_decoration"
+}

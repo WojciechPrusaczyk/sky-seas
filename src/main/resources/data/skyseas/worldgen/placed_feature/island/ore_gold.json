@@ -1,0 +1,22 @@
+{
+  "feature": "skyseas:island/ore_gold",
+  "placement": [
+    {
+      "type": "minecraft:count",
+      "count": 3
+    },
+    {
+      "type": "skyseas:zone_count",
+      "min": 1.0,
+      "max": 1.8
+    },
+    {
+      "type": "minecraft:in_square"
+    },
+    {
+      "type": "skyseas:island_relative_height",
+      "min_depth": 4,
+      "max_depth": 60
+    }
+  ]
+}

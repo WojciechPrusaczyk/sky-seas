@@ -1,0 +1,30 @@
+{
+  "feature": "minecraft:glow_lichen",
+  "placement": [
+    {
+      "type": "minecraft:count",
+      "count": 24
+    },
+    {
+      "type": "minecraft:in_square"
+    },
+    {
+      "type": "skyseas:seabed"
+    },
+    {
+      "type": "skyseas:depth_chance",
+      "from_y": -5,
+      "to_y": -30,
+      "min": 0.0
+    },
+    {
+      "type": "minecraft:random_offset",
+      "xz_spread": 0,
+      "y_spread": {
+        "type": "minecraft:uniform",
+        "min_inclusive": 0,
+        "max_inclusive": 6
+      }
+    }
+  ]
+}

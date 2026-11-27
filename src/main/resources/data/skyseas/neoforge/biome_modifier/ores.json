@@ -1,0 +1,21 @@
+{
+  "type": "neoforge:add_features",
+  "biomes": "#minecraft:is_overworld",
+  "features": [
+    "skyseas:island/ore_copper",
+    "skyseas:island/ore_iron",
+    "skyseas:island/ore_gold",
+    "skyseas:island/ore_redstone",
+    "skyseas:seabed/exposure_coal",
+    "skyseas:seabed/exposure_copper",
+    "skyseas:seabed/exposure_iron",
+    "skyseas:seabed/exposure_gold",
+    "skyseas:seabed/exposure_redstone",
+    "skyseas:seabed/exposure_lapis",
+    "skyseas:seabed/exposure_raw_iron",
+    "skyseas:seabed/exposure_raw_copper",
+    "skyseas:seabed/exposure_raw_gold",
+    "skyseas:diamond_nests"
+  ],
+  "step": "underground_ores"
+}

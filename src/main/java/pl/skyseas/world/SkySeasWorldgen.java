@@ -19,6 +19,16 @@ public final class SkySeasWorldgen {
             PLACEMENTS.register("seabed", () -> () -> SeabedPlacement.CODEC);
     public static final DeferredHolder<PlacementModifierType<?>, PlacementModifierType<LayerFilter>> LAYER_FILTER =
             PLACEMENTS.register("layer_filter", () -> () -> LayerFilter.CODEC);
+    public static final DeferredHolder<PlacementModifierType<?>, PlacementModifierType<IslandRelativeHeight>> ISLAND_RELATIVE_HEIGHT =
+            PLACEMENTS.register("island_relative_height", () -> () -> IslandRelativeHeight.CODEC);
+    public static final DeferredHolder<PlacementModifierType<?>, PlacementModifierType<ZoneCount>> ZONE_COUNT =
+            PLACEMENTS.register("zone_count", () -> () -> ZoneCount.CODEC);
+    public static final DeferredHolder<PlacementModifierType<?>, PlacementModifierType<DepthChance>> DEPTH_CHANCE =
+            PLACEMENTS.register("depth_chance", () -> () -> DepthChance.CODEC);
+    public static final DeferredHolder<Feature<?>, Feature<NoneFeatureConfiguration>> DIAMOND_NESTS =
+            FEATURES.register("diamond_nests", DiamondNestFeature::new);
+    public static final DeferredHolder<Feature<?>, Feature<NoneFeatureConfiguration>> SEABED_VENT =
+            FEATURES.register("seabed_vent", VentFeature::new);
     public static final DeferredHolder<Feature<?>, Feature<NoneFeatureConfiguration>> SEABED_MATERIALS =
             FEATURES.register("seabed_materials", SeabedMaterialsFeature::new);
 
