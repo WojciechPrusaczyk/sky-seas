@@ -826,6 +826,47 @@ class LayoutTest {
         assertTrue(l >= 0.25 && h >= 0.2, "height spread: low " + l + ", high " + h);
     }
 
+    /**
+     * The top disc of every hanging spire sits inside the body above it, so its top face
+     * never shows under the underside (it got grass there).
+     */
+    @Test
+    void spireTopsInsideTheirBodies() {
+        Layout layout = new Layout(SEEDS[0], P, CLIMATE);
+        int spires = 0;
+        for (int rx = -3; rx <= 3; rx++) {
+            for (int rz = -3; rz <= 3; rz++) {
+                RegionLayout r = layout.region(rx, rz);
+                for (int i = 0; i < r.count; i++) {
+                    byte t = r.type[i];
+                    if (RegionLayout.isOcean(t) || t == RegionLayout.SKY_BRIDGE || !r.owns(i, P.layoutRegionSize())) {
+                        continue;
+                    }
+                    boolean continent = t == RegionLayout.CONTINENT;
+                    int off = r.paramOffset[i];
+                    int n = (int) r.params[off + (continent ? ContinentShape.SPIRE_COUNT : SkyFormShape.SPIRE_COUNT)];
+                    int o0 = off + (continent ? ContinentShape.SPIRE0 : SkyFormShape.SPIRE0);
+                    for (int k = 0; k < n; k++) {
+                        int o = o0 + ContinentShape.SPIRE_STRIDE * k;
+                        double top = r.params[o + 2];
+                        double rad = r.params[o + 4] + 1.0;
+                        for (int a = 0; a < 16; a++) {
+                            double x = r.params[o] + Math.cos(a * Math.PI / 8) * rad;
+                            double z = r.params[o + 1] + Math.sin(a * Math.PI / 8) * rad;
+                            double bottom = continent
+                                    ? ContinentShape.column(P, r.params, off, r.shapeSeed[i], x, z, Layout.BOTTOM)
+                                    : SkyFormShape.column(r.params, off, r.shapeSeed[i], x, z, Layout.BOTTOM);
+                            assertTrue(bottom < top, RegionLayout.TYPE_NAMES[t] + " spire top " + top + " under bottom "
+                                    + bottom + " at " + x + "," + z);
+                        }
+                        spires++;
+                    }
+                }
+            }
+        }
+        assertTrue(spires > 200, "too few spires " + spires);
+    }
+
     /** An archipelago and a Hallelujah cluster within 1000 blocks of spawn, for every seed. */
     @Test
     void clustersGuaranteedNearSpawn() {

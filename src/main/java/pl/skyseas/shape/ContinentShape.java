@@ -663,6 +663,14 @@ public final class ContinentShape {
                 continue;
             }
             double bottom = column(p, prm, off, seed, x, z, BOTTOM);
+            // The top disc sits above the underside everywhere under it (hanging bumps), or its top face shows.
+            double high = bottom;
+            for (int k = 0; k < 16; k++) {
+                double a8 = k * 0.125 * Math.PI;
+                high = Math.max(high, column(p, prm, off, seed, x + Math.cos(a8) * (radius + 2.0),
+                        z + Math.sin(a8) * (radius + 2.0), BOTTOM));
+            }
+            double top = Math.max(bottom + SPIRE_EMBED, high + 3.0);
             double length = Math.min(ShapeMath.lerp(p.continentSpireLengthMin(), p.continentSpireLengthMax(), u(seed, i + 4)),
                     bottom - p.skyForms().skySpireMinY() - 1.0);
             if (length < 0.8 * p.continentSpireLengthMin()) {
@@ -671,8 +679,8 @@ public final class ContinentShape {
             int o = off + SPIRE0 + SPIRE_STRIDE * count;
             prm[o] = x;
             prm[o + 1] = z;
-            prm[o + 2] = bottom + SPIRE_EMBED;
-            prm[o + 3] = length + SPIRE_EMBED;
+            prm[o + 2] = top;
+            prm[o + 3] = length + top - bottom;
             prm[o + 4] = radius;
             prm[o + 5] = u(seed, i + 5) * 2.0 * Math.PI;
             count++;

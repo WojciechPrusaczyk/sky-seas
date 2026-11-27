@@ -17,9 +17,20 @@ public final class SeabedColumn {
         return height - p.worldMinY();
     }
 
-    /** 0 inside the roof band and above it, rising to 1 over {@code caveMaskRamp} blocks below. */
+    /** Caves fade out near the bottom of the world over these Y (matches the bottom slide in oceanic.json). */
+    private static final double CAVE_FLOOR_Y = -56.0;
+    /** Vertical room under the roof below which caves fade out: squeezed caves become flat one-block sheets. */
+    private static final double CAVE_BAND_MIN = 14.0;
+    private static final double CAVE_BAND_FULL = 26.0;
+
+    /**
+     * 0 inside the roof band and above it, rising to 1 over {@code caveMaskRamp} blocks below;
+     * 0 where the rock between the roof and the bottom is too thin for whole caves.
+     */
     public static double caveMask(WorldParams p, double height, int y) {
-        return ShapeMath.clamp((height - p.caveRoofThickness() - y) / p.caveMaskRamp(), 0.0, 1.0);
+        double roof = height - p.caveRoofThickness();
+        double room = ShapeMath.smoothstep(CAVE_BAND_MIN, CAVE_BAND_FULL, roof - CAVE_FLOOR_Y);
+        return room * ShapeMath.clamp((roof - y) / p.caveMaskRamp(), 0.0, 1.0);
     }
 
     /**

@@ -49,6 +49,9 @@ public final class SeabedTests {
         WorldParams p = WorldParams.DEFAULTS;
         int columns = 0;
         long caveBlocks = 0;
+        caveRuns = 0;
+        caveSlivers = 0;
+        caveSheets = 0;
         int minSeen = Integer.MAX_VALUE;
         int maxSeen = Integer.MIN_VALUE;
         for (long seed : SEEDS) {
@@ -78,8 +81,15 @@ public final class SeabedTests {
                 }
             }
         }
-        SkySeas.LOGGER.info("SeabedTests: {} columns ok, seabed top Y {}..{}, {} cave blocks below the roof",
-                columns, minSeen, maxSeen, caveBlocks);
+        SkySeas.LOGGER.info("SeabedTests: {} columns ok, seabed top Y {}..{}, {} cave blocks below the roof, "
+                + "{} cave runs, {} one block high, {} flat sheet blocks, mean height {}", columns, minSeen, maxSeen, caveBlocks, caveRuns,
+                caveSlivers, caveSheets,
+                caveRuns == 0 ? 0 : String.format("%.1f", (double) caveBlocks / caveRuns));
+        // Flat one-block sheets come from caves squeezed between the roof and the bottom; 2.1% before round 3.
+        if (caveSheets > 0.016 * caveBlocks) {
+            helper.fail("flat cave sheets: " + caveSheets + " of " + caveBlocks + " cave blocks");
+            return;
+        }
         if (caveBlocks == 0) {
             helper.fail("no caves at all below the roof");
             return;
@@ -216,16 +226,49 @@ public final class SeabedTests {
     }
 
     /** Air or fluid blocks between the roof and the bottom of the world (caves, flooded or not). */
+    /** Cave runs (vertical stretches of air or fluid under the roof): all, one block high, and their summed height. */
+    static long caveRuns;
+    /** Vanilla bedrock reaches up to Y -60: runs among its blocks are not cave shapes. */
+    private static final int BEDROCK_TOP = -58;
+    static long caveSlivers;
+    /** Flat one-block sheets: thin gaps whose four neighbours are thin gaps too (cut tunnels). */
+    static long caveSheets;
+
     private static int countCaveBlocks(WorldParams p, ProtoChunk chunk, int x, int z, int top) {
         int count = 0;
+        int run = 0;
         BlockPos.MutableBlockPos pos = new BlockPos.MutableBlockPos(x, 0, z);
         for (int y = top - (int) p.caveRoofThickness(); y > chunk.getMinBuildHeight(); y--) {
             BlockState state = chunk.getBlockState(pos.setY(y));
             if (state.isAir() || !state.getFluidState().isEmpty()) {
                 count++;
+                run++;
+            } else if (run > 0 && y + run < BEDROCK_TOP) {
+                run = 0;
+            } else if (run > 0) {
+                caveRuns++;
+                caveSlivers += run == 1 ? 1 : 0;
+                run = 0;
+            }
+        }
+        for (int y = top - (int) p.caveRoofThickness(); y > BEDROCK_TOP; y--) {
+            if ((x & 15) > 0 && (x & 15) < 15 && (z & 15) > 0 && (z & 15) < 15 && thinGap(chunk, pos, x, y, z)
+                    && thinGap(chunk, pos, x + 1, y, z) && thinGap(chunk, pos, x - 1, y, z)
+                    && thinGap(chunk, pos, x, y, z + 1) && thinGap(chunk, pos, x, y, z - 1)) {
+                caveSheets++;
             }
         }
         return count;
+    }
+
+    private static boolean open(ProtoChunk chunk, BlockPos.MutableBlockPos pos, int x, int y, int z) {
+        BlockState state = chunk.getBlockState(pos.set(x, y, z));
+        return state.isAir() || !state.getFluidState().isEmpty();
+    }
+
+    /** Open block with rock right above and below it. */
+    private static boolean thinGap(ProtoChunk chunk, BlockPos.MutableBlockPos pos, int x, int y, int z) {
+        return open(chunk, pos, x, y, z) && !open(chunk, pos, x, y + 1, z) && !open(chunk, pos, x, y - 1, z);
     }
 
     /** Column dump for failure messages. */

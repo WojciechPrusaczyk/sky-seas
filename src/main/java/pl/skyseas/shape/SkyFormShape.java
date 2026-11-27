@@ -131,18 +131,28 @@ public final class SkyFormShape {
                 continue;
             }
             double bottom = column(prm, off, seed, x, z, ContinentShape.BOTTOM);
+            // The underside rises towards the rim: the spire's top disc must sit above the
+            // underside everywhere under it, or its top face shows (and gets grass).
+            double high = bottom;
+            double low = column(prm, off, seed, x, z, ContinentShape.TOP);
+            for (int k = 0; k < 16; k++) {
+                double a8 = k * 0.125 * Math.PI;
+                double px = x + Math.cos(a8) * (radius + 2.0);
+                double pz = z + Math.sin(a8) * (radius + 2.0);
+                high = Math.max(high, column(prm, off, seed, px, pz, ContinentShape.BOTTOM));
+                low = Math.min(low, column(prm, off, seed, px, pz, ContinentShape.TOP));
+            }
+            double top = high + 3.0;
             double length = Math.min(ShapeMath.lerp(p.continentSpireLengthMin(), p.continentSpireLengthMax(), u(seed, i + 3)),
                     bottom - minTipY);
-            if (length < 0.8 * p.continentSpireLengthMin()) {
+            if (length < 0.8 * p.continentSpireLengthMin() || top > low - 4.0) {
                 continue;
             }
-            // Embedded a few blocks into the underside, so the spire meets it everywhere.
-            double embed = Math.min(6.0, 0.5 * prm[off + RIM]);
             int o = off + SPIRE0 + ContinentShape.SPIRE_STRIDE * n;
             prm[o] = x;
             prm[o + 1] = z;
-            prm[o + 2] = bottom + embed;
-            prm[o + 3] = length + embed;
+            prm[o + 2] = top;
+            prm[o + 3] = length + top - bottom;
             prm[o + 4] = radius;
             prm[o + 5] = u(seed, i + 4) * 2.0 * Math.PI;
             n++;

@@ -101,6 +101,9 @@ public final class ContinentTests {
 
     /** Air blocks under thick rock seen by {@link #check} (sky corridors, and arches or bridges over other rock). */
     private static int corridorAir;
+    /** Enclosed air gaps above the sea: all of them, and those one block high (slivers of cut tunnels). */
+    private static int gaps;
+    private static int slivers;
 
     /** Half-size of a connectivity window in chunks. */
     private static final int WINDOW_CHUNKS = 2;
@@ -168,6 +171,8 @@ public final class ContinentTests {
         String[] kinds = {"tower", "medium island", "small island", "archipelago", "hallelujah", "sky bridge", "sunk island"};
         int windows = 0;
         corridorAir = 0;
+        gaps = 0;
+        slivers = 0;
         for (long seed : SEEDS) {
             StagedChunkGen gen = StagedChunkGen.create(helper.getLevel(), StagedChunkGen.SKY_SEAS, seed);
             Layout layout = LayoutAccess.get(gen.randomState());
@@ -205,7 +210,8 @@ public final class ContinentTests {
                 }
             }
         }
-        SkySeas.LOGGER.info("ContinentTests: {} sky form windows without loose sky blocks, {} corridor air blocks", windows, corridorAir);
+        SkySeas.LOGGER.info("ContinentTests: {} sky form windows without loose sky blocks, {} corridor air blocks, "
+                + "{} enclosed gaps of which {} one block high", windows, corridorAir, gaps, slivers);
         // Without corridors arches and overhangs give about 90 such blocks in these windows; with them about 380.
         if (corridorAir < 200) {
             helper.fail("no corridors in thick sky forms: " + corridorAir + " air blocks under thick rock");
@@ -259,6 +265,19 @@ public final class ContinentTests {
                         roof = solid[v + k];
                     }
                     corridorAir += roof ? 1 : 0;
+                }
+            }
+            for (int y = 1; y < ny - 1; y++) {
+                int v = col * ny + y;
+                if (y + y0 > 64 && !solid[v] && solid[v - 1]) {
+                    int h = 0;
+                    while (y + h < ny && !solid[v + h] && h <= 40) {
+                        h++;
+                    }
+                    if (y + h < ny && h <= 40) {
+                        gaps++;
+                        slivers += h == 1 ? 1 : 0;
+                    }
                 }
             }
         }
