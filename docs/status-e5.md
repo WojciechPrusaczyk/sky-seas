@@ -50,3 +50,15 @@ Census (r = 5 chunków):
 - Więcej dużych komór: próg jaskiń „cheese” 0,27 → 0,22. Udział powietrza w skale pod dnem w miejscu z testu (seed świata testowego, chunki 32…37 × −32…−27): przed poprawką kanciastych jaskiń 6,3%, po niej 14,2%, z nowym progiem 18,2%.
 - `ridges` na niebie: znak vanilli, stała wielkość (PV „mid”), w górach kontynentów ku linii szczytów. Wcześniej grzbiety vanilli dawały na wyspach biom rzeki (doliny) i paski klas PV (np. tajga na przemian z windswept). Odstępstwo od spec (tam vanillowy szum wszędzie); spec poprawiona.
 - `generatorVersion` 23.
+
+## Runda 5: rzeki, lichen, krawędzie wysp
+
+- Rzeki tylko na kontynentach na niebie (decyzja użytkownika), 1–3 na kontynent zależnie od wielkości (ok. 2,7 średnio w próbie 3 seedów):
+  - układ (`ContinentShape.placeRivers`, czysta Java, test `RiverTest`): źródło w najwyższym z kilku punktów z dala od wybrzeża i gór, krok 8 bloków w dół terenu z lekkim ciągiem ku wybrzeżu, poziom wody nigdy nie rośnie, wcięcie najwyżej 14 bloków; bieg, który nie dojdzie do wybrzeża, odpada. Liczone tylko dla kontynentów w budowanym regionie: ok. 5–10 ms na region.
+  - teren: `column(TOP)` wycina koryto (dno w kształcie U, brzegi o nachyleniu 0,6); kolumny poza prostokątem rzeki kosztują jedno porównanie. Decyzje klastrów używają `TERRAIN` (wierzch bez rzek), bo rzeki istnieją tylko w układach z danym kontynentem (determinizm).
+  - `skyseas:river` (krok `lakes`): woda jako gotowe bloki; dziury w brzegu domurowane; na progach jeden tick płynu (vanilla raz dorabia mały wodospad); ujście za krawędzią to wodospad z półkami.
+- Kaskady (losowe i z ujść rzek): półki co 20–30 bloków, skalna miseczka z oczkiem 3×3 (powietrze nad rogami, do złapania oddechu przy płynięciu w górę), wylot na zmianę w przeciwne strony.
+- `/skyseas locate river|river_mouth`.
+- Glow lichen pod wyspami: 16 → 3 próby na chunk.
+- Krawędzie wysp (`SkyColumn.density`, jeden szum 2D liczony tylko przy obrzeżu): zaokrąglona górna krawędź (promień 2–5) i podcięcie ściany w dół (stałe 0,2 plus do 0,45 zależnie od szumu, do 12 bloków pod wierzchem). Tylko zabiera skałę, nic nie wychodzi poza obrys.
+- `generatorVersion` 25.

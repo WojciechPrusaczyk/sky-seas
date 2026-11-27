@@ -18,10 +18,33 @@ public final class SkyColumn {
     private SkyColumn() {
     }
 
+    /** Coast rim shaping (blocks): band from the outline, noise scale, undercut slope and depth, rounding radius. */
+    private static final double RIM_BAND = 14.0;
+    private static final double RIM_SCALE = 60.0;
+    private static final double RIM_UNDERCUT_MIN = 0.2;
+    private static final double RIM_UNDERCUT = 0.45;
+    private static final double RIM_UNDERCUT_DEPTH = 12.0;
+    private static final double RIM_ROUND_MIN = 2.0;
+    private static final double RIM_ROUND_MAX = 5.0;
+
     public static double density(WorldParams p, long noiseSeed, double x, double y, double z,
                                  double edge, double top, double bottom, double detail) {
         // Inside the outline at least 2: cell corners grazing the coast would interpolate to loose slivers.
-        double d = Math.min(Math.min(top - y, y - bottom), edge > 0.0 ? Math.max(edge, 2.0) : edge);
+        double rim = edge > 0.0 ? Math.max(edge, 2.0) : edge;
+        double depth = top - y;
+        if (rim > -1.0 && rim < RIM_BAND && depth > -1.0 && y > bottom) {
+            // Coast rim (one 2D noise): a rounded top edge of varying radius, and an undercut on part of
+            // the coast. Both only remove rock, so nothing grows past the outline.
+            double n = SimplexNoise.noise2(noiseSeed + 7, x / RIM_SCALE, z / RIM_SCALE);
+            rim -= (RIM_UNDERCUT_MIN + RIM_UNDERCUT * Math.max(0.0, n)) * ShapeMath.clamp(depth, 0.0, RIM_UNDERCUT_DEPTH);
+            double r = RIM_ROUND_MIN + (RIM_ROUND_MAX - RIM_ROUND_MIN) * (0.5 + 0.5 * n);
+            if (rim < r && depth < r && depth > 0.0) {
+                double a = r - Math.max(rim, 0.0);
+                double b = r - depth;
+                rim = Math.min(rim, r - Math.sqrt(a * a + b * b));
+            }
+        }
+        double d = Math.min(Math.min(depth, y - bottom), rim);
         if (d > 0.0 && detail > 0.0) {
             // Carving must change slower than the distance to the surface (gradient below 1),
             // otherwise it cuts loose pieces off thin rims; amplitude and scales keep it there.
