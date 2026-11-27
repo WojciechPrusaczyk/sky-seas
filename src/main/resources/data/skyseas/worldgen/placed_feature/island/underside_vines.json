@@ -9,7 +9,8 @@
       "type": "minecraft:in_square"
     },
     {
-      "type": "skyseas:island_underside"
+      "type": "skyseas:island_underside",
+      "small_islands_only": true
     }
   ]
 }

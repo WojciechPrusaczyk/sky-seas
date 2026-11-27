@@ -1,0 +1,11 @@
+{
+  "type": "skyseas:climate_ridges",
+  "input": "minecraft:overworld/ridges",
+  "height": "skyseas:seabed_height",
+  "island": "skyseas:climate/sky_type",
+  "bottom": "skyseas:climate/sky_bottom",
+  "top": "skyseas:climate/sky_top",
+  "point": "skyseas:climate/sky_erosion",
+  "mountain": "skyseas:climate/sky_mountain",
+  "warm": "skyseas:climate/warm_bias"
+}

@@ -10,7 +10,7 @@ import pl.skyseas.layout.Climate;
 /**
  * Router climate parameters in 3D ({@link Climate}), one registered type per {@link Kind}:
  * {@code skyseas:climate_continents}, {@code climate_erosion}, {@code climate_temperature},
- * {@code climate_vegetation}, {@code climate_depth}. {@code input} is the vanilla 2D value
+ * {@code climate_vegetation}, {@code climate_depth}, {@code climate_ridges}. {@code input} is the vanilla 2D value
  * (unused for depth); {@code island}, {@code bottom}, {@code top}, {@code point} and
  * {@code mountain} are the flat-cached {@code skyseas:sky_climate_*} columns, {@code height}
  * the cached seabed height and {@code warm} the warm-sea bias near spawn.
@@ -24,7 +24,8 @@ public record ClimateFunction(Kind kind, DensityFunction input, DensityFunction 
         EROSION("climate_erosion", -1.0, 1.0),
         TEMPERATURE("climate_temperature", -2.0, 1.0),
         VEGETATION("climate_vegetation", -1.0, 1.0),
-        DEPTH("climate_depth", 0.0, 10.0);
+        DEPTH("climate_depth", 0.0, 10.0),
+        RIDGES("climate_ridges", -1.0, 1.0);
 
         public final String id;
         final double min;
@@ -62,6 +63,7 @@ public record ClimateFunction(Kind kind, DensityFunction input, DensityFunction 
             case TEMPERATURE -> Climate.temperature(is, b, y, point.compute(ctx), warm.compute(ctx), input.compute(ctx));
             case VEGETATION -> Climate.vegetation(is, b, y, point.compute(ctx), input.compute(ctx));
             case DEPTH -> Climate.depth(is, b, top.compute(ctx), height.compute(ctx), y, WorldParams.DEFAULTS.climateDepthScale());
+            case RIDGES -> Climate.ridges(is, b, y, mountain.compute(ctx), input.compute(ctx));
         };
     }
 

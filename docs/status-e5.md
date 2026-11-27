@@ -41,3 +41,12 @@ Census (r = 5 chunków):
 - Poprawka: `max(caves, 1 − 2·cave_mask)`, czyli −1 przy pełnej masce; jaskinie zachowują własny gradient. W tym samym miejscu po poprawce są zwykłe, zaokrąglone jaskinie. Spec zaktualizowana.
 - Carvery nie miały z tym nic wspólnego (usunięte w rundzie 1 i tak zostaje).
 - `generatorVersion` 22.
+
+## Runda 4: uwagi z testu w grze
+
+- Kaskady z wysp: 25% poprzedniej liczby (szansa na chunk z krawędzią 0,5 → 0,125).
+- Źródełka wody (`spring_water`, wychodzą na zboczach wysp oceanicznych): 25 → 19 na chunk. Lawa bez zmian.
+- Pnącza z glow berries (rosną i świecą, losowe ticki) tylko pod małymi wyspami (promień < 40, bez kontynentów) i pod formami Alleluja (`small_islands_only` w `skyseas:island_underside`). Korzenie, glow lichen i stalaktyty zostają wszędzie. Census przy spawnie (kontynent): 0 pnączy.
+- Więcej dużych komór: próg jaskiń „cheese” 0,27 → 0,22. Udział powietrza w skale pod dnem w miejscu z testu (seed świata testowego, chunki 32…37 × −32…−27): przed poprawką kanciastych jaskiń 6,3%, po niej 14,2%, z nowym progiem 18,2%.
+- `ridges` na niebie: znak vanilli, stała wielkość (PV „mid”), w górach kontynentów ku linii szczytów. Wcześniej grzbiety vanilli dawały na wyspach biom rzeki (doliny) i paski klas PV (np. tajga na przemian z windswept). Odstępstwo od spec (tam vanillowy szum wszędzie); spec poprawiona.
+- `generatorVersion` 23.

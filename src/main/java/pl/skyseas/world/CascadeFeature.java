@@ -21,10 +21,10 @@ import pl.skyseas.layout.RegionLayout;
  * so a later update keeps the fall as it is.
  */
 public final class CascadeFeature extends Feature<NoneFeatureConfiguration> {
-    private static final double CHANCE = 0.5;
+    private static final double CHANCE = 0.125;
     private static final int DROP = 12;
     /** Sky forms at least this large (layout radius, blocks) get waterfalls; continents always. */
-    private static final double MIN_RADIUS = 40.0;
+    static final double MIN_RADIUS = 40.0;
     private static final BlockState SOURCE = Blocks.WATER.defaultBlockState();
     private static final BlockState FLOWING = Blocks.WATER.defaultBlockState().setValue(LiquidBlock.LEVEL, 1);
     private static final BlockState FALLING = Blocks.WATER.defaultBlockState().setValue(LiquidBlock.LEVEL, 8);

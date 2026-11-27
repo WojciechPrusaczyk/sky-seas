@@ -29,6 +29,19 @@ class ClimateTest {
     }
 
     @Test
+    void skyRidgesHaveNoValleys() {
+        // Vanilla peaks-and-valleys: -(| |w| - 2/3 | - 1/3) * 3; river valleys need it below -0.85.
+        for (double w = -1.0; w <= 1.0; w += 0.01) {
+            double r = Climate.ridges(RegionLayout.CONTINENT, 150, 200, 0.0, w);
+            double pv = -(Math.abs(Math.abs(r) - 2.0 / 3.0) - 1.0 / 3.0) * 3.0;
+            assertTrue(pv > -0.2 && pv < 0.2, "mid peaks-and-valleys on flat sky land");
+            assertEquals(w < 0.0, r < 0.0, "vanilla sign kept");
+        }
+        assertEquals(2.0 / 3.0, Climate.ridges(RegionLayout.CONTINENT, 150, 260, 60.0, 0.1), 1e-9);
+        assertEquals(0.01, Climate.ridges(NONE, Layout.NO_BOTTOM, 70, 0.0, 0.01), 1e-9);
+    }
+
+    @Test
     void depthOnlyUnderRock() {
         double scale = WorldParams.DEFAULTS.climateDepthScale();
         assertEquals(0.0, Climate.depth(RegionLayout.CONTINENT, 150, 220, -20, 230, scale));

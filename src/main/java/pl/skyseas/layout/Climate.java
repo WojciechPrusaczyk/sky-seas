@@ -102,6 +102,24 @@ public final class Climate {
         return inSky(island, bottom, y) && point > Layout.NO_CLIMATE ? ShapeMath.lerp(base, point, PULL) : base;
     }
 
+    /** Ridges magnitude on sky land: peaks-and-valleys "mid", no river valleys. */
+    private static final double RIDGES_MID = 0.35;
+    /** Ridges magnitude of the vanilla peaks line (peaks-and-valleys 1). */
+    private static final double RIDGES_PEAK = 2.0 / 3.0;
+
+    /**
+     * Ridges (weirdness) on sky land keep the vanilla sign (biome variants) but a fixed
+     * magnitude: vanilla's ridge lines would give river valleys and stripes of
+     * peaks-and-valleys classes across islands. Continent mountains move toward the peak line.
+     */
+    public static double ridges(double island, double bottom, int y, double mountain, double vanilla) {
+        if (!inSky(island, bottom, y)) {
+            return vanilla;
+        }
+        double m = ShapeMath.lerp(RIDGES_MID, RIDGES_PEAK, ShapeMath.smoothstep(10.0, 45.0, mountain));
+        return vanilla < 0.0 ? -m : m;
+    }
+
     /** Biome depth: blocks under the surface above (sky island top or seabed) over the scale. */
     public static double depth(double island, double bottom, double top, double height, int y, double scale) {
         if (inSky(island, bottom, y)) {
