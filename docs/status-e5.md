@@ -63,4 +63,11 @@ Census (r = 5 chunków):
 - Jeziorka na kontynentach: 1 na 12 chunków (było 1 na 6).
 - Glow lichen pod wyspami: 16 → 3 próby na chunk.
 - Krawędzie wysp (`SkyColumn.density`, jeden szum 2D liczony tylko przy obrzeżu): zaokrąglona górna krawędź (promień 2–5) i podcięcie ściany w dół na ok. połowie wybrzeża (do 0,5 bloku na blok, do 12 bloków pod wierzchem, tylko przy kolumnach grubszych niż ok. 8–20 bloków). Szersze podcięcie (stałe minimum, przesunięty próg) odrywało kawałki od wąskich wież w `LayoutTest` i GameTeście, więc zostało wycofane. Tylko zabiera skałę, nic nie wychodzi poza obrys. Dolna krawędź też zaokrąglona (promień do połowy grubości), więc cienkie obrzeża małych i średnich wysp mają przekrój soczewki zamiast pionowej ścianki.
-- `generatorVersion` 28.
+- `generatorVersion` 28 (dalej 29, niżej).
+
+## Poprawka: kanciaste jaskinie w wyspach na niebie
+
+- Zgłoszenie z gry: (−1635, 132, −220), seed −1053848179847227344. Jaskinie w wyspach (`sky/corridors`) są włączane przez `range_choice` (odległość od wierzchu i spodu, grubość wyspy). Poza zakresem było 64, a ograniczenie jaskini na granicy zakresu wynosi 1. Narożniki komórek po obu stronach granicy dawały przy interpolacji skok od wartości jaskini do 64, więc jaskinia kończyła się płaską ścianą na płaszczyźnie komórki.
+- Poprawka: poza zakresem 1,0, tyle samo co ograniczenie na granicy. W tym samym miejscu po poprawce nie ma płaszczyzn na siatce (prostokąty w przekroju to drzewa).
+- Pod dnem ten sam przypadek już nie zachodzi: `oceanic` poza zakresem maski daje 1,0, czyli tyle, ile `1 − 2·cave_mask` przy masce 0. `skyseas:shafts` (64 poza zakresem) jest liczone poza interpolacją, blok po bloku.
+- `generatorVersion` 29.
