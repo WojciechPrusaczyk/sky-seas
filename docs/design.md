@@ -103,16 +103,18 @@ Miejscami dno to goła skała (deepslate, tuff, basalt) zamiast piasku, żeby ru
 
 **Wyspy i formy w oceanie.** Wysp oceanicznych jest dużo, z wyraźnym udziałem średnich. Formy dna (wulkany, góry podwodne, iglice) są częste i tylko luźno związane z temperaturą wody: wulkany występują w zimnej i umiarkowanej wodzie, gęściej w zimnej.
 
-**Biomy dna.** Oprócz vanillowych biomów wodnych dno dostaje cztery własne biomy z datapacka. Gracze nie potrzebują do nich moda, bo serwer wysyła je jako dane. Strefy mają 300–800 bloków, a temperatura wody tylko przechyla szanse. Dla gry są to oceany, więc wraki, ruiny, monumenty i moby działają w nich normalnie.
+**Regiony dna (decyzja 2026-11-27: nie biomy).** Dno dzieli się na regiony po kilkaset bloków, każdy z innym charakterem form; to formy moda, tak jak wyspy i wulkany, a biom wody zostaje vanillowy. Temperatura wody tylko przechyla charakter.
 
-| Biom | Gdzie | Woda i atmosfera | Charakter |
-| --- | --- | --- | --- |
-| Pola wulkaniczne | Zimna i umiarkowana woda | Ciemna, szarozielona woda; mniej ryb | Basalt, magma, kominy, grupy stożków, pola kolumn bazaltowych |
-| Las kelpu | Umiarkowana i zimna woda | Zielonkawa woda; dużo ryb | Gęsty kelp sięgający wysoko w toni, skalne grzbiety |
-| Skalne pustkowie | Każda temperatura | Czysta, szara woda | Słupy, łuki, skarpy, głazy, odsłonięte rudy |
-| Głębia | Tylko w rowach, poniżej ok. Y 0 | Prawie czarna woda, bliższa mgła wodna, glow squid | Strome ściany, glow lichen, sculk nad starożytnymi miastami |
+| Region | Charakter |
+| --- | --- |
+| Pola wulkaniczne | Grupy stożków różnej wysokości z kraterami; od E5 basalt, magma, kominy |
+| Wzgórza i pasma | Podwodne góry i grzbiety; od E5 kelp na zboczach |
+| Skalne pustkowie | Poszarpane grzbiety, las filarów, odsłonięta skała i rudy |
+| Wąwozy | Sieci wąwozów z półkami, głęboko pod otaczające dno; od E5 glow lichen |
+| Tarasy | Skarpy, tarasy i płaskowyże |
+| Równiny | Rzadkie, z wydmami |
 
-**Monumentalne formacje.** Dno nie może być płaskie ani puste; każdy biom dna ma własny zestaw form, a ogólnie:
+**Monumentalne formacje.** Dno nie może być płaskie ani puste; każdy region dna ma własny zestaw form, a ogólnie:
 
 - słupy i kolumny skalne 20–60 bloków wysokości, w grupach; część sięga połowy głębokości (ok. Y 25–30);
 - łuki skalne o rozpiętości 20–60 bloków;
@@ -204,7 +206,7 @@ Struktury podziemne nie mogą wystawać do wody; wymagany jest strop nad nimi. M
 
 ## Biomy i klimat
 
-Nie dodajemy własnych biomów lądowych (wyjątkiem są cztery biomy dna, patrz Oceany): generator rozkłada biomy vanilli i modów w trzech wymiarach, według jednej mapy klimatu dla nieba i oceanu.
+Nie dodajemy żadnych własnych biomów (regiony dna to formy, patrz Oceany): generator rozkłada biomy vanilli i modów w trzech wymiarach, według jednej mapy klimatu dla nieba i oceanu.
 
 - **Biomy 3D.** W jednej kolumnie leży biom oceaniczny na dole i lądowy na wyspie. Ryby, drowned i struktury oceaniczne działają poprawnie pod wyspą.
 - **Spójny region.** Niebo i ocean korzystają z tej samej mapy klimatu, więc nad zamarzniętym oceanem wiszą śnieżne wyspy.

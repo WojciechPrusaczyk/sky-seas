@@ -15,7 +15,7 @@ Mod (robocza nazwa **Sky Seas**, id `skyseas`) implementuje generator świata op
 5. **Dane ponad kod.** Struktura routera szumu w JSON (datapack wbudowany w jar), parametry w configu, matematyka kształtów w Javie.
 6. **Testowalność.** Układ wysp i matematyka kształtów nie zależą od klas Minecrafta, więc da się je testować JUnitem.
 
-**Poza zakresem:** nowe biomy lądowe (dno ma cztery własne biomy z datapacka, patrz Biomy i klimat), bloki i itemy; Nether i End; Distant Horizons; zmiany mobów.
+**Poza zakresem:** jakiekolwiek własne biomy (regiony dna to formy moda), bloki i itemy; Nether i End; Distant Horizons; zmiany mobów.
 
 ## Środowisko i stos technologiczny
 
@@ -44,7 +44,7 @@ Generator składa się z jednej warstwy planującej (układ wysp, liczony raz na
 | --- | --- | --- | --- |
 | Układ (layout) | wywoływany leniwie z każdego etapu | Plan regionu 1024×1024 bloków: typy wysp, pozycje, wysokości, flagi (cenota, łańcuch, starter) | Czysta Java, cache regionów, bez klas MC |
 | Struktury | `structure_starts` | Gdzie wolno postawić strukturę | Vanilla + warunki spawnu Lithostitched; mixiny tylko gdy konieczne |
-| Klimat i biomy | `biomes` | Trójwymiarowy wybór vanillowych biomów; w warstwie oceanu cztery biomy dna | Vanillowe `multi_noise` + własne funkcje klimatu w routerze + cienka nakładka na źródło biomów tylko dla dna |
+| Klimat i biomy | `biomes` | Trójwymiarowy wybór vanillowych biomów | Vanillowe `multi_noise` + własne funkcje klimatu w routerze |
 | Kształt | `noise` | Gęstość: wyspy, dno, wyspy oceaniczne, jaskinie, szyby; aquifery wypełniają wodę | `noise_settings` w JSON + własne typy `DensityFunction` |
 | Powierzchnia | `surface` | Trawa, piasek, gołe skały dna, strefy wulkaniczne | Vanillowe surface rules + własne warunki |
 | Carvery | `carvers` | Wyłączone | Jaskinie są w gęstości; carvery usuwa `neoforge:remove_carvers` |
@@ -243,13 +243,7 @@ Progi w tabeli to wartości z vanillowego `OverworldBiomeBuilder` i Claude Code 
 - **Klastry tematyczne.** Każdy klaster ma wybrany punkt klimatu; w jego obrysie temperatura, wilgotność i erozja są mieszane w 80% ku temu punktowi, co daje jeden dominujący biom.
 - **Teren czyta klimat.** Kształt dna (rafy w ciepłych, wulkany i rowy w zimnych) używa tej samej funkcji temperatury co biomy, więc rafa zawsze trafia w warm ocean.
 - **Koszt.** Biomy są próbkowane co 4 bloki, ale dla każdej kwarty; funkcje klimatu korzystają z kubełka układu i danych 2D z cache, bez własnych szumów 3D.
-- **Biomy dna (decyzja z E3).** Cztery własne biomy z datapacka moda: pola wulkaniczne (zimna i umiarkowana woda), las kelpu (umiarkowana i zimna), skalne pustkowie (każda temperatura) i głębia (tylko w rowach, poniżej ok. Y 0). Wymagania:
-  - pliki JSON w datapacku wbudowanym w jar; klient dostaje je jako dane i nie potrzebuje moda;
-  - tagi oceaniczne (`#minecraft:is_ocean`, `#minecraft:is_deep_ocean`) i tagi biomów struktur (wraki, ruiny, monumenty), żeby struktury i spawn mobów traktowały je jak ocean;
-  - wybór przez cienką nakładkę na vanillowe źródło biomów, działającą tylko w warstwie oceanu (pod powierzchnią wody, nad skałą dna); ląd i niebo zostają przy vanillowym `multi_noise`, z zachowaniem zgodności z TerraBlender;
-  - strefy z własnego szumu w skali 300–800 bloków, liczone w układzie (poziom 2), żeby formy dna wiedziały, w której strefie stoją; temperatura wody tylko przechyla szanse;
-  - głębia z bliższą mgłą wodną przez vanillowy tag biomów (ten, którego używają bagna), jeśli kod klienta to potwierdzi;
-  - podział: strefy i formy w E3, pliki biomów i nakładka w E4, materiały i dekoracje w E5.
+- **Bez własnych biomów (decyzja 2026-11-27, `docs/decisions/2026-11-27-no-seabed-biomes.md`).** Regiony dna to prowincje z E3 (`SeabedProvinces`), formy moda, nie biomy; w wodzie zostają vanillowe biomy oceaniczne. Materiały i dekoracje regionów w E5 po prowincji.
 - **Pozostałe pola routera** (`barrier`, `fluid_level_floodedness`, `fluid_level_spread`, `lava`, `vein_toggle`, `vein_ridged`, `vein_gap`) zostają vanillowe; vanillowe żyły rud same trafiają w skałę pod dnem.
 
 ## Powierzchnia, featury i rudy
@@ -372,7 +366,6 @@ Wszystkie liczby z dokumentu designowego są parametrami w configu COMMON (`conf
 | `clusters.edgeChance`, `clusters.edgeRadius` | 0,30; 200 … 260 | Klastry na środkach boków siatki |
 | `clusters.guaranteeDistance`, `clusters.guaranteeRadius` | 650; 230 | Gwarantowany archipelag i klaster Alleluja przy spawnie |
 | `ocean.islandDensity` | ok. 2× wartości z E3a | Gęstość wysp oceanicznych |
-| `seabedBiomes.zoneScale` | 300 … 800 | Wielkość stref biomów dna |
 | `visibility.sky` | 1 wyspa w 250, 3 w 500 (z Y 150) | Reguła widoczności nieba |
 | `visibility.sea` | coś w 250 | Reguła widoczności morza |
 | `visibility.seabed` | forma w 150, monumentalna (> 30 bloków) w 500 | Reguła widoczności dna |
@@ -403,7 +396,7 @@ Testowanie opiera się na trzech filarach: komendach, które pokazują układ be
 | `/skyseas info` | W pozycji gracza: warstwa, strefa i współczynnik, wyspa (id, typ), Y dna, grubość skały, wartości klimatu, biom |
 | `/skyseas info cache` | Stan cache układu: liczba regionów, trafienia, pamięć |
 | `/skyseas locate <typ>` | Najbliższa wyspa danego typu, cenota, błękitna dziura, rów, wulkan lub formacja; z układu, bez generacji (od E3a: kontynent, wyspa oceaniczna, duża wyspa, atol, góra podwodna, wulkan, iglica morska) |
-| `/skyseas map <promień> [skala]` | PNG z góry liczony z samego układu (typy wysp, strefy, czyste niebo, zacienienie, strefy biomów dna, miejsca łamiące reguły widoczności) do `skyseas/maps/`; sekundy zamiast godzin latania |
+| `/skyseas map <promień> [skala]` | PNG z góry liczony z samego układu (typy wysp, strefy, czyste niebo, zacienienie, regiony dna, miejsca łamiące reguły widoczności) do `skyseas/maps/`; sekundy zamiast godzin latania |
 | `/skyseas audit <promień>` | Reguły widoczności z designu (niebo, morze, dno: odsetek punktów, które je spełniają, i lista najgorszych miejsc) liczone z układu; na wygenerowanych chunkach: procent zacienienia morza, wyspy nad lądem w oceanie (ma być 0), grubość stropów, objętość jaskiń względem grubości skały, rudy per strefa, położenie struktur; wynik w CSV |
 | `/skyseas bench <chunki> [here] [vanilla]` | Generuje N chunków w odległym obszarze (z `here`: wokół pozycji), mierzy czasy etapów (biomes, noise, surface, features), zapisuje CSV do porównań między commitami |
 
@@ -471,9 +464,9 @@ Wdrożenie idzie w dziesięciu etapach; każdy kończy się działającym świat
      - testy: JUnit `largeSkyFormsDoNotOverlap`, `skyFormHeights` (zatopione 5–15%, rozrzut wysokości), udział niskich kontynentów 5–15%, bryły 3D od Y 24; GameTesty: okno od Y 29 (kawałki sięgające dna to dno albo formy oceaniczne), pomijane kawałki z samego lodu i śniegu (vanillowe góry lodowe), okno wyspy zatopionej, skan dna od powierzchni formy oceanicznej.
      - korekta po locie (`generatorVersion` 14): wyraźniejsze roje i otwarte przestrzenie (siatka 80, szansa 0,04–0,8 po krzywej t², fala 1100), ciaśniejsze archipelagi (środki ≥ 0,45 sumy promieni), 10% wież.
    - Zrealizowane w rundzie 0: dwa indeksy kubełkowe na region (niebo, ocean) i parametry o zmiennej długości; `ClimateProbe`; `skyseas:cave_top` (bez jaskiń w iglicach morskich); ochrona stropu obejmuje też wierzchni blok dna (GameTest złapał dziurę na stromym zboczu szelfu); `continents` = 0,5 nad lądem wysp oceanicznych od Y 62 (tymczasowo, do E4).
-5. **E4 — Klimat i biomy 3D.** Wszystkie funkcje klimatu, chłodzenie z wysokością, klastry tematyczne, biomy jaskiniowe; pliki czterech biomów dna, ich tagi i nakładka na źródło biomów w warstwie oceanu.
+5. **E4 — Klimat i biomy 3D.** Wszystkie funkcje klimatu, chłodzenie z wysokością, klastry tematyczne, biomy jaskiniowe, ciepła rafa przy spawnie; poprawki błędów jaskiń pod dnem (sześciany). Bez własnych biomów.
    - Akceptacja: lądowe biomy na wyspach, oceaniczne w wodzie, deep dark tylko pod grubą skałą, rafy w warm ocean.
-6. **E5 — Powierzchnia i featury.** Surface rules (w tym materiały biomów dna: basalt, magma, tuff, goła skała), dekoracje biomów dna (kelp, kominy, glow lichen), rudy wysp i dna, odsłonięcia, gniazda diamentów, kaskady, spody, kominy, jeziorka; lodowe sufity z kieszeniami powietrza i góry lodowe z zanurzonymi korzeniami.
+6. **E5 — Powierzchnia i featury.** Surface rules (w tym materiały regionów dna po prowincji: basalt, magma, tuff, goła skała), dekoracje regionów dna (kelp, kominy, glow lichen), rudy wysp i dna, odsłonięcia, gniazda diamentów, kaskady, spody, kominy, jeziorka; lodowe sufity z kieszeniami powietrza i góry lodowe z zanurzonymi korzeniami.
    - Akceptacja: audyt rud per strefa zgodny z configiem; brak zaplanowanych ticków płynów po generacji.
 7. **E6 — Struktury.** Warunki Lithostitched, przesunięcia Y, tagi.
    - Akceptacja: audyt struktur: wioski w głębi wysp, twierdze, kopalnie i trial chambers pod dnem ze stropem.
@@ -526,14 +519,14 @@ Największe ryzyko to zmiana generatora po starcie świata (szwy); reszta to pun
 
 - [ ] Jak każda struktura podziemna wybiera Y (twierdze: przesunięcie pod poziom morza; kopalnie zwykłe i badlands; trial chambers; starożytne miasta) i gdzie najtaniej wpiąć regułę „pod dnem ze stropem”. Etap E6.
 - [ ] Czy rejestr warunków spawnu Lithostitched w wersji z paczki przyjmuje typy z innych modów; jeśli nie, mixin. Etap E6.
-- [ ] Czy TerraBlender wstrzykuje regiony i reguły powierzchni przy własnym kluczu `noise_settings`; jeśli nie, wariant B: nadpisanie `minecraft:overworld` zamiast osobnego presetu. Etap E4.
+- [x] Czy TerraBlender wstrzykuje regiony i reguły powierzchni przy własnym kluczu `noise_settings`; jeśli nie, wariant B: nadpisanie `minecraft:overworld` zamiast osobnego presetu. Etap E4. Wynik (TerraBlender 4.1.0.8): tak; sprawdza typ wymiaru (tag overworld), `NoiseBasedChunkGenerator` i `instanceof MultiNoiseBiomeSource`, reguły powierzchni dopina do ustawień generatora.
 - [ ] Zachowanie aquiferów i warunku `above_preliminary_surface` przy dwóch powierzchniach w kolumnie (wyspa nad dnem). Etap E2.
-- [ ] Progi klimatu w `OverworldBiomeBuilder` 1.21.1: oceany, wybrzeża, wyspy grzybowe, deep dark i `depth`. Etap E4.
+- [x] Progi klimatu w `OverworldBiomeBuilder` 1.21.1: oceany, wybrzeża, wyspy grzybowe, deep dark i `depth`. Etap E4. Wynik: zgodne z tabelą; wybrzeże −0,19…−0,11; biomy powierzchni `depth` 0 i 1, jaskiniowe 0,2–0,9, deep dark 1,1 przy erozji < −0,375 (`isDeepDarkRegion`: erozja < −0,225 i depth > 0,9).
 - [ ] Czy klient bez moda łączy się z serwerem (żadnych synchronizowanych wpisów rejestrów). Etap E0.
 - [x] Heightmapy nad pustymi kolumnami i vanillowe szukanie spawnu; spawn ustawiany na kontynencie startowym. Etap E3. Wynik: vanilla szuka po klimacie do 2048 bloków; spawn ustawimy w anulowanym zdarzeniu NeoForge `LevelEvent.CreateSpawnPosition` (bez mixina); rozrzut spawnu graczy korzysta z heightmapy; heightmapy nad pustymi kolumnami widzą wodę.
-- [ ] Czy klient vanilla bez moda łączy się z serwerem, który ma biomy z datapacka moda (synchronizacja rejestru biomów jako danych). Etap E4, przed nakładką.
-- [ ] Jak nakładka na źródło biomów (tylko warstwa oceanu) współżyje z TerraBlender i z `/locate biome`; czy da się ją zrobić bez mixina (własny `BiomeSource` opakowujący `multi_noise`). Etap E4.
-- [ ] Który tag biomów daje bliższą mgłę wodną (bagna) i czy działa dla biomu z datapacka. Etap E4.
+- [x] (nieaktualne: bez własnych biomów, decyzja 2026-11-27) Czy klient vanilla bez moda łączy się z serwerem, który ma biomy z datapacka moda (synchronizacja rejestru biomów jako danych). Etap E4, przed nakładką.
+- [x] (nieaktualne: bez własnych biomów, decyzja 2026-11-27) Jak nakładka na źródło biomów (tylko warstwa oceanu) współżyje z TerraBlender i z `/locate biome`; czy da się ją zrobić bez mixina (własny `BiomeSource` opakowujący `multi_noise`). Etap E4.
+- [x] (nieaktualne: bez własnych biomów, decyzja 2026-11-27) Który tag biomów daje bliższą mgłę wodną (bagna) i czy działa dla biomu z datapacka. Etap E4.
 - [ ] Tagi biomów struktur oceanicznych (wraki, ruiny, monumenty) i spawnu mobów wodnych w 1.21.1. Etap E4.
 - [ ] Identyfikatory rudy cynku i jej placed feature w Create 6. Etap E5.
 - [ ] Jak Create Deep Seas liczy ciśnienie, do strojenia `seabed.trenchMinY`. Etap E8.
