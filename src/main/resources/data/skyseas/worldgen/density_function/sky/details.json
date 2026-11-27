@@ -1,0 +1,6 @@
+{
+  "type": "skyseas:sky_details",
+  "root": "skyseas:layout/root",
+  "floor": "skyseas:sky/spire_floor",
+  "ceiling": "skyseas:sky/detail_ceiling"
+}

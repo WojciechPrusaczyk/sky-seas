@@ -15,14 +15,16 @@ import pl.skyseas.config.WorldParams;
 public final class LayoutCache {
     private final long seed;
     private final WorldParams params;
+    private final ClimateProbe climate;
     private final int maxRegions;
     private final Map<Long, FutureTask<RegionLayout>> regions;
     private final ThreadLocal<RegionLayout> last = new ThreadLocal<>();
     private final AtomicLong computed = new AtomicLong();
 
-    LayoutCache(long seed, WorldParams params) {
+    LayoutCache(long seed, WorldParams params, ClimateProbe climate) {
         this.seed = seed;
         this.params = params;
+        this.climate = climate;
         this.maxRegions = params.layoutCacheRegions();
         this.regions = new LinkedHashMap<>(16, 0.75f, true) {
             @Override
@@ -53,7 +55,7 @@ public final class LayoutCache {
         synchronized (regions) {
             task = regions.get(key);
             if (task == null) {
-                task = new FutureTask<>(() -> LayoutGenerator.generate(seed, params, rx, rz));
+                task = new FutureTask<>(() -> LayoutGenerator.generate(seed, params, climate, rx, rz));
                 regions.put(key, task);
                 mine = true;
             }

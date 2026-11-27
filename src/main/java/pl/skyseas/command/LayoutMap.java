@@ -14,14 +14,16 @@ import net.minecraft.world.level.levelgen.DensityFunction;
 import pl.skyseas.SkySeas;
 import pl.skyseas.config.WorldParams;
 import pl.skyseas.density.LayoutAccess;
+import pl.skyseas.density.SeabedHeightFunction;
 import pl.skyseas.density.ZoneFactorFunction;
 import pl.skyseas.layout.Layout;
 import pl.skyseas.layout.ZoneField;
 
 /**
  * {@code /skyseas map}: top-down PNG computed from the layout alone (no chunk
- * generation). Ocean shaded by zone, continents coloured by top height (green, brown,
- * white peaks), island reach outlined, region grid and spawn marked. Runs on its own thread.
+ * generation). Ocean shaded by zone, ocean islands and shallows from the seabed height, sky islands coloured by top height (green, brown,
+ * white peaks), small islands and bridges light green, island reach outlined, region grid and spawn marked; magenta
+ * points (every 50 blocks) fail the sky visibility rule. Runs on its own thread.
  */
 final class LayoutMap {
     static final int MAX_PIXELS = 4096;
@@ -31,6 +33,12 @@ final class LayoutMap {
     private static final int REACH = 0x16324F;
     private static final int GRID = 0x5F7F9F;
     private static final int SPAWN = 0xE03030;
+    private static final int SAND = 0xE2D49A;
+    /** Small islands and bridges (per-block forms). */
+    private static final int DETAIL = 0xB8E07A;
+    /** Grid point that fails the sky visibility rule. */
+    private static final int BLIND = 0xFF30C0;
+    private static final int VISIBILITY_STEP = 50;
 
     private LayoutMap() {
     }
@@ -61,8 +69,9 @@ final class LayoutMap {
             return "[Sky Seas] map: not a Sky Seas world";
         }
         WorldParams p = layout.params();
-        ZoneFactorFunction zone = RouterLookup.find(level.getChunkSource().randomState().router().finalDensity(),
-                ZoneFactorFunction.class);
+        DensityFunction router = level.getChunkSource().randomState().router().finalDensity();
+        ZoneFactorFunction zone = RouterLookup.find(router, ZoneFactorFunction.class);
+        SeabedHeightFunction seabed = RouterLookup.find(router, SeabedHeightFunction.class);
         int size = 2 * radius / scale;
         int x0 = centerX - radius;
         int z0 = centerZ - radius;
@@ -74,17 +83,27 @@ final class LayoutMap {
         long t0 = System.nanoTime();
         BufferedImage img = new BufferedImage(size, size, BufferedImage.TYPE_INT_RGB);
         int land = 0;
+        int points = 0;
+        int blind = 0;
         for (int py = 0; py < size; py++) {
             int z = z0 + py * scale;
             for (int px = 0; px < size; px++) {
                 int x = x0 + px * scale;
                 int rgb;
+                double h;
                 double edge = layout.column(x, z, Layout.EDGE);
                 if (edge > 0.0) {
                     rgb = landColor(p, layout.column(x, z, Layout.TOP));
                     land++;
+                } else if (layout.detailFloor(x & ~3, z & ~3) < Layout.NO_SPIRE) {
+                    rgb = DETAIL;
                 } else if (edge > -p.islandReachMargin()) {
                     rgb = REACH;
+                } else if (seabed != null && (h = seabed.compute(new DensityFunction.SinglePointContext(x, 0, z))) > 30.0) {
+                    rgb = oceanFormColor(h);
+                    if (h >= 63.0) {
+                        land++;
+                    }
                 } else {
                     double f = zone == null ? ZoneField.factorAtDistance(p, Math.hypot(x, z))
                             : zone.compute(new DensityFunction.SinglePointContext(x, 0, z));
@@ -96,6 +115,13 @@ final class LayoutMap {
                 }
                 if (Math.floorMod(x, p.layoutRegionSize()) < scale || Math.floorMod(z, p.layoutRegionSize()) < scale) {
                     rgb = blend(rgb, GRID);
+                }
+                if (Math.floorMod(x, VISIBILITY_STEP) < scale && Math.floorMod(z, VISIBILITY_STEP) < scale) {
+                    points++;
+                    if (!layout.skyVisible(x, z, 250.0, 500.0)) {
+                        blind++;
+                        rgb = BLIND;
+                    }
                 }
                 if ((Math.abs(x) < 3 * scale && Math.abs(z) < 24 * scale) || (Math.abs(z) < 3 * scale && Math.abs(x) < 24 * scale)) {
                     rgb = SPAWN;
@@ -109,10 +135,45 @@ final class LayoutMap {
         Files.createDirectories(dir);
         Path file = dir.resolve("map-" + LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMdd-HHmmss")) + ".png");
         ImageIO.write(img, "png", file.toFile());
+        if (seabed != null) {
+            ImageIO.write(seabedImage(seabed, x0, z0, size, scale), "png",
+                    dir.resolve(file.getFileName().toString().replace("map-", "seabed-")).toFile());
+        }
         return String.format(java.util.Locale.ROOT,
-                "[Sky Seas] map: %dx%d px, %d blocks/px, centre %d,%d, land %.1f%%, %d ms, layout regions cached %d\n  png: %s",
-                size, size, scale, centerX, centerZ, 100.0 * land / ((double) size * size), ms,
+                "[Sky Seas] map: %dx%d px, %d blocks/px, centre %d,%d, land %.1f%%, sky visibility %.2f%% of %d points, "
+                        + "%d ms, layout regions cached %d\n  png: %s",
+                size, size, scale, centerX, centerZ, 100.0 * land / ((double) size * size),
+                points == 0 ? 100.0 : 100.0 * (points - blind) / points, points, ms,
                 layout.cache().size(), file.toAbsolutePath());
+    }
+
+    /** Seabed heights (deep blue to sand) with hillshade from the north-west; land above sea level grey. */
+    private static BufferedImage seabedImage(SeabedHeightFunction seabed, int x0, int z0, int size, int scale) {
+        double[] h = new double[(size + 1) * (size + 1)];
+        for (int py = 0; py <= size; py++) {
+            for (int px = 0; px <= size; px++) {
+                h[py * (size + 1) + px] = seabed.compute(new DensityFunction.SinglePointContext(x0 + px * scale, 0, z0 + py * scale));
+            }
+        }
+        BufferedImage img = new BufferedImage(size, size, BufferedImage.TYPE_INT_RGB);
+        for (int py = 0; py < size; py++) {
+            for (int px = 0; px < size; px++) {
+                double v = h[py * (size + 1) + px];
+                double slope = (2.0 * v - h[py * (size + 1) + px + 1] - h[(py + 1) * (size + 1) + px]) / scale;
+                int rgb = v >= 63.0 ? 0x909090 : lerpColor(0x0A1E5A, 0xD8C890, (v + 50.0) / 80.0);
+                img.setRGB(px, py, slope > 0 ? lerpColor(rgb, 0xFFFFFF, Math.min(0.5, slope * 0.4))
+                        : lerpColor(rgb, 0x000000, Math.min(0.6, -slope * 0.4)));
+            }
+        }
+        return img;
+    }
+
+    /** Ocean islands (sand to green) and shallows (turquoise, lighter when shallower). */
+    private static int oceanFormColor(double h) {
+        if (h >= 63.0) {
+            return h < 64.5 ? SAND : lerpColor(0x5FA046, 0x7A6A4A, (h - 64.5) / 30.0);
+        }
+        return lerpColor(0x2E86A8, 0x6FD3D6, (h - 30.0) / 33.0);
     }
 
     /** Green lowlands, brown slopes, white peaks. */

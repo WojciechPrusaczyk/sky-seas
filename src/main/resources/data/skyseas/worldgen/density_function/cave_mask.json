@@ -1,4 +1,4 @@
 {
   "type": "skyseas:cave_mask",
-  "height": "skyseas:seabed_height"
+  "height": "skyseas:cave_top"
 }

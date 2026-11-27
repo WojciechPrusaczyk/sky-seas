@@ -6,6 +6,6 @@
     "edge": "skyseas:sky/edge",
     "top": "skyseas:sky/top",
     "bottom": "skyseas:sky/bottom",
-    "mountain": "skyseas:sky/mountain"
+    "detail": "skyseas:sky/detail"
   }
 }

@@ -2,6 +2,7 @@
   "type": "minecraft:cache_2d",
   "argument": {
     "type": "skyseas:seabed_height",
+    "root": "skyseas:layout/root",
     "zone": "skyseas:zone_factor",
     "temperature": "skyseas:climate/temperature",
     "relief": {

@@ -19,5 +19,19 @@
     "when_in_range": 0.5,
     "when_out_of_range": -0.6
   },
-  "when_out_of_range": -0.6
+  "when_out_of_range": {
+    "type": "minecraft:range_choice",
+    "input": "skyseas:seabed_height",
+    "min_inclusive": 63.0,
+    "max_exclusive": 1000.0,
+    "when_in_range": {
+      "type": "minecraft:range_choice",
+      "input": "minecraft:y",
+      "min_inclusive": 62.0,
+      "max_exclusive": 1000.0,
+      "when_in_range": 0.5,
+      "when_out_of_range": -0.6
+    },
+    "when_out_of_range": -0.6
+  }
 }

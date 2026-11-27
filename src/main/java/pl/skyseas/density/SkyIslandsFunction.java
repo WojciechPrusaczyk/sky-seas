@@ -14,20 +14,20 @@ import pl.skyseas.shape.SkyColumn;
  * return {@link SkyColumn#MIN} without further work.
  */
 public record SkyIslandsFunction(DensityFunction root, DensityFunction edge, DensityFunction top,
-                                 DensityFunction bottom, DensityFunction mountain, Layout layout)
+                                 DensityFunction bottom, DensityFunction detail, Layout layout)
         implements DensityFunction {
     public static final MapCodec<SkyIslandsFunction> DATA_CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
             DensityFunction.HOLDER_HELPER_CODEC.fieldOf("root").forGetter(SkyIslandsFunction::root),
             DensityFunction.HOLDER_HELPER_CODEC.fieldOf("edge").forGetter(SkyIslandsFunction::edge),
             DensityFunction.HOLDER_HELPER_CODEC.fieldOf("top").forGetter(SkyIslandsFunction::top),
             DensityFunction.HOLDER_HELPER_CODEC.fieldOf("bottom").forGetter(SkyIslandsFunction::bottom),
-            DensityFunction.HOLDER_HELPER_CODEC.fieldOf("mountain").forGetter(SkyIslandsFunction::mountain)
+            DensityFunction.HOLDER_HELPER_CODEC.fieldOf("detail").forGetter(SkyIslandsFunction::detail)
     ).apply(i, SkyIslandsFunction::of));
     private static final KeyDispatchDataCodec<SkyIslandsFunction> CODEC = KeyDispatchDataCodec.of(DATA_CODEC);
 
     static SkyIslandsFunction of(DensityFunction root, DensityFunction edge, DensityFunction top,
-                                 DensityFunction bottom, DensityFunction mountain) {
-        return new SkyIslandsFunction(root, edge, top, bottom, mountain, LayoutRootFunction.layoutOf(root));
+                                 DensityFunction bottom, DensityFunction detail) {
+        return new SkyIslandsFunction(root, edge, top, bottom, detail, LayoutRootFunction.layoutOf(root));
     }
 
     @Override
@@ -37,7 +37,7 @@ public record SkyIslandsFunction(DensityFunction root, DensityFunction edge, Den
             return SkyColumn.MIN;
         }
         return SkyColumn.density(WorldParams.DEFAULTS, layout.detailSeed(), ctx.blockX(), ctx.blockY(), ctx.blockZ(),
-                e, top.compute(ctx), bottom.compute(ctx), mountain.compute(ctx));
+                e, top.compute(ctx), bottom.compute(ctx), detail.compute(ctx));
     }
 
     @Override
@@ -48,7 +48,7 @@ public record SkyIslandsFunction(DensityFunction root, DensityFunction edge, Den
     @Override
     public DensityFunction mapAll(Visitor visitor) {
         return visitor.apply(of(root.mapAll(visitor), edge.mapAll(visitor), top.mapAll(visitor),
-                bottom.mapAll(visitor), mountain.mapAll(visitor)));
+                bottom.mapAll(visitor), detail.mapAll(visitor)));
     }
 
     @Override

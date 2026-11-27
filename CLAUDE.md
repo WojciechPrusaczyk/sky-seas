@@ -13,6 +13,7 @@ Serwerowy mod do Minecrafta 1.21.1 (NeoForge), który generuje świat latającyc
 
 - Pracujemy etapami E0–E9 z `docs/spec.md` (sekcja „Plan wdrożenia”), po kolei. Kolejny etap zaczynamy dopiero, gdy poprzedni spełnia kryteria akceptacji.
 - Początek etapu: przeczytaj odpowiednie sekcje spec, sprawdź w kodzie Minecrafta/NeoForge punkty z „Do weryfikacji” przypisane do tego etapu, przedstaw krótki plan i poczekaj na moją akceptację.
+- W trakcie etapu pracujemy na gałęzi `e<N>-wip` z commitami po drodze; merge na `main` dopiero po mojej akceptacji całego etapu. Etap może być podzielony na rundy; każda kończy się mapą, benchem i moim testem w grze, a przed testem wypisz, czego w świecie jeszcze nie ma.
 - Koniec etapu: `./gradlew test`, GameTesty (jeśli istnieją), pomiar `/skyseas bench` (od E1), krótki raport: co zrobione, wyniki pomiarów, odstępstwa od spec. Potem commit i tag `e<N>-done`.
 - Nie zgaduj API Minecrafta ani NeoForge. Sprawdzaj w zdekompilowanym kodzie (Parchment) lub w dokumentacji NeoForge.
 - Małe, logiczne commity.
@@ -22,7 +23,7 @@ Serwerowy mod do Minecrafta 1.21.1 (NeoForge), który generuje świat latającyc
 1. **Wydajność przede wszystkim.** Zero alokacji w `compute()` i `fillArray`; bez streamów, lambd, boxingu i iteratorów kolekcji w gorących ścieżkach; cache 2D (`cache_2d`, `flat_cache`), `interpolated` dla dużych form, szybkie wyjścia po zakresie Y.
 2. **Determinizm.** Ten sam seed i parametry dają te same chunki, niezależnie od liczby wątków i kolejności generacji. Żadnego globalnego stanu zależnego od kolejności.
 3. **Rozszerzamy vanillę.** `NoiseBasedChunkGenerator` + `multi_noise` z presetem `minecraft:overworld`. Nie piszemy generatora od zera.
-4. **Tylko serwer.** Żadnych bloków, itemów, encji, pakietów sieciowych ani wpisów w rejestrach synchronizowanych z klientem.
+4. **Tylko serwer.** Żadnych bloków, itemów, encji, pakietów sieciowych ani wpisów w rejestrach, które wymagają moda po stronie klienta. Biomy z datapacka wbudowanego w jar są dozwolone (klient dostaje je jako dane); własne są tylko cztery biomy dna z designu.
 5. **Testowalność.** Pakiety `pl.skyseas.layout` i `pl.skyseas.shape` nie importują klas Minecrafta i mają testy JUnit.
 6. **Mixiny w ostateczności.** Każdy mixin uzasadnij w komentarzu i zapytaj przed dodaniem.
 

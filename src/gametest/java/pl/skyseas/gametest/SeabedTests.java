@@ -15,6 +15,9 @@ import pl.skyseas.command.RouterLookup;
 import pl.skyseas.command.StagedChunkGen;
 import pl.skyseas.density.SeabedHeightFunction;
 import pl.skyseas.config.WorldParams;
+import pl.skyseas.density.LayoutAccess;
+import pl.skyseas.layout.Layout;
+import pl.skyseas.shape.OceanShape;
 import pl.skyseas.shape.SeabedShape;
 
 /**
@@ -32,11 +35,11 @@ public final class SeabedTests {
     private static final int STRIDE_CHUNKS = 250;
     private static final int SEA_LEVEL = 63;
     /**
-     * p5..p95 seabed height spread expected from a relief of about +/-8..10 blocks. The upper
-     * bound leaves room for canyons and trenches, which pull p5 down in far areas.
+     * p5..p95 seabed height spread with the provinces (round 3 of E3): canyons down to about
+     * Y -52, hills, cones and pillars up to Y 24; plains alone would give under 20.
      */
-    private static final double MIN_RELIEF_SPREAD = 14.0;
-    private static final double MAX_RELIEF_SPREAD = 30.0;
+    private static final double MIN_RELIEF_SPREAD = 20.0;
+    private static final double MAX_RELIEF_SPREAD = 60.0;
 
     private SeabedTests() {
     }
@@ -46,10 +49,14 @@ public final class SeabedTests {
         WorldParams p = WorldParams.DEFAULTS;
         int columns = 0;
         long caveBlocks = 0;
+        caveRuns = 0;
+        caveSlivers = 0;
+        caveSheets = 0;
         int minSeen = Integer.MAX_VALUE;
         int maxSeen = Integer.MIN_VALUE;
         for (long seed : SEEDS) {
             StagedChunkGen gen = StagedChunkGen.create(helper.getLevel(), StagedChunkGen.SKY_SEAS, seed);
+            Layout layout = LayoutAccess.get(gen.randomState());
             for (int i = 0; i < GRID; i++) {
                 for (int j = 0; j < GRID; j++) {
                     ChunkPos pos = new ChunkPos((i - GRID / 2) * STRIDE_CHUNKS, (j - GRID / 2) * STRIDE_CHUNKS);
@@ -58,8 +65,9 @@ public final class SeabedTests {
                         for (int z = 0; z < 16; z++) {
                             int bx = pos.getBlockX(x);
                             int bz = pos.getBlockZ(z);
-                            int top = seabedTop(chunk, bx, bz);
-                            String error = checkColumn(p, chunk, bx, bz, top);
+                            boolean oceanForm = isOceanForm(layout, bx, bz);
+                            int top = seabedTop(p, chunk, bx, bz, oceanForm ? layout.oceanHeight(bx, bz, SeabedShape.maxHeight(p)) : p.worldMinY());
+                            String error = checkColumn(p, chunk, bx, bz, top, oceanForm);
                             if (error != null) {
                                 helper.fail("seed " + seed + ": " + error);
                                 return;
@@ -73,8 +81,15 @@ public final class SeabedTests {
                 }
             }
         }
-        SkySeas.LOGGER.info("SeabedTests: {} columns ok, seabed top Y {}..{}, {} cave blocks below the roof",
-                columns, minSeen, maxSeen, caveBlocks);
+        SkySeas.LOGGER.info("SeabedTests: {} columns ok, seabed top Y {}..{}, {} cave blocks below the roof, "
+                + "{} cave runs, {} one block high, {} flat sheet blocks, mean height {}", columns, minSeen, maxSeen, caveBlocks, caveRuns,
+                caveSlivers, caveSheets,
+                caveRuns == 0 ? 0 : String.format("%.1f", (double) caveBlocks / caveRuns));
+        // Flat one-block sheets come from caves squeezed between the roof and the bottom; 2.1% before round 3.
+        if (caveSheets > 0.016 * caveBlocks) {
+            helper.fail("flat cave sheets: " + caveSheets + " of " + caveBlocks + " cave blocks");
+            return;
+        }
         if (caveBlocks == 0) {
             helper.fail("no caves at all below the roof");
             return;
@@ -106,7 +121,7 @@ public final class SeabedTests {
     }
 
     /**
-     * The seabed must not be flat: the spread between the 5th and 95th percentile of
+     * The plain seabed (outside ocean forms) must not be flat: the spread between the 5th and 95th percentile of
      * seabed height in a 4x4 km area must match a relief of roughly +/-8..10 blocks.
      */
     @GameTest(template = "empty")
@@ -117,12 +132,17 @@ public final class SeabedTests {
         for (int[] origin : areas) {
             double[] samples = new double[250 * 250];
             int n = 0;
+            Layout layout = LayoutAccess.get(gen.randomState());
             for (int i = 0; i < 250; i++) {
                 for (int j = 0; j < 250; j++) {
-                    samples[n++] = seabed.compute(new DensityFunction.SinglePointContext(
-                            origin[0] + i * 16, 0, origin[1] + j * 16));
+                    int x = origin[0] + i * 16;
+                    int z = origin[1] + j * 16;
+                    if (!isOceanForm(layout, x, z)) {
+                        samples[n++] = seabed.compute(new DensityFunction.SinglePointContext(x, 0, z));
+                    }
                 }
             }
+            samples = java.util.Arrays.copyOf(samples, n);
             java.util.Arrays.sort(samples);
             double p5 = samples[n * 5 / 100];
             double p50 = samples[n / 2];
@@ -163,9 +183,22 @@ public final class SeabedTests {
         helper.succeed();
     }
 
-    /** Y of the highest seabed block below sea level (skips water and vanilla icebergs). */
-    private static int seabedTop(ProtoChunk chunk, int x, int z) {
-        BlockPos.MutableBlockPos pos = new BlockPos.MutableBlockPos(x, SEA_LEVEL - 1, z);
+    /** True if an ocean form (island, shelf, seamount, volcano, spire) reaches this column. */
+    private static boolean isOceanForm(Layout layout, int x, int z) {
+        return layout.oceanAt(layout.regionAt(x, z), x, z, OceanShape.NONE) >= 0;
+    }
+
+    /**
+     * Y of the highest seabed or ocean-form block under the sky forms (skips air, water and
+     * vanilla icebergs), scanning down from just above the ocean form's surface (on the highest seabed base) or from
+     * under continentMinBottomY, below every sky form.
+     */
+    private static int seabedTop(WorldParams p, ProtoChunk chunk, int x, int z, double oceanForm) {
+        int start = Math.max((int) p.continentMinBottomY() - 1, (int) Math.ceil(oceanForm) + 2);
+        BlockPos.MutableBlockPos pos = new BlockPos.MutableBlockPos(x, start, z);
+        while (pos.getY() >= SEA_LEVEL && (chunk.getBlockState(pos).isAir() || isOceanColumn(chunk.getBlockState(pos)))) {
+            pos.move(0, -1, 0);
+        }
         while (pos.getY() > chunk.getMinBuildHeight() && isOceanColumn(chunk.getBlockState(pos))) {
             pos.move(0, -1, 0);
         }
@@ -177,8 +210,8 @@ public final class SeabedTests {
         return state.is(Blocks.WATER) || state.is(Blocks.PACKED_ICE) || state.is(Blocks.SNOW_BLOCK);
     }
 
-    private static String checkColumn(WorldParams p, ProtoChunk chunk, int x, int z, int top) {
-        if (top < SeabedShape.minHeight(p) - 1 || top > SeabedShape.maxHeight(p)) {
+    private static String checkColumn(WorldParams p, ProtoChunk chunk, int x, int z, int top, boolean oceanForm) {
+        if (top < SeabedShape.minHeight(p) - 1 || top > (oceanForm ? OceanShape.maxHeight(p) : SeabedShape.maxHeight(p))) {
             return "seabed top " + top + " out of range at " + x + "," + z;
         }
         BlockPos.MutableBlockPos pos = new BlockPos.MutableBlockPos(x, 0, z);
@@ -189,27 +222,53 @@ public final class SeabedTests {
                         + "\n" + describeColumn(chunk, x, z, top);
             }
         }
-        // Sky islands start at continentMinBottomY: the 50 blocks over the sea stay open.
-        for (int y = SEA_LEVEL; y < p.continentMinBottomY(); y++) {
-            BlockState state = chunk.getBlockState(pos.setY(y));
-            if (!state.isAir() && !isOceanColumn(state)) {
-                return "unexpected block above sea level at " + x + "," + y + "," + z;
-            }
-        }
         return null;
     }
 
     /** Air or fluid blocks between the roof and the bottom of the world (caves, flooded or not). */
+    /** Cave runs (vertical stretches of air or fluid under the roof): all, one block high, and their summed height. */
+    static long caveRuns;
+    /** Vanilla bedrock reaches up to Y -60: runs among its blocks are not cave shapes. */
+    private static final int BEDROCK_TOP = -58;
+    static long caveSlivers;
+    /** Flat one-block sheets: thin gaps whose four neighbours are thin gaps too (cut tunnels). */
+    static long caveSheets;
+
     private static int countCaveBlocks(WorldParams p, ProtoChunk chunk, int x, int z, int top) {
         int count = 0;
+        int run = 0;
         BlockPos.MutableBlockPos pos = new BlockPos.MutableBlockPos(x, 0, z);
         for (int y = top - (int) p.caveRoofThickness(); y > chunk.getMinBuildHeight(); y--) {
             BlockState state = chunk.getBlockState(pos.setY(y));
             if (state.isAir() || !state.getFluidState().isEmpty()) {
                 count++;
+                run++;
+            } else if (run > 0 && y + run < BEDROCK_TOP) {
+                run = 0;
+            } else if (run > 0) {
+                caveRuns++;
+                caveSlivers += run == 1 ? 1 : 0;
+                run = 0;
+            }
+        }
+        for (int y = top - (int) p.caveRoofThickness(); y > BEDROCK_TOP; y--) {
+            if ((x & 15) > 0 && (x & 15) < 15 && (z & 15) > 0 && (z & 15) < 15 && thinGap(chunk, pos, x, y, z)
+                    && thinGap(chunk, pos, x + 1, y, z) && thinGap(chunk, pos, x - 1, y, z)
+                    && thinGap(chunk, pos, x, y, z + 1) && thinGap(chunk, pos, x, y, z - 1)) {
+                caveSheets++;
             }
         }
         return count;
+    }
+
+    private static boolean open(ProtoChunk chunk, BlockPos.MutableBlockPos pos, int x, int y, int z) {
+        BlockState state = chunk.getBlockState(pos.set(x, y, z));
+        return state.isAir() || !state.getFluidState().isEmpty();
+    }
+
+    /** Open block with rock right above and below it. */
+    private static boolean thinGap(ProtoChunk chunk, BlockPos.MutableBlockPos pos, int x, int y, int z) {
+        return open(chunk, pos, x, y, z) && !open(chunk, pos, x, y + 1, z) && !open(chunk, pos, x, y - 1, z);
     }
 
     /** Column dump for failure messages. */

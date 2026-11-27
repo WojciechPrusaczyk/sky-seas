@@ -1,4 +1,5 @@
 {
   "type": "skyseas:layout_root",
-  "noise": "skyseas:layout_seed"
+  "noise": "skyseas:layout_seed",
+  "temperature": "skyseas:climate/temperature"
 }

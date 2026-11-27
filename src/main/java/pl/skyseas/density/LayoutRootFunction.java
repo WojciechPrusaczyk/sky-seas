@@ -1,6 +1,7 @@
 package pl.skyseas.density;
 
 import com.mojang.serialization.MapCodec;
+import com.mojang.serialization.codecs.RecordCodecBuilder;
 import net.minecraft.util.KeyDispatchDataCodec;
 import net.minecraft.world.level.levelgen.DensityFunction;
 import net.minecraft.world.level.levelgen.DensityFunctions;
@@ -17,18 +18,27 @@ import pl.skyseas.layout.Layout;
  * functions, so every reference to the root in the router shares one Layout.
  */
 public final class LayoutRootFunction implements DensityFunction {
-    public static final MapCodec<LayoutRootFunction> DATA_CODEC = NoiseHolder.CODEC.fieldOf("noise")
-            .xmap(LayoutRootFunction::new, LayoutRootFunction::noise);
+    public static final MapCodec<LayoutRootFunction> DATA_CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
+            NoiseHolder.CODEC.fieldOf("noise").forGetter(LayoutRootFunction::noise),
+            DensityFunction.HOLDER_HELPER_CODEC.fieldOf("temperature").forGetter(LayoutRootFunction::temperature)
+    ).apply(i, LayoutRootFunction::new));
     private static final KeyDispatchDataCodec<LayoutRootFunction> CODEC = KeyDispatchDataCodec.of(DATA_CODEC);
     private static final double[][] SEED_POINTS = {{0, 0, 0}, {1.5e4, 7.0, -3.1e4}, {-2.7e4, 31.0, 1.3e4}, {123.4, -9.0, 567.8}};
 
     private final NoiseHolder noise;
+    /**
+     * Climate temperature for layout decisions, bound by the same RandomState as the
+     * noise. Sampled outside chunk generation (no per-chunk caches), so it is thread-safe.
+     */
+    private final DensityFunction temperature;
     /** Null until the noise is bound by a RandomState. */
     private final Layout layout;
 
-    public LayoutRootFunction(NoiseHolder noise) {
+    public LayoutRootFunction(NoiseHolder noise, DensityFunction temperature) {
         this.noise = noise;
-        this.layout = noise.noise() == null ? null : new Layout(deriveSeed(noise), WorldParams.DEFAULTS);
+        this.temperature = temperature;
+        this.layout = noise.noise() == null ? null : new Layout(deriveSeed(noise), WorldParams.DEFAULTS,
+                (x, z) -> temperature.compute(new SinglePointContext(x, 0, z)));
     }
 
     private static long deriveSeed(NoiseHolder noise) {
@@ -43,6 +53,10 @@ public final class LayoutRootFunction implements DensityFunction {
         return noise;
     }
 
+    public DensityFunction temperature() {
+        return temperature;
+    }
+
     public Layout layout() {
         return layout;
     }
@@ -50,6 +64,9 @@ public final class LayoutRootFunction implements DensityFunction {
     /** The layout behind a reference to the root (unwraps registry holders), or null if unbound. */
     public static Layout layoutOf(DensityFunction f) {
         while (f instanceof DensityFunctions.HolderHolder holder) {
+            if (!holder.function().isBound()) {
+                return null; // still parsing the registry
+            }
             f = holder.function().value();
         }
         return f instanceof LayoutRootFunction root ? root.layout : null;
@@ -68,7 +85,8 @@ public final class LayoutRootFunction implements DensityFunction {
     @Override
     public DensityFunction mapAll(Visitor visitor) {
         NoiseHolder bound = visitor.visitNoise(noise);
-        return visitor.apply(bound.equals(noise) ? this : new LayoutRootFunction(bound));
+        // Bind once (RandomState); later visitors (NoiseChunk) keep this layout and the cache-free temperature.
+        return visitor.apply(bound.equals(noise) ? this : new LayoutRootFunction(bound, temperature.mapAll(visitor)));
     }
 
     @Override

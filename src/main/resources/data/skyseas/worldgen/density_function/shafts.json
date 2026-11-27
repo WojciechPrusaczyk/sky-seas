@@ -1,0 +1,11 @@
+{
+  "type": "minecraft:range_choice",
+  "input": "skyseas:shaft_near",
+  "min_inclusive": 0.5,
+  "max_exclusive": 2.0,
+  "when_in_range": {
+    "type": "skyseas:shafts",
+    "root": "skyseas:layout/root"
+  },
+  "when_out_of_range": 64.0
+}
