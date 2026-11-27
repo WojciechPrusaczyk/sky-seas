@@ -35,11 +35,11 @@ public final class SeabedTests {
     private static final int STRIDE_CHUNKS = 250;
     private static final int SEA_LEVEL = 63;
     /**
-     * p5..p95 seabed height spread expected from a relief of about +/-8..10 blocks. The upper
-     * bound leaves room for canyons and trenches, which pull p5 down in far areas.
+     * p5..p95 seabed height spread with the provinces (round 3 of E3): canyons down to about
+     * Y -52, hills, cones and pillars up to Y 24; plains alone would give under 20.
      */
-    private static final double MIN_RELIEF_SPREAD = 14.0;
-    private static final double MAX_RELIEF_SPREAD = 30.0;
+    private static final double MIN_RELIEF_SPREAD = 20.0;
+    private static final double MAX_RELIEF_SPREAD = 60.0;
 
     private SeabedTests() {
     }

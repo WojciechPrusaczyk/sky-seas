@@ -128,6 +128,7 @@ package pl.skyseas.config;
  * @param seaSpireTopMin          lowest spire top above sea level
  * @param seaSpireTopMax          highest spire top above sea level
  * @param skyForms                towers, sky islands and clusters between continents (round 2 of E3)
+ * @param seabedForms             seabed provinces and their forms (round 3 of E3)
  */
 public record WorldParams(
         int worldMinY,
@@ -243,10 +244,11 @@ public record WorldParams(
         double seaSpireRadiusMax,
         double seaSpireTopMin,
         double seaSpireTopMax,
-        SkyForms skyForms) {
+        SkyForms skyForms,
+        SeabedForms seabedForms) {
 
     /** Bumped whenever a code change alters generated chunks (see CLAUDE.md). */
-    public static final int GENERATOR_VERSION = 15;
+    public static final int GENERATOR_VERSION = 16;
 
     public static final WorldParams DEFAULTS = new WorldParams(
             -64,
@@ -410,11 +412,99 @@ public record WorldParams(
                 0.3,
                 0.3,
                 200.0,
-                260.0));
+                260.0),
+            new SeabedForms(
+                650.0,
+                0.10,
+                1.0, 1.0, 1.0, 0.8, 0.8,
+                0.5,
+                7.0,
+                18.0,
+                42.0,
+                360.0, 0.055, -45.0,
+                170.0, 0.07, -34.0,
+                60, 0.75, 7.0, 26.0, 5.0, 38.0,
+                14.0, 3,
+                44, 0.45, 4.5, 9.0, 18.0, 55.0,
+                24.0));
 
     /** Distance at which the zone factor reaches 1 (start of the Edge). */
     public double zoneMaxRadius() {
         return zoneRadii[zoneRadii.length - 1];
+    }
+
+    /**
+     * Seabed provinces (round 3 of E3): soft regions of the seabed, each with its own set of
+     * forms, so the floor is rarely a flat plain. Weights are relative; the temperature tilts
+     * them (volcanic fields in cold water, plateaus in warm).
+     *
+     * @param provinceScale           wavelength of the province noise
+     * @param plainsShare             share of the seabed left as plains with dunes
+     * @param hillsWeight             hills and underwater mountain ranges
+     * @param canyonsWeight           canyon networks down to near the bedrock
+     * @param volcanicWeight          fields of small cones
+     * @param plateausWeight          scarps, terraces and table plateaus
+     * @param rockyWeight             pillars and columns
+     * @param provinceBlend           noise distance over which provinces blend (larger = softer borders)
+     * @param midAmplitude            medium-scale bumps (every 50-150 blocks) outside plains
+     * @param hillAmplitude           rolling hills in the hills province
+     * @param mountainAmplitude       ridged mountain ranges in the hills province
+     * @param canyonScale             wavelength of the main canyon network
+     * @param canyonWidth             ridge-noise band of a main canyon (larger = wider)
+     * @param canyonFloorY            floor of the main canyons; open water much below about -48 meets aquifer
+     *                                cells under the hard-coded lava level -54, which turn it into dry pockets
+     * @param branchScale             wavelength of the side canyons
+     * @param branchWidth
+     * @param branchFloorY            floor of the side canyons
+     * @param coneCell                grid of cones in volcanic fields
+     * @param coneChance              chance of a cone per cell at full province weight
+     * @param coneRadiusMin           cone base radius
+     * @param coneRadiusMax
+     * @param coneHeightMin           cone height above the seabed
+     * @param coneHeightMax
+     * @param terraceStep             height of one scarp in the plateau province
+     * @param terraceSteps            scarps between the lowest and the highest terrace
+     * @param pillarCell              grid of pillars in the rocky province
+     * @param pillarChance            chance of a pillar per cell at full province weight
+     * @param pillarRadiusMin
+     * @param pillarRadiusMax
+     * @param pillarHeightMin         pillar height above the seabed
+     * @param pillarHeightMax
+     * @param maxY                    nothing of the seabed rises above this Y (sky forms stay above 30)
+     */
+    public record SeabedForms(
+            double provinceScale,
+            double plainsShare,
+            double hillsWeight,
+            double canyonsWeight,
+            double volcanicWeight,
+            double plateausWeight,
+            double rockyWeight,
+            double provinceBlend,
+            double midAmplitude,
+            double hillAmplitude,
+            double mountainAmplitude,
+            double canyonScale,
+            double canyonWidth,
+            double canyonFloorY,
+            double branchScale,
+            double branchWidth,
+            double branchFloorY,
+            int coneCell,
+            double coneChance,
+            double coneRadiusMin,
+            double coneRadiusMax,
+            double coneHeightMin,
+            double coneHeightMax,
+            double terraceStep,
+            int terraceSteps,
+            int pillarCell,
+            double pillarChance,
+            double pillarRadiusMin,
+            double pillarRadiusMax,
+            double pillarHeightMin,
+            double pillarHeightMax,
+            double maxY) {
     }
 
     /**

@@ -7,6 +7,7 @@ import net.minecraft.world.level.levelgen.DensityFunction;
 import pl.skyseas.config.WorldParams;
 import pl.skyseas.layout.Layout;
 import pl.skyseas.shape.OceanShape;
+import pl.skyseas.shape.SeabedProvinces;
 import pl.skyseas.shape.SeabedShape;
 
 /**
@@ -42,7 +43,12 @@ public record SeabedHeightFunction(DensityFunction root, Layout layout, DensityF
         double base = SeabedShape.height(WorldParams.DEFAULTS, zone.compute(ctx), temperature.compute(ctx),
                 relief.compute(ctx), roughness.compute(ctx), dunes.compute(ctx), canyon.compute(ctx),
                 trench.compute(ctx));
-        return layout == null ? base : layout.oceanHeight(ctx.blockX(), ctx.blockZ(), base);
+        if (layout == null) {
+            return base;
+        }
+        base = SeabedProvinces.height(WorldParams.DEFAULTS, layout.seabedSeed(), temperature.compute(ctx), ctx.blockX(),
+                ctx.blockZ(), base);
+        return layout.oceanHeight(ctx.blockX(), ctx.blockZ(), base);
     }
 
     @Override

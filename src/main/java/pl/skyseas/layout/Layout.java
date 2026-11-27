@@ -56,6 +56,11 @@ public final class Layout {
         return Hash.hash(seed, 0x3D);
     }
 
+    /** Seed of the seabed provinces and their forms. */
+    public long seabedSeed() {
+        return Hash.hash(seed, 0x5EABEDL);
+    }
+
     public RegionLayout region(int rx, int rz) {
         return cache.get(rx, rz);
     }

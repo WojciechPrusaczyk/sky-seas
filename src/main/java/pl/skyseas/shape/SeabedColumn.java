@@ -20,8 +20,8 @@ public final class SeabedColumn {
     /** Caves fade out near the bottom of the world over these Y (matches the bottom slide in oceanic.json). */
     private static final double CAVE_FLOOR_Y = -56.0;
     /** Vertical room under the roof below which caves fade out: squeezed caves become flat one-block sheets. */
-    private static final double CAVE_BAND_MIN = 14.0;
-    private static final double CAVE_BAND_FULL = 26.0;
+    private static final double CAVE_BAND_MIN = 18.0;
+    private static final double CAVE_BAND_FULL = 30.0;
 
     /**
      * 0 inside the roof band and above it, rising to 1 over {@code caveMaskRamp} blocks below;

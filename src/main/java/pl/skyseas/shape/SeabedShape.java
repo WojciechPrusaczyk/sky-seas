@@ -77,12 +77,11 @@ public final class SeabedShape {
 
     /** Lowest possible seabed height for these parameters. */
     public static double minHeight(WorldParams p) {
-        return p.seabedTrenchMinY();
+        return SeabedProvinces.lowest(p);
     }
 
-    /** Highest possible seabed height for these parameters. */
+    /** Highest possible seabed height for these parameters (provinces included). */
     public static double maxHeight(WorldParams p) {
-        return Math.max(p.seabedBaseYNear(), p.seabedBaseYFar())
-                + p.seabedReliefSaturation() * p.seabedReliefAmplitude() + p.seabedDuneAmplitude();
+        return p.seabedForms().maxY();
     }
 }
