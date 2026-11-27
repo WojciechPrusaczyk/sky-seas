@@ -125,6 +125,10 @@ public final class StagedChunkGen {
         }, biomeZoomSeed);
     }
 
+    public MultiNoiseBiomeSource biomeSource() {
+        return biomeSource;
+    }
+
     public RandomState randomState() {
         return random;
     }

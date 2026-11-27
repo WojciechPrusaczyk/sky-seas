@@ -19,7 +19,15 @@ public record SkyColumnFunction(Kind kind, DensityFunction root, Layout layout) 
         BOTTOM("sky_bottom", Layout.BOTTOM, 0.0, Layout.NO_BOTTOM),
         DETAIL("sky_detail", Layout.DETAIL, 0.0, 1.0),
         SPIRE_FLOOR("sky_spire_floor", -1, -64.0, Layout.NO_SPIRE),
-        DETAIL_CEILING("sky_detail_ceiling", -2, Layout.NO_TOP, 400.0);
+        DETAIL_CEILING("sky_detail_ceiling", -2, Layout.NO_TOP, 400.0),
+        CLIMATE_TYPE("sky_climate_type", -10 - Layout.CLIMATE_TYPE, Layout.NO_CLIMATE, 20.0),
+        CLIMATE_BOTTOM("sky_climate_bottom", -10 - Layout.CLIMATE_BOTTOM, -64.0, Layout.NO_BOTTOM),
+        CLIMATE_TOP("sky_climate_top", -10 - Layout.CLIMATE_TOP, Layout.NO_TOP, 400.0),
+        CLIMATE_TEMPERATURE("sky_climate_temperature", -10 - Layout.CLIMATE_TEMPERATURE, Layout.NO_CLIMATE, 2.0),
+        CLIMATE_VEGETATION("sky_climate_vegetation", -10 - Layout.CLIMATE_VEGETATION, Layout.NO_CLIMATE, 2.0),
+        CLIMATE_EROSION("sky_climate_erosion", -10 - Layout.CLIMATE_EROSION, Layout.NO_CLIMATE, 2.0),
+        CLIMATE_MOUNTAIN("sky_climate_mountain", -10 - Layout.CLIMATE_MOUNTAIN, 0.0, 400.0),
+        WARM_BIAS("warm_bias", -3, 0.0, 1.0);
 
         public final String id;
         final int column;
@@ -52,8 +60,17 @@ public record SkyColumnFunction(Kind kind, DensityFunction root, Layout layout) 
                 case TOP -> Layout.NO_TOP;
                 case DETAIL -> 0.0;
                 case SPIRE_FLOOR -> Layout.NO_SPIRE;
-                case DETAIL_CEILING -> Layout.NO_TOP;
+                case DETAIL_CEILING, CLIMATE_TOP -> Layout.NO_TOP;
+                case CLIMATE_BOTTOM -> Layout.NO_BOTTOM;
+                case CLIMATE_MOUNTAIN, WARM_BIAS -> 0.0;
+                case CLIMATE_TYPE, CLIMATE_TEMPERATURE, CLIMATE_VEGETATION, CLIMATE_EROSION -> Layout.NO_CLIMATE;
             };
+        }
+        if (kind == Kind.WARM_BIAS) {
+            return layout.warmBias(ctx.blockX(), ctx.blockZ());
+        }
+        if (kind.column <= -10) {
+            return layout.climateColumn(ctx.blockX(), ctx.blockZ(), -10 - kind.column);
         }
         if (kind == Kind.SPIRE_FLOOR) {
             return layout.detailFloor(ctx.blockX(), ctx.blockZ());

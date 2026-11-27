@@ -125,7 +125,7 @@ public final class LayoutGenerator {
         double[] clusters = clusters(seed, p, x0, z0, size);
         singles(seed, p, x0, z0, size, continents, land, clusters, prm, out);
         for (int c = 0; c < clusters.length; c += CLUSTER_STRIDE) {
-            cluster(p, x0, z0, size, continents, land, clusters, c, prm, out);
+            cluster(p, climate, x0, z0, size, continents, land, clusters, c, prm, out);
         }
         chains.add(p, x0, z0, size, prm, out);
         return out.build(rx, rz, size, p.layoutBucketSize(), indexMargin(p), OCEAN_INDEX_MARGIN);
@@ -309,7 +309,7 @@ public final class LayoutGenerator {
             Land none = new Land();
             none.chains = new Chains();
             addOcean(p, x0, z0, size, near, none, prm, out, RegionLayout.OCEAN_ISLAND, 0, s,
-                    ZoneField.factorAtDistance(p, GUARANTEED_ISLAND_DISTANCE));
+                    ZoneField.factorAtDistance(p, GUARANTEED_ISLAND_DISTANCE), RegionLayout.FLAG_GUARANTEED);
             land.add(x, z, landRadius);
             return;
         }
@@ -330,6 +330,11 @@ public final class LayoutGenerator {
 
     private static void addOcean(WorldParams p, int x0, int z0, int size, Continents continents, Land land, double[] prm,
                                  RegionBuilder out, byte type, int kind, long id, double zone) {
+        addOcean(p, x0, z0, size, continents, land, prm, out, type, kind, id, zone, 0);
+    }
+
+    private static void addOcean(WorldParams p, int x0, int z0, int size, Continents continents, Land land, double[] prm,
+                                 RegionBuilder out, byte type, int kind, long id, double zone, int flags) {
         double x = prm[OceanShape.CX];
         double z = prm[OceanShape.CZ];
         double reach = OceanShape.reach(kind, prm, 0);
@@ -344,7 +349,7 @@ public final class LayoutGenerator {
         }
         if (inside) {
             out.add(type, id, (int) Math.round(x), (int) Math.round(z), reach, p.worldMinY(),
-                    (int) Math.ceil(OceanShape.maxY(kind, prm, 0)), id, 0, zone, prm, 0, OceanShape.STRIDE);
+                    (int) Math.ceil(OceanShape.maxY(kind, prm, 0)), id, flags, zone, prm, 0, OceanShape.STRIDE);
             if (type == RegionLayout.OCEAN_ISLAND) {
                 double[] sh = new double[ShaftShape.STRIDE];
                 for (int k = 0, n = ShaftShape.count(prm, 0, id); k < n; k++) {
@@ -398,6 +403,8 @@ public final class LayoutGenerator {
     }
 
     private static final int CLUSTER_STRIDE = 7;
+    /** Erosion Hallelujah clusters are pulled toward (vanilla erosion class 0: peaks). */
+    private static final double HALLELUJAH_EROSION = -0.85;
     /** Cluster ranks: big forms of a lower-ranked (later) cluster keep clear of higher-ranked discs. */
     private static final int RANK_GUARANTEED = 0;
     private static final int RANK_CORNER = 1;
@@ -673,7 +680,7 @@ public final class LayoutGenerator {
      * then reject single candidates, checked only for those that touch the region or end
      * one of its bridges.
      */
-    private static void cluster(WorldParams p, int x0, int z0, int size, Continents continents, Land land,
+    private static void cluster(WorldParams p, ClimateProbe climate, int x0, int z0, int size, Continents continents, Land land,
                                 double[] clusters, int c, double[] prm, RegionBuilder out) {
         WorldParams.SkyForms f = p.skyForms();
         double ccx = clusters[c];
@@ -691,6 +698,11 @@ public final class LayoutGenerator {
         double ux = Math.cos(phi);
         double uz = Math.sin(phi);
         double band0 = heightBand(cs, p, ccx, ccz);
+        // One climate point per cluster (its centre, so the sky stays coherent with the sea below);
+        // Hallelujah clusters are pulled toward low erosion, where vanilla puts peaks.
+        double ct = climate.temperature((int) ccx, (int) ccz);
+        double cv = climate.vegetation((int) ccx, (int) ccz);
+        double ce = arch ? climate.erosion((int) ccx, (int) ccz) : HALLELUJAH_EROSION;
         double[] cx = new double[want];
         double[] cz = new double[want];
         double[] cr = new double[want];
@@ -738,6 +750,7 @@ public final class LayoutGenerator {
                 continue;
             }
             addSky(p, out, type, seeds[k], prm, flags | (detailForm(p, arch, cr[k]) ? RegionLayout.FLAG_DETAIL : 0));
+            out.climate(ct, cv, ce);
         }
         if (!arch) {
             return;

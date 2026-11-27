@@ -11,4 +11,14 @@ public interface ClimateProbe {
     ClimateProbe TEMPERATE = (x, z) -> 0.0;
 
     double temperature(int x, int z);
+
+    /** Vegetation (humidity) at a column; thematic clusters pull toward the value at their centre. */
+    default double vegetation(int x, int z) {
+        return 0.0;
+    }
+
+    /** Erosion at a column. */
+    default double erosion(int x, int z) {
+        return 0.0;
+    }
 }

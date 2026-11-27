@@ -1,37 +1,11 @@
 {
-  "type": "minecraft:range_choice",
-  "input": "skyseas:sky/edge",
-  "min_inclusive": -16.0,
-  "max_exclusive": 1000000.0,
-  "when_in_range": {
-    "type": "minecraft:range_choice",
-    "input": {
-      "type": "minecraft:add",
-      "argument1": "minecraft:y",
-      "argument2": {
-        "type": "minecraft:mul",
-        "argument1": -1.0,
-        "argument2": "skyseas:sky/bottom"
-      }
-    },
-    "min_inclusive": 0.0,
-    "max_exclusive": 1000000.0,
-    "when_in_range": 0.5,
-    "when_out_of_range": -0.6
-  },
-  "when_out_of_range": {
-    "type": "minecraft:range_choice",
-    "input": "skyseas:seabed_height",
-    "min_inclusive": 63.0,
-    "max_exclusive": 1000.0,
-    "when_in_range": {
-      "type": "minecraft:range_choice",
-      "input": "minecraft:y",
-      "min_inclusive": 62.0,
-      "max_exclusive": 1000.0,
-      "when_in_range": 0.5,
-      "when_out_of_range": -0.6
-    },
-    "when_out_of_range": -0.6
-  }
+  "type": "skyseas:climate_continents",
+  "input": "minecraft:overworld/continents",
+  "height": "skyseas:seabed_height",
+  "island": "skyseas:climate/sky_type",
+  "bottom": "skyseas:climate/sky_bottom",
+  "top": "skyseas:climate/sky_top",
+  "point": 0.0,
+  "mountain": "skyseas:climate/sky_mountain",
+  "warm": "skyseas:climate/warm_bias"
 }

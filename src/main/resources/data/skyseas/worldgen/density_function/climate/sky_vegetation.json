@@ -1,0 +1,7 @@
+{
+  "type": "minecraft:flat_cache",
+  "argument": {
+    "type": "skyseas:sky_climate_vegetation",
+    "root": "skyseas:layout/root"
+  }
+}
