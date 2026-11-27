@@ -275,6 +275,8 @@ Pomiary:
 
 Gwarantowane klastry (seed serwera): archipelag 430,212,−12; Alleluja −524,299,107.
 
+Korekta po locie (`generatorVersion` 14): wyraźniejsze roje i otwarte przestrzenie, ciaśniej w rojach i archipelagach. Na region: wieże 2,5, wyspy pojedyncze 38,9; widoczność nieba 98,9–99,0% (JUnit), 99,21% (mapa); zacienienie 33%; bench noise spawn 1,08×, archipelag 1,09×; JUnit 38/38, GameTesty 7/7.
+
 ### Runda 3: dno
 
 **Zakres:**

@@ -407,11 +407,12 @@ public final class LayoutGenerator {
         return ShapeMath.smoothstep(-0.6, 0.6, SimplexNoise.noise2(seed ^ HEIGHT_SALT, x / scale, z / scale));
     }
 
-    /** Chance of a single form per cell: dense swarms and empty stretches. */
+    /** Chance of a single form per cell: dense swarms and open stretches (squared, so swarms stand out). */
     private static double skyDensity(long seed, WorldParams p, double x, double z) {
         WorldParams.SkyForms f = p.skyForms();
         double n = SimplexNoise.noise2(seed ^ DENSITY_SALT, x / f.densityScale(), z / f.densityScale());
-        return ShapeMath.lerp(f.skyDensityMin(), f.skyCellChance(), ShapeMath.smoothstep(-0.5, 0.5, n));
+        double t = ShapeMath.smoothstep(-0.3, 0.4, n);
+        return ShapeMath.lerp(f.skyDensityMin(), f.skyCellChance(), t * t);
     }
 
     /**

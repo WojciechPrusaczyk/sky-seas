@@ -365,9 +365,9 @@ Wszystkie liczby z dokumentu designowego są parametrami w configu COMMON (`conf
 | `islands.hangingSpires` | 3 … 8 (małe wyspy 0 … 2), długość 10 … 40 | Iglice pod spodami wysp |
 | `towers.perRegion`, `towers.size` | 2 … 4; szerokość 15 … 40, wysokość 50 … 150 | Wyspy-wieże |
 | `skyIslands.perRegion`, `skyIslands.size` | 10 … 20; 10 … 30 i 30 … 80 | Małe i średnie wyspy (ok. połowa jako satelity 100 … 400 od kontynentu) |
-| `skyForms.cellSize`, `skyForms.cellChance`, `skyForms.densityMin`, `skyForms.towerShare` | 112; 1,0; 0,1; 0,15 | Siatka wież i wysp pojedynczych; szansa na komórkę z szumu gęstości (fala 1500) między 0,1 a 1,0 (wynik: ok. 2,8 wieży i 29 wysp na region) |
+| `skyForms.cellSize`, `skyForms.cellChance`, `skyForms.densityMin`, `skyForms.towerShare` | 80; 0,8; 0,04; 0,10 | Siatka wież i wysp pojedynczych; szansa na komórkę z szumu gęstości (fala 1100, krzywa t², więc roje i otwarte przestrzenie) między 0,04 a 0,8 (wynik: ok. 2,5 wieży i 39 wysp na region) |
 | `skyForms.heightScale`, `skyForms.sunkShare`, `skyForms.sunkTop`, `skyForms.islandTopMin`, `skyForms.towerTopMin` | 900; 0,1; 64 … 75; 80; 160 | Pasma wysokości wysp (szum), wyspy zatopione |
-| `skyForms.detailRadiusMax`, `skyForms.detailOverlap`, `skyForms.continentOverlap` | 40; 0,6; 0,3 | Wyspy liczone per blok: mogą się nakładać (środki ≥ 0,6 sumy promieni w klastrze) i wchodzić do 30% promienia na brzeg kontynentu |
+| `skyForms.detailRadiusMax`, `skyForms.detailOverlap`, `skyForms.continentOverlap` | 40; 0,45; 0,3 | Wyspy liczone per blok: mogą się nakładać (środki ≥ 0,6 sumy promieni w klastrze) i wchodzić do 30% promienia na brzeg kontynentu |
 | `clusters.archipelagoChance`, `clusters.hallelujahChance`, `clusters.radius` | 0,45; 0,30; 300 … 480 | Klastry na narożnikach siatki kontynentów (archipelag 20–60 wysp, Alleluja 20–50 brył) |
 | `clusters.edgeChance`, `clusters.edgeRadius` | 0,30; 200 … 260 | Klastry na środkach boków siatki |
 | `clusters.guaranteeDistance`, `clusters.guaranteeRadius` | 650; 230 | Gwarantowany archipelag i klaster Alleluja przy spawnie |
@@ -470,6 +470,7 @@ Wdrożenie idzie w dziesięciu etapach; każdy kończy się działającym świat
      - nowa kolumna `sky_detail_ceiling` (flat_cache): `sky_details` liczy bloki między podłogą a sufitem detali, bo nakładające się wyspy mogą leżeć na dowolnych wysokościach w jednej kolumnie;
      - noodle poniżej Y 63 tylko w gałęzi oceanu: `max(sky, min(oceanic, noodle<63))` (inaczej wycinał kawałki z zatopionych wysp);
      - testy: JUnit `largeSkyFormsDoNotOverlap`, `skyFormHeights` (zatopione 5–15%, rozrzut wysokości), udział niskich kontynentów 5–15%, bryły 3D od Y 24; GameTesty: okno od Y 29 (kawałki sięgające dna to dno albo formy oceaniczne), pomijane kawałki z samego lodu i śniegu (vanillowe góry lodowe), okno wyspy zatopionej, skan dna od powierzchni formy oceanicznej.
+     - korekta po locie (`generatorVersion` 14): wyraźniejsze roje i otwarte przestrzenie (siatka 80, szansa 0,04–0,8 po krzywej t², fala 1100), ciaśniejsze archipelagi (środki ≥ 0,45 sumy promieni), 10% wież.
    - Zrealizowane w rundzie 0: dwa indeksy kubełkowe na region (niebo, ocean) i parametry o zmiennej długości; `ClimateProbe`; `skyseas:cave_top` (bez jaskiń w iglicach morskich); ochrona stropu obejmuje też wierzchni blok dna (GameTest złapał dziurę na stromym zboczu szelfu); `continents` = 0,5 nad lądem wysp oceanicznych od Y 62 (tymczasowo, do E4).
 5. **E4 — Klimat i biomy 3D.** Wszystkie funkcje klimatu, chłodzenie z wysokością, klastry tematyczne, biomy jaskiniowe; pliki czterech biomów dna, ich tagi i nakładka na źródło biomów w warstwie oceanu.
    - Akceptacja: lądowe biomy na wyspach, oceaniczne w wodzie, deep dark tylko pod grubą skałą, rafy w warm ocean.

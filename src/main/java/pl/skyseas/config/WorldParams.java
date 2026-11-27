@@ -246,7 +246,7 @@ public record WorldParams(
         SkyForms skyForms) {
 
     /** Bumped whenever a code change alters generated chunks (see CLAUDE.md). */
-    public static final int GENERATOR_VERSION = 13;
+    public static final int GENERATOR_VERSION = 14;
 
     public static final WorldParams DEFAULTS = new WorldParams(
             -64,
@@ -366,9 +366,9 @@ public record WorldParams(
                 305.0,
                 70.0,
                 70.0,
-                112,
-                1.0,
-                0.15,
+                80,
+                0.8,
+                0.1,
                 0.5,
                 5.0,
                 15.0,
@@ -397,8 +397,8 @@ public record WorldParams(
                 120.0,
                 32.0,
                 16.0,
-                0.1,
-                1500.0,
+                0.04,
+                1100.0,
                 900.0,
                 0.1,
                 64.0,
@@ -406,7 +406,7 @@ public record WorldParams(
                 80.0,
                 160.0,
                 40.0,
-                0.6,
+                0.45,
                 0.3,
                 0.3,
                 200.0,
