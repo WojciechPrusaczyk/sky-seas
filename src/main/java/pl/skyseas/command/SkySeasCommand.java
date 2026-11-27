@@ -54,6 +54,8 @@ public final class SkySeasCommand {
                                 .executes(ctx -> map(ctx, 0))
                                 .then(Commands.argument("scale", IntegerArgumentType.integer(1, 64))
                                         .executes(ctx -> map(ctx, IntegerArgumentType.getInteger(ctx, "scale"))))))
+                .then(Commands.literal("census")
+                        .then(Commands.argument("radius", IntegerArgumentType.integer(0, 8)).executes(SkySeasCommand::census)))
                 .then(Commands.literal("audit")
                         .then(Commands.argument("radius", IntegerArgumentType.integer(64, 32768)).executes(SkySeasCommand::audit)))
                 .then(Commands.literal("bench")
@@ -348,6 +350,19 @@ public final class SkySeasCommand {
                 layout.cache().bytes() / 1024.0);
         ctx.getSource().sendSuccess(() -> Component.literal(msg), false);
         return 1;
+    }
+
+    private static int census(CommandContext<CommandSourceStack> ctx) {
+        CommandSourceStack source = ctx.getSource();
+        try {
+            String msg = Census.run(source.getLevel(), BlockPos.containing(source.getPosition()),
+                    IntegerArgumentType.getInteger(ctx, "radius"));
+            source.sendSuccess(() -> Component.literal(msg), true);
+            return 1;
+        } catch (java.io.IOException e) {
+            source.sendFailure(Component.literal("[Sky Seas] census failed: " + e));
+            return 0;
+        }
     }
 
     private static int audit(CommandContext<CommandSourceStack> ctx) {

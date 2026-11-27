@@ -21,6 +21,7 @@ public final class SkySeas {
 
     public SkySeas(IEventBus modBus) {
         SkySeasRegistries.register(modBus);
+        pl.skyseas.world.SkySeasWorldgen.register(modBus);
         NeoForge.EVENT_BUS.addListener(SkySeasCommand::onRegisterCommands);
         NeoForge.EVENT_BUS.addListener(SpawnHandler::onCreateSpawn);
     }

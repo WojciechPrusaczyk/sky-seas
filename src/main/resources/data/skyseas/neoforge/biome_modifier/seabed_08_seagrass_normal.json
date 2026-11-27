@@ -1,0 +1,8 @@
+{
+  "type": "neoforge:add_features",
+  "biomes": [
+    "minecraft:ocean"
+  ],
+  "features": "skyseas:seabed/seagrass_normal",
+  "step": "vegetal_decoration"
+}

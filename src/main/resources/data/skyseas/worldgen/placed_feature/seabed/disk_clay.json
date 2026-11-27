@@ -1,0 +1,21 @@
+{
+  "feature": "minecraft:disk_clay",
+  "placement": [
+    {
+      "type": "minecraft:in_square"
+    },
+    {
+      "type": "skyseas:seabed"
+    },
+    {
+      "type": "minecraft:block_predicate_filter",
+      "predicate": {
+        "type": "minecraft:matching_fluids",
+        "fluids": "minecraft:water"
+      }
+    },
+    {
+      "type": "minecraft:biome"
+    }
+  ]
+}

@@ -490,6 +490,33 @@ public final class Layout {
     }
 
     /** Ocean form whose surface is highest at the column (above the given base), or -1. */
+    /**
+     * Volcano forms of the layout at a column: -1 outside any, else 0..1 heat, high on the
+     * crater rim and in the crater floor (magma in E5), low on the flanks.
+     */
+    public double volcanoHeat(int x, int z) {
+        RegionLayout r = regionAt(x, z);
+        int b = r.bucket(x, z);
+        double best = -1.0;
+        for (int k = r.oceanStart(b), end = r.oceanEnd(b); k < end; k++) {
+            int i = r.oceanItem(k);
+            if (r.type[i] != RegionLayout.VOLCANO) {
+                continue;
+            }
+            int off = r.paramOffset[i];
+            double d = Math.hypot(x - r.params[off + OceanShape.CX], z - r.params[off + OceanShape.CZ]);
+            double radius = r.params[off + OceanShape.RADIUS];
+            if (d >= radius) {
+                continue;
+            }
+            double crater = r.params[off + OceanShape.CRATER_RADIUS];
+            double rim = 1.0 - Math.abs(d - crater) / (0.3 * crater + 3.0);
+            double floor = d < 0.6 * crater ? 0.7 : 0.0;
+            best = Math.max(best, ShapeMath.clamp(Math.max(rim, floor), 0.0, 1.0));
+        }
+        return best;
+    }
+
     public int oceanAt(RegionLayout r, int x, int z, double base) {
         int b = r.bucket(x, z);
         int best = -1;

@@ -230,6 +230,18 @@ public final class SeabedProvinces {
     }
 
     private static double cones(WorldParams p, long seed, double x, double z) {
+        return cones(p, seed, x, z, false);
+    }
+
+    /**
+     * Heat of the cone vents at a column, 0..1: high on the rim of a crater and at the top of
+     * a small cone without one (magma in E5).
+     */
+    public static double coneHeat(WorldParams p, long seed, double x, double z) {
+        return cones(p, seed, x, z, true);
+    }
+
+    private static double cones(WorldParams p, long seed, double x, double z, boolean heat) {
         WorldParams.SeabedForms f = p.seabedForms();
         int cell = f.coneCell();
         int ci = (int) Math.floor(x / cell);
@@ -258,6 +270,11 @@ public final class SeabedProvinces {
                 double hgt = ShapeMath.lerp(f.coneHeightMin(), f.coneHeightMax(),
                         ShapeMath.clamp(size + 0.3 * (Hash.unit(Hash.hash(s, 5)) - 0.5), 0.0, 1.0));
                 double rc = 0.28 * r;
+                if (heat) {
+                    double v = hgt > 12.0 ? 1.0 - Math.abs(d - rc) / (0.12 * r) : 1.0 - d / (0.22 * r);
+                    best = Math.max(best, ShapeMath.clamp(v, 0.0, 1.0));
+                    continue;
+                }
                 double v;
                 if (d >= rc) {
                     v = hgt * Math.pow((r - d) / (r - rc), 1.4);

@@ -12,6 +12,7 @@ import pl.skyseas.layout.Layout;
  */
 public final class LayoutAccess {
     private static final Map<RandomState, Layout> CACHE = new WeakHashMap<>();
+    private static final Map<RandomState, SeabedHeightFunction> SEABED = new WeakHashMap<>();
 
     private LayoutAccess() {
     }
@@ -27,5 +28,17 @@ public final class LayoutAccess {
             }
         }
         return layout;
+    }
+
+    /** The seabed height function of this RandomState (unwrapped, thread-safe), or null outside Sky Seas. */
+    public static synchronized SeabedHeightFunction seabed(RandomState random) {
+        SeabedHeightFunction f = SEABED.get(random);
+        if (f == null) {
+            f = RouterLookup.find(random.router().finalDensity(), SeabedHeightFunction.class);
+            if (f != null) {
+                SEABED.put(random, f);
+            }
+        }
+        return f;
     }
 }

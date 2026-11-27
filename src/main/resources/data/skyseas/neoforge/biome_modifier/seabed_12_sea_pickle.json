@@ -1,0 +1,8 @@
+{
+  "type": "neoforge:add_features",
+  "biomes": [
+    "minecraft:warm_ocean"
+  ],
+  "features": "skyseas:seabed/sea_pickle",
+  "step": "vegetal_decoration"
+}
