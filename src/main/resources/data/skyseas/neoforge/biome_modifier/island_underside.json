@@ -1,0 +1,11 @@
+{
+  "type": "neoforge:add_features",
+  "biomes": "#minecraft:is_overworld",
+  "features": [
+    "skyseas:island/underside_roots",
+    "skyseas:island/underside_vines",
+    "skyseas:island/underside_lichen",
+    "skyseas:island/underside_dripstone"
+  ],
+  "step": "vegetal_decoration"
+}

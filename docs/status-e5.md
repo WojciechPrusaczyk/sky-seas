@@ -26,3 +26,11 @@ Census (r = 5 chunków):
 | Ocean 9000, 9000 | — | surowe bloki rud ok. 230, glow lichen 340, sea pickle 190 |
 
 **Uwaga:** magma leżąca na dnie (pola wulkaniczne, vanillowe `underwater_magma`) jest oznaczana przez vanillę do aktualizacji po generacji, więc z czasem w załadowanym świecie dorabia kolumny bąbelków ciągnące w dół. Liczba kolumn w census zależy przez to od czasu działania serwera, nie od generacji.
+
+## Runda 3: kaskady, jeziorka, spody, lód
+
+- `skyseas:cascade` (krok `fluid_springs`): w połowie chunków z krawędzią kontynentu lub wyspy o promieniu ≥ 40 wodospad. Krawędź szukana po heightmapie (spadek ≥ 12 bloków, wierzch ≥ 20 nad morzem). Źródło stoi we wnęce w krawędzi, otwarte boki wnęki dostają murek ze skały spod niej. Woda płynąca i spadająca do morza z gotowych stanów, bez ticków. Census przy kontynencie 8500, 8785 (r = 8): 589 bloków płynącej wody nad morzem.
+- Jeziorka: vanillowy `minecraft:lake` z wodą na wyspach (1 na 6 chunków, `skyseas:layer_filter` = sky). Start w rogu chunka, bo jezioro z wodą zamraża powierzchnię do 15 bloków od startu; przy losowym punkcie w chunku sięgało poza dozwolony obszar i wywalało serwer (dlatego vanilla ma już tylko jeziora lawy).
+- Spody wysp (`skyseas:island_underside`: powietrze tuż pod spodem wyspy przy spodzie z układu): hanging roots, cave vines, glow lichen, pointed dripstone. Census przy spawnie: ok. 3,9 tys. korzeni, 7,5 tys. pnączy, 3,5 tys. glow lichen.
+- `skyseas:frozen_sea` w zamarzniętych oceanach, raz na chunk: lodowy sufit (packed ice, 3 bloki) z kieszenią powietrza w środku (35%) albo korzeń góry lodowej: packed ice z rdzeniem z blue ice, 20–45 bloków pod wodę pod małą czapą (12%). Census przy −1024, −1024: 12,8 tys. bloków packed ice nad wodą i 26,6 tys. pod.
+- `generatorVersion` 21.

@@ -1,0 +1,17 @@
+{
+  "feature": "skyseas:island/lake_water",
+  "placement": [
+    {
+      "type": "minecraft:rarity_filter",
+      "chance": 6
+    },
+    {
+      "type": "minecraft:heightmap",
+      "heightmap": "WORLD_SURFACE_WG"
+    },
+    {
+      "type": "skyseas:layer_filter",
+      "layer": "sky"
+    }
+  ]
+}

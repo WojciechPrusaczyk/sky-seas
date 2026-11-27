@@ -25,6 +25,12 @@ public final class SkySeasWorldgen {
             PLACEMENTS.register("zone_count", () -> () -> ZoneCount.CODEC);
     public static final DeferredHolder<PlacementModifierType<?>, PlacementModifierType<DepthChance>> DEPTH_CHANCE =
             PLACEMENTS.register("depth_chance", () -> () -> DepthChance.CODEC);
+    public static final DeferredHolder<PlacementModifierType<?>, PlacementModifierType<IslandUnderside>> ISLAND_UNDERSIDE =
+            PLACEMENTS.register("island_underside", () -> () -> IslandUnderside.CODEC);
+    public static final DeferredHolder<Feature<?>, Feature<NoneFeatureConfiguration>> CASCADE =
+            FEATURES.register("cascade", CascadeFeature::new);
+    public static final DeferredHolder<Feature<?>, Feature<NoneFeatureConfiguration>> FROZEN_SEA =
+            FEATURES.register("frozen_sea", IceFeature::new);
     public static final DeferredHolder<Feature<?>, Feature<NoneFeatureConfiguration>> DIAMOND_NESTS =
             FEATURES.register("diamond_nests", DiamondNestFeature::new);
     public static final DeferredHolder<Feature<?>, Feature<NoneFeatureConfiguration>> SEABED_VENT =
