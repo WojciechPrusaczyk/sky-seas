@@ -709,8 +709,10 @@ public final class ContinentShape {
     /** Deepest cut of the water level below the original terrain; deeper rivers are dropped. */
     private static final double RIVER_MAX_CUT = 14.0;
     /** Extra pull towards the coast per block of edge distance lost (blocks of height). */
-    private static final double RIVER_EDGE_PULL = 0.35;
+    private static final double RIVER_EDGE_PULL = 0.25;
     private static final double RIVER_TURN = 0.6;
+    /** Shorter walks (about 160 blocks) are dropped: rivers should cross a good part of the land. */
+    private static final int RIVER_MIN_POINTS = 20;
     /** Beyond this distance past the half width the banks are above any terrain the river cuts. */
     private static final double RIVER_REACH = 1.0 + (RIVER_MAX_CUT + 1.0) / RIVER_BANK_SLOPE;
 
@@ -725,7 +727,7 @@ public final class ContinentShape {
         double r = prm[off + RADIUS];
         int want = r < 300.0 ? 1 : (r < 480.0 ? 2 : 3);
         int count = 0;
-        for (int attempt = 0; attempt < 4 * want && count < want; attempt++) {
+        for (int attempt = 0; attempt < 6 * want && count < want; attempt++) {
             if (walkRiver(p, seed, prm, off, count, 2000 + 100 * attempt)) {
                 count++;
                 prm[off + RIVER_COUNT] = count;
@@ -744,7 +746,7 @@ public final class ContinentShape {
         for (int k = 0; k < 12; k++) {
             double x = cx + ShapeMath.lerp(prm[off + BOX_MIN_X], prm[off + BOX_MAX_X], u(seed, salt + 2 * k));
             double z = cz + ShapeMath.lerp(prm[off + BOX_MIN_Z], prm[off + BOX_MAX_Z], u(seed, salt + 2 * k + 1));
-            if (column(p, prm, off, seed, x, z, EDGE) < 70.0 || column(p, prm, off, seed, x, z, MOUNTAIN) > 30.0
+            if (column(p, prm, off, seed, x, z, EDGE) < Math.max(70.0, 0.25 * prm[off + RADIUS]) || column(p, prm, off, seed, x, z, MOUNTAIN) > 30.0
                     || nearRiver(prm, off, index, x, z, 150.0)) {
                 continue;
             }
@@ -806,7 +808,7 @@ public final class ContinentShape {
                 }
                 setPoint(prm, o, n++, x, z, level, half);
                 finishRiver(prm, o, n);
-                return n >= 6;
+                return n >= RIVER_MIN_POINTS;
             }
             level = Math.min(level, Math.floor(bTop - riverDepth(frac)));
             if (bTop - level > RIVER_MAX_CUT) {

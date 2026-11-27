@@ -1,7 +1,6 @@
 package pl.skyseas.world;
 
 import net.minecraft.core.BlockPos;
-import net.minecraft.util.RandomSource;
 import net.minecraft.world.level.WorldGenLevel;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.LiquidBlock;
@@ -17,7 +16,7 @@ import pl.skyseas.layout.RegionLayout;
 /**
  * {@code skyseas:cascade}: waterfalls from the rim of large sky islands, once per chunk with a
  * chance. A source sits in a notch cut into the rim, the next block out holds flowing water
- * and below it falls down to whatever it meets (usually the sea), with shelves ({@link Cascades}). All as
+ * and below it falls down to whatever it meets (usually the sea). All as
  * finished fluid states, without fluid ticks; the states match what vanilla flow would give,
  * so a later update keeps the fall as it is.
  */
@@ -60,7 +59,7 @@ public final class CascadeFeature extends Feature<NoneFeatureConfiguration> {
             }
             for (int[] d : DIRS) {
                 if (level.getHeight(Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, x + d[0], z + d[1]) - 1 < top - DROP
-                        && place(level, ctx.random(), x, z, top, d)) {
+                        && place(level, x, z, top, d)) {
                     return true;
                 }
             }
@@ -78,7 +77,7 @@ public final class CascadeFeature extends Feature<NoneFeatureConfiguration> {
     }
 
     /** Notch at x, z in the surface block at top, fall from the column outward in direction d. */
-    private static boolean place(WorldGenLevel level, RandomSource random, int x, int z, int top, int[] d) {
+    private static boolean place(WorldGenLevel level, int x, int z, int top, int[] d) {
         BlockPos.MutableBlockPos p = new BlockPos.MutableBlockPos();
         int ox = x + d[0];
         int oz = z + d[1];
@@ -103,7 +102,7 @@ public final class CascadeFeature extends Feature<NoneFeatureConfiguration> {
         level.setBlock(p.set(x, top + 1, z), Blocks.AIR.defaultBlockState(), 2);
         level.setBlock(p.set(x, top, z), SOURCE, 2);
         level.setBlock(p.set(ox, top, oz), FLOWING, 2);
-        Cascades.fall(level, random, ox, top - 1, oz, d[0], d[1]);
+        Cascades.fall(level, ox, top - 1, oz);
         return true;
     }
 }

@@ -13,6 +13,7 @@ class RiverTest {
     void riversRunDownToTheCoast() {
         int continents = 0;
         int rivers = 0;
+        long points = 0;
         long t0 = System.nanoTime();
         for (long seed : new long[]{20261125L, -7998477474305010018L, 42L}) {
             Layout layout = new Layout(seed, P);
@@ -28,14 +29,16 @@ class RiverTest {
                         int count = (int) r.params[off + ContinentShape.RIVER_COUNT];
                         for (int k = 0; k < count; k++) {
                             rivers++;
+                            points += (long) r.params[off + ContinentShape.RIVER0 + ContinentShape.RIVER_STRIDE * k];
                             check(r.params, off, r.shapeSeed[i], off + ContinentShape.RIVER0 + ContinentShape.RIVER_STRIDE * k);
                         }
                     }
                 }
             }
         }
-        System.out.printf("RIVERS %d continents, %d rivers, %.0f ms%n", continents, rivers, (System.nanoTime() - t0) / 1e6);
-        assertTrue(rivers >= continents, "about one river or more per continent");
+        System.out.printf("RIVERS %d continents, %d rivers, mean length %.0f blocks, %.0f ms%n", continents, rivers,
+                8.0 * points / Math.max(1, rivers), (System.nanoTime() - t0) / 1e6);
+        assertTrue(rivers >= 1.5 * continents, "about two rivers per continent");
     }
 
     private static void check(double[] prm, int off, long seed, int o) {

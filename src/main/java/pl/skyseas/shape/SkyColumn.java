@@ -39,10 +39,17 @@ public final class SkyColumn {
             // Thin rims (small islands, tapered edges) are not undercut: it would cut off pieces.
             rim -= RIM_UNDERCUT * Math.max(0.0, n) * ShapeMath.clamp(depth, 0.0, RIM_UNDERCUT_DEPTH)
                     * ShapeMath.smoothstep(8.0, 20.0, top - bottom);
-            double r = RIM_ROUND_MIN + (RIM_ROUND_MAX - RIM_ROUND_MIN) * (0.5 + 0.5 * n);
+            // Rounded top and bottom edges; on thin rims (small islands) together a lens-shaped edge.
+            double r = Math.min(RIM_ROUND_MIN + (RIM_ROUND_MAX - RIM_ROUND_MIN) * (0.5 + 0.5 * n), 0.5 * (top - bottom));
+            double up = y - bottom;
             if (rim < r && depth < r && depth > 0.0) {
                 double a = r - Math.max(rim, 0.0);
                 double b = r - depth;
+                rim = Math.min(rim, r - Math.sqrt(a * a + b * b));
+            }
+            if (rim < r && up < r) {
+                double a = r - Math.max(rim, 0.0);
+                double b = r - up;
                 rim = Math.min(rim, r - Math.sqrt(a * a + b * b));
             }
         }

@@ -1,7 +1,6 @@
 package pl.skyseas.world;
 
 import net.minecraft.core.BlockPos;
-import net.minecraft.util.RandomSource;
 import net.minecraft.world.level.WorldGenLevel;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.state.BlockState;
@@ -17,8 +16,8 @@ import pl.skyseas.shape.ContinentShape;
  * ({@link ContinentShape#riverLevel}), once per chunk at the lakes step. Each channel column
  * is filled with water sources from the river level down to its bed. Where the water would
  * meet open air beside it: a lower river section (a step) gets a single fluid tick, so
- * vanilla makes the small fall once; the mouth over the cliff becomes a waterfall with
- * shelves ({@link Cascades}); anywhere else the gap is closed with a bank block.
+ * vanilla makes the small fall once; the mouth over the cliff becomes a straight waterfall
+ * ({@link Cascades}); anywhere else the gap is closed with a bank block.
  */
 public final class RiverFeature extends Feature<NoneFeatureConfiguration> {
     /** Deepest water column; a channel column without a bed within it hangs over the cliff. */
@@ -56,7 +55,6 @@ public final class RiverFeature extends Feature<NoneFeatureConfiguration> {
         if (!any) {
             return false;
         }
-        RandomSource random = ctx.random();
         BlockPos.MutableBlockPos p = new BlockPos.MutableBlockPos();
         BlockPos.MutableBlockPos q = new BlockPos.MutableBlockPos();
         boolean placed = false;
@@ -74,6 +72,13 @@ public final class RiverFeature extends Feature<NoneFeatureConfiguration> {
             for (int y = top; y > bed; y--) {
                 level.setBlock(p.set(x, y, z), Cascades.SOURCE, 2);
                 placed = true;
+            }
+            // No grass under water: dirt, with patches of gravel.
+            BlockState floor = level.getBlockState(p.set(x, bed, z));
+            if (bed < top && (floor.is(Blocks.GRASS_BLOCK) || floor.is(Blocks.PODZOL) || floor.is(Blocks.MYCELIUM)
+                    || floor.is(Blocks.SNOW_BLOCK) || floor.is(Blocks.DIRT_PATH))) {
+                boolean gravel = ((x * 31 + z * 17) & 7) < 2 ^ ((x >> 2) + (z >> 2) & 1) == 0;
+                level.setBlock(p, gravel ? Blocks.GRAVEL.defaultBlockState() : Blocks.DIRT.defaultBlockState(), 2);
             }
             for (int y = top; y > bed; y--) {
                 for (int[] d : DIRS) {
@@ -94,7 +99,7 @@ public final class RiverFeature extends Feature<NoneFeatureConfiguration> {
                         continue;
                     } else if (y == top && nearMouth(prm, offs, n, nx, nz)) {
                         level.setBlock(q.set(nx, y, nz), Cascades.FLOWING_1, 2);
-                        Cascades.fall(level, random, nx, y - 1, nz, d[0], d[1]);
+                        Cascades.fall(level, nx, y - 1, nz);
                     } else {
                         BlockState below = level.getBlockState(q.set(nx, y - 1, nz));
                         level.setBlock(q.set(nx, y, nz), below.isSolid() ? below : Blocks.STONE.defaultBlockState(), 2);
