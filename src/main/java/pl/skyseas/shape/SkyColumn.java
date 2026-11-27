@@ -21,8 +21,8 @@ public final class SkyColumn {
     /** Coast rim shaping (blocks): band from the outline, noise scale, undercut slope and depth, rounding radius. */
     private static final double RIM_BAND = 14.0;
     private static final double RIM_SCALE = 60.0;
-    private static final double RIM_UNDERCUT_MIN = 0.2;
-    private static final double RIM_UNDERCUT = 0.45;
+    /** Undercut on about half of the coast (more covers narrow towers and cuts pieces off). */
+    private static final double RIM_UNDERCUT = 0.5;
     private static final double RIM_UNDERCUT_DEPTH = 12.0;
     private static final double RIM_ROUND_MIN = 2.0;
     private static final double RIM_ROUND_MAX = 5.0;
@@ -36,7 +36,9 @@ public final class SkyColumn {
             // Coast rim (one 2D noise): a rounded top edge of varying radius, and an undercut on part of
             // the coast. Both only remove rock, so nothing grows past the outline.
             double n = SimplexNoise.noise2(noiseSeed + 7, x / RIM_SCALE, z / RIM_SCALE);
-            rim -= (RIM_UNDERCUT_MIN + RIM_UNDERCUT * Math.max(0.0, n)) * ShapeMath.clamp(depth, 0.0, RIM_UNDERCUT_DEPTH);
+            // Thin rims (small islands, tapered edges) are not undercut: it would cut off pieces.
+            rim -= RIM_UNDERCUT * Math.max(0.0, n) * ShapeMath.clamp(depth, 0.0, RIM_UNDERCUT_DEPTH)
+                    * ShapeMath.smoothstep(8.0, 20.0, top - bottom);
             double r = RIM_ROUND_MIN + (RIM_ROUND_MAX - RIM_ROUND_MIN) * (0.5 + 0.5 * n);
             if (rim < r && depth < r && depth > 0.0) {
                 double a = r - Math.max(rim, 0.0);

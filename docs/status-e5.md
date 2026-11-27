@@ -60,5 +60,5 @@ Census (r = 5 chunków):
 - Kaskady (losowe i z ujść rzek): półki co 20–30 bloków, skalna miseczka z oczkiem 3×3 (powietrze nad rogami, do złapania oddechu przy płynięciu w górę), wylot na zmianę w przeciwne strony.
 - `/skyseas locate river|river_mouth`.
 - Glow lichen pod wyspami: 16 → 3 próby na chunk.
-- Krawędzie wysp (`SkyColumn.density`, jeden szum 2D liczony tylko przy obrzeżu): zaokrąglona górna krawędź (promień 2–5) i podcięcie ściany w dół (stałe 0,2 plus do 0,45 zależnie od szumu, do 12 bloków pod wierzchem). Tylko zabiera skałę, nic nie wychodzi poza obrys.
-- `generatorVersion` 25.
+- Krawędzie wysp (`SkyColumn.density`, jeden szum 2D liczony tylko przy obrzeżu): zaokrąglona górna krawędź (promień 2–5) i podcięcie ściany w dół na ok. połowie wybrzeża (do 0,5 bloku na blok, do 12 bloków pod wierzchem, tylko przy kolumnach grubszych niż ok. 8–20 bloków). Szersze podcięcie (stałe minimum, przesunięty próg) odrywało kawałki od wąskich wież w `LayoutTest` i GameTeście, więc zostało wycofane. Tylko zabiera skałę, nic nie wychodzi poza obrys.
+- `generatorVersion` 26.
