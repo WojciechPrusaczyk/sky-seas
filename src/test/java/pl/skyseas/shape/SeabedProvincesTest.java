@@ -17,7 +17,7 @@ class SeabedProvincesTest {
         int n = 0;
         for (int x = -12000; x <= 12000; x += 60) {
             for (int z = -12000; z <= 12000; z += 60) {
-                count[SeabedProvinces.dominant(P, SEED, 0.0, x, z)]++;
+                count[SeabedProvinces.dominant(P, SEED, x, z)]++;
                 n++;
             }
         }
@@ -46,7 +46,7 @@ class SeabedProvincesTest {
                 double hi = -1000.0;
                 for (int x = wx; x < wx + 64; x += 4) {
                     for (int z = wz; z < wz + 64; z += 4) {
-                        double h = SeabedProvinces.height(P, SEED, 0.0, x, z, BASE);
+                        double h = SeabedProvinces.height(P, SEED, x, z, BASE);
                         lo = Math.min(lo, h);
                         hi = Math.max(hi, h);
                     }
@@ -71,8 +71,8 @@ class SeabedProvincesTest {
         int pillars = 0;
         for (int x = -4000; x <= 4000; x += 8) {
             for (int z = -4000; z <= 4000; z += 8) {
-                int k = SeabedProvinces.dominant(P, SEED, 0.0, x, z);
-                double rise = SeabedProvinces.height(P, SEED, 0.0, x, z, BASE) - BASE;
+                int k = SeabedProvinces.dominant(P, SEED, x, z);
+                double rise = SeabedProvinces.height(P, SEED, x, z, BASE) - BASE;
                 cones += k == SeabedProvinces.VOLCANIC && rise > 20.0 ? 1 : 0;
                 pillars += k == SeabedProvinces.ROCKY && rise > 25.0 ? 1 : 0;
             }

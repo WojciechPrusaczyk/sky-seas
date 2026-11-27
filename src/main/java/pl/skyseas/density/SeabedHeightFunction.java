@@ -46,7 +46,7 @@ public record SeabedHeightFunction(DensityFunction root, Layout layout, DensityF
         if (layout == null) {
             return base;
         }
-        base = SeabedProvinces.height(WorldParams.DEFAULTS, layout.seabedSeed(), temperature.compute(ctx), ctx.blockX(),
+        base = SeabedProvinces.height(WorldParams.DEFAULTS, layout.seabedSeed(), ctx.blockX(),
                 ctx.blockZ(), base);
         return layout.oceanHeight(ctx.blockX(), ctx.blockZ(), base);
     }

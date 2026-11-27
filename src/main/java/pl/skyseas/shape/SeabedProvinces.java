@@ -9,8 +9,9 @@ import pl.skyseas.layout.Hash;
  * are hills and underwater mountain ranges, canyon networks cut down to near the bedrock,
  * fields of small cones, scarps with terraces and table plateaus, and pillar fields.
  *
- * <p>A plains noise picks the plains; elsewhere the angle of a 2D noise vector picks the
- * province, each owning a sector sized by its weight, blended at the sector borders.
+ * <p>Provinces are warped Voronoi cells of about {@code provinceScale} blocks, each given one
+ * province by its weight (plains by {@code plainsShare}), blended over {@code provinceBlend}
+ * blocks at the borders.
  * Everything is a 2D height (the seabed stays a heightmap, so the roof and caves follow
  * it); single forms (cones, pillars) appear with a chance scaled by their province weight
  * at their centre, so they are never cut in half by a border.
@@ -23,87 +24,81 @@ public final class SeabedProvinces {
     public static final int ROCKY = 4;
     public static final int PLAINS = 5;
     public static final String[] NAMES = {"hills", "canyons", "volcanic", "plateaus", "rocky", "plains"};
-    private static final int COUNT = 5;
-    /** Plains noise above the threshold is plains: measured quantiles of the simplex noise. */
-    private static final double[] PLAINS_QUANTILES = {0.0, 0.05, 0.10, 0.15, 0.20, 0.30};
-    private static final double[] PLAINS_THRESHOLDS = {1.0, 0.83, 0.74, 0.65, 0.56, 0.37};
-    private static final double PLAINS_EDGE = 0.08;
-    /** Sector border blend (turns of the angle) per unit of provinceBlend. */
-    private static final double BLEND_TURNS = 0.06;
+    private static final int COUNT = 6;
     private static final double SOFT_CAP = 6.0;
 
     private SeabedProvinces() {
     }
 
-    /** Plains weight 0..1 at a column. */
-    public static double plains(WorldParams p, long seed, double x, double z) {
+    /** Weight 0..1 of a province at a column; the six weights sum to 1. */
+    public static double weight(WorldParams p, long seed, double x, double z, int province) {
         WorldParams.SeabedForms f = p.seabedForms();
-        double n = SimplexNoise.noise2(seed + 11, x / (1.3 * f.provinceScale()), z / (1.3 * f.provinceScale()));
-        double t = threshold(f.plainsShare());
-        return ShapeMath.smoothstep(t - PLAINS_EDGE, t + PLAINS_EDGE, n);
-    }
-
-    private static double threshold(double share) {
-        for (int k = 1; k < PLAINS_QUANTILES.length; k++) {
-            if (share <= PLAINS_QUANTILES[k]) {
-                double t = (share - PLAINS_QUANTILES[k - 1]) / (PLAINS_QUANTILES[k] - PLAINS_QUANTILES[k - 1]);
-                return ShapeMath.lerp(PLAINS_THRESHOLDS[k - 1], PLAINS_THRESHOLDS[k], t);
+        double cell = f.provinceScale();
+        // Warped cells give organic borders instead of straight Voronoi edges.
+        double wx = x + 0.3 * cell * SimplexNoise.noise2(seed + 12, x / (0.6 * cell), z / (0.6 * cell));
+        double wz = z + 0.3 * cell * SimplexNoise.noise2(seed + 13, x / (0.6 * cell), z / (0.6 * cell));
+        int ci = (int) Math.floor(wx / cell);
+        int cj = (int) Math.floor(wz / cell);
+        double dmin = Double.MAX_VALUE;
+        for (int di = -1; di <= 1; di++) {
+            for (int dj = -1; dj <= 1; dj++) {
+                dmin = Math.min(dmin, distance(seed, cell, ci + di, cj + dj, wx, wz));
             }
         }
-        return PLAINS_THRESHOLDS[PLAINS_THRESHOLDS.length - 1];
-    }
-
-    /** Weight 0..1 of one of the five non-plains provinces at a column, before the plains weight. */
-    public static double weight(WorldParams p, long seed, double temperature, double x, double z, int province) {
-        return weight(p.seabedForms(), turn(p, seed, x, z), temperature, province);
-    }
-
-    /** Angle of the province noise vector at a column, in turns 0..1. */
-    private static double turn(WorldParams p, long seed, double x, double z) {
-        WorldParams.SeabedForms f = p.seabedForms();
-        double a = SimplexNoise.noise2(seed + 12, x / f.provinceScale(), z / f.provinceScale());
-        double b = SimplexNoise.noise2(seed + 13, x / f.provinceScale(), z / f.provinceScale());
-        return (Math.atan2(b, a) / (2.0 * Math.PI)) + 0.5;
-    }
-
-    private static double weight(WorldParams.SeabedForms f, double turn, double temperature, int province) {
-        double cold = ShapeMath.clamp(-temperature * 2.0, -1.0, 1.0);
+        double mine = 0.0;
         double total = 0.0;
-        for (int k = 0; k < COUNT; k++) {
-            total += tilted(f, k, cold);
+        for (int di = -1; di <= 1; di++) {
+            for (int dj = -1; dj <= 1; dj++) {
+                double d = distance(seed, cell, ci + di, cj + dj, wx, wz);
+                double w = 1.0 - ShapeMath.smoothstep(0.0, f.provinceBlend(), d - dmin);
+                if (w > 0.0) {
+                    total += w;
+                    if (provinceOf(f, seed, ci + di, cj + dj) == province) {
+                        mine += w;
+                    }
+                }
+            }
         }
-        double start = 0.0;
-        for (int k = 0; k < province; k++) {
-            start += tilted(f, k, cold) / total;
-        }
-        double end = start + tilted(f, province, cold) / total;
-        double bw = BLEND_TURNS * f.provinceBlend();
-        return sector(turn, start, end, bw) + sector(turn - 1.0, start, end, bw) + sector(turn + 1.0, start, end, bw);
+        return mine / total;
     }
 
-    private static double sector(double t, double start, double end, double bw) {
-        return ShapeMath.smoothstep(start - bw, start + bw, t) * (1.0 - ShapeMath.smoothstep(end - bw, end + bw, t));
+    /** Plains weight 0..1 at a column. */
+    public static double plains(WorldParams p, long seed, double x, double z) {
+        return weight(p, seed, x, z, PLAINS);
     }
 
-    private static double tilted(WorldParams.SeabedForms f, int province, double cold) {
-        return switch (province) {
-            case HILLS -> f.hillsWeight();
-            case CANYONS -> f.canyonsWeight();
-            case VOLCANIC -> f.volcanicWeight() * (1.0 + 0.6 * cold);
-            case PLATEAUS -> f.plateausWeight() * (1.0 - 0.4 * cold);
-            default -> f.rockyWeight();
-        };
+    private static double distance(long seed, double cell, int ci, int cj, double x, double z) {
+        long s = Hash.hash(seed + 14, ci, cj);
+        double cx = (ci + 0.15 + 0.7 * Hash.unit(Hash.hash(s, 1))) * cell;
+        double cz = (cj + 0.15 + 0.7 * Hash.unit(Hash.hash(s, 2))) * cell;
+        return Math.hypot(x - cx, z - cz);
+    }
+
+    private static int provinceOf(WorldParams.SeabedForms f, long seed, int ci, int cj) {
+        double u = Hash.unit(Hash.hash(Hash.hash(seed + 14, ci, cj), 3));
+        if (u < f.plainsShare()) {
+            return PLAINS;
+        }
+        double total = f.hillsWeight() + f.canyonsWeight() + f.volcanicWeight() + f.plateausWeight() + f.rockyWeight();
+        double v = (u - f.plainsShare()) / (1.0 - f.plainsShare()) * total;
+        if ((v -= f.hillsWeight()) < 0.0) {
+            return HILLS;
+        }
+        if ((v -= f.canyonsWeight()) < 0.0) {
+            return CANYONS;
+        }
+        if ((v -= f.volcanicWeight()) < 0.0) {
+            return VOLCANIC;
+        }
+        return v - f.plateausWeight() < 0.0 ? PLATEAUS : ROCKY;
     }
 
     /** Dominant province at a column (tools, map, tests). */
-    public static int dominant(WorldParams p, long seed, double temperature, double x, double z) {
-        if (plains(p, seed, x, z) > 0.5) {
-            return PLAINS;
-        }
+    public static int dominant(WorldParams p, long seed, double x, double z) {
         int best = 0;
         double bw = -1.0;
         for (int k = 0; k < COUNT; k++) {
-            double w = weight(p, seed, temperature, x, z, k);
+            double w = weight(p, seed, x, z, k);
             if (w > bw) {
                 bw = w;
                 best = k;
@@ -113,17 +108,16 @@ public final class SeabedProvinces {
     }
 
     /** Seabed height with the province forms raised on the E1 seabed {@code base}. */
-    public static double height(WorldParams p, long seed, double temperature, double x, double z, double base) {
+    public static double height(WorldParams p, long seed, double x, double z, double base) {
         WorldParams.SeabedForms f = p.seabedForms();
         double q = 1.0 - plains(p, seed, x, z);
         if (q <= 0.0) {
             return base;
         }
-        double turn = turn(p, seed, x, z);
         double h = base + q * f.midAmplitude() * (0.65 * SimplexNoise.noise2(seed + 20, x / 110.0, z / 110.0)
                 + 0.35 * SimplexNoise.noise2(seed + 21, x / 55.0, z / 55.0));
 
-        double wh = q * weight(f, turn, temperature, HILLS);
+        double wh = weight(p, seed, x, z, HILLS);
         if (wh > 0.0) {
             double hills = f.hillAmplitude() * SimplexNoise.noise2(seed + 22, x / 160.0, z / 160.0);
             double ridge = 1.0 - Math.abs(SimplexNoise.noise2(seed + 23, x / 280.0, z / 280.0));
@@ -131,7 +125,7 @@ public final class SeabedProvinces {
             h += wh * (hills + f.mountainAmplitude() * ridge * ridge * ridge * ranges);
         }
 
-        double wt = q * weight(f, turn, temperature, PLATEAUS);
+        double wt = weight(p, seed, x, z, PLATEAUS);
         if (wt > 0.0) {
             double u = 0.5 * (SimplexNoise.noise2(seed + 25, x / 320.0, z / 320.0) + 1.0) * f.terraceSteps();
             double level = Math.floor(u);
@@ -142,11 +136,11 @@ public final class SeabedProvinces {
             h += wt * (terrace + mesa - 0.5 * f.terraceStep());
         }
 
-        double wc = q * weight(f, turn, temperature, CANYONS);
+        double wc = weight(p, seed, x, z, CANYONS);
         if (wc > 0.0) {
             double cut = ShapeMath.smoothstep(0.1, 0.45, wc);
-            double wx = x + 50.0 * SimplexNoise.noise2(seed + 27, x / 220.0, z / 220.0);
-            double wz = z + 50.0 * SimplexNoise.noise2(seed + 28, x / 220.0, z / 220.0);
+            double wx = x + 35.0 * SimplexNoise.noise2(seed + 27, x / 300.0, z / 300.0);
+            double wz = z + 35.0 * SimplexNoise.noise2(seed + 28, x / 300.0, z / 300.0);
             double main = canyon(SimplexNoise.noise2(seed + 29, wx / f.canyonScale(), wz / f.canyonScale()), f.canyonWidth());
             double side = canyon(SimplexNoise.noise2(seed + 30, wx / f.branchScale(), wz / f.branchScale()), f.branchWidth());
             // Floors stay well above Y -54: aquifer cells below it (vanilla lava level) dry out open water nearby.
@@ -162,8 +156,18 @@ public final class SeabedProvinces {
             h = hc;
         }
 
-        h += cones(p, seed, temperature, x, z, q);
-        h += pillars(p, seed, temperature, x, z, q);
+        double wv = weight(p, seed, x, z, VOLCANIC);
+        if (wv > 0.0) {
+            // Cone fields stand on a broad volcanic swell.
+            h += wv * 6.0 * (1.0 + SimplexNoise.noise2(seed + 33, x / 260.0, z / 260.0));
+        }
+        double wr = weight(p, seed, x, z, ROCKY);
+        if (wr > 0.0) {
+            double crag = 1.0 - Math.abs(SimplexNoise.noise2(seed + 34, x / 48.0, z / 48.0));
+            h += wr * 12.0 * crag * crag * crag;
+        }
+        h += cones(p, seed, x, z);
+        h += pillars(p, seed, x, z);
 
         double cap = f.maxY() - SOFT_CAP;
         if (h > cap) {
@@ -185,10 +189,10 @@ public final class SeabedProvinces {
         if (ridge <= 0.0) {
             return 0.0;
         }
-        return 0.45 * ShapeMath.smoothstep(0.0, 0.12, ridge) + 0.55 * ShapeMath.smoothstep(0.3, 0.45, ridge);
+        return 0.4 * ShapeMath.smoothstep(0.0, 0.1, ridge) + 0.6 * ShapeMath.smoothstep(0.35, 0.45, ridge);
     }
 
-    private static double cones(WorldParams p, long seed, double temperature, double x, double z, double q) {
+    private static double cones(WorldParams p, long seed, double x, double z) {
         WorldParams.SeabedForms f = p.seabedForms();
         int cell = f.coneCell();
         int ci = (int) Math.floor(x / cell);
@@ -204,13 +208,13 @@ public final class SeabedProvinces {
                 double cx = (ci + di + Hash.unit(Hash.hash(s, 2))) * cell;
                 double cz = (cj + dj + Hash.unit(Hash.hash(s, 3))) * cell;
                 // Small cones are common, large ones rare.
-                double size = Math.pow(Hash.unit(Hash.hash(s, 4)), 1.8);
+                double size = Math.pow(Hash.unit(Hash.hash(s, 4)), 1.2);
                 double r = ShapeMath.lerp(f.coneRadiusMin(), f.coneRadiusMax(), size);
                 double d = Math.hypot(x - cx, z - cz);
                 if (d >= r) {
                     continue;
                 }
-                double w = (1.0 - plains(p, seed, cx, cz)) * weight(p, seed, temperature, cx, cz, VOLCANIC);
+                double w = weight(p, seed, cx, cz, VOLCANIC);
                 if (roll >= f.coneChance() * w) {
                     continue;
                 }
@@ -230,7 +234,7 @@ public final class SeabedProvinces {
         return best;
     }
 
-    private static double pillars(WorldParams p, long seed, double temperature, double x, double z, double q) {
+    private static double pillars(WorldParams p, long seed, double x, double z) {
         WorldParams.SeabedForms f = p.seabedForms();
         int cell = f.pillarCell();
         int ci = (int) Math.floor(x / cell);
@@ -250,7 +254,7 @@ public final class SeabedProvinces {
                 if (d >= 2.2 * r) {
                     continue;
                 }
-                double w = (1.0 - plains(p, seed, cx, cz)) * weight(p, seed, temperature, cx, cz, ROCKY);
+                double w = weight(p, seed, cx, cz, ROCKY);
                 if (roll >= f.pillarChance() * w) {
                     continue;
                 }

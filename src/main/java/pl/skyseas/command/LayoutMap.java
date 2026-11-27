@@ -135,12 +135,37 @@ final class LayoutMap {
         Files.createDirectories(dir);
         Path file = dir.resolve("map-" + LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMdd-HHmmss")) + ".png");
         ImageIO.write(img, "png", file.toFile());
+        if (seabed != null) {
+            ImageIO.write(seabedImage(seabed, x0, z0, size, scale), "png",
+                    dir.resolve(file.getFileName().toString().replace("map-", "seabed-")).toFile());
+        }
         return String.format(java.util.Locale.ROOT,
                 "[Sky Seas] map: %dx%d px, %d blocks/px, centre %d,%d, land %.1f%%, sky visibility %.2f%% of %d points, "
                         + "%d ms, layout regions cached %d\n  png: %s",
                 size, size, scale, centerX, centerZ, 100.0 * land / ((double) size * size),
                 points == 0 ? 100.0 : 100.0 * (points - blind) / points, points, ms,
                 layout.cache().size(), file.toAbsolutePath());
+    }
+
+    /** Seabed heights (deep blue to sand) with hillshade from the north-west; land above sea level grey. */
+    private static BufferedImage seabedImage(SeabedHeightFunction seabed, int x0, int z0, int size, int scale) {
+        double[] h = new double[(size + 1) * (size + 1)];
+        for (int py = 0; py <= size; py++) {
+            for (int px = 0; px <= size; px++) {
+                h[py * (size + 1) + px] = seabed.compute(new DensityFunction.SinglePointContext(x0 + px * scale, 0, z0 + py * scale));
+            }
+        }
+        BufferedImage img = new BufferedImage(size, size, BufferedImage.TYPE_INT_RGB);
+        for (int py = 0; py < size; py++) {
+            for (int px = 0; px < size; px++) {
+                double v = h[py * (size + 1) + px];
+                double slope = (2.0 * v - h[py * (size + 1) + px + 1] - h[(py + 1) * (size + 1) + px]) / scale;
+                int rgb = v >= 63.0 ? 0x909090 : lerpColor(0x0A1E5A, 0xD8C890, (v + 50.0) / 80.0);
+                img.setRGB(px, py, slope > 0 ? lerpColor(rgb, 0xFFFFFF, Math.min(0.5, slope * 0.4))
+                        : lerpColor(rgb, 0x000000, Math.min(0.6, -slope * 0.4)));
+            }
+        }
+        return img;
     }
 
     /** Ocean islands (sand to green) and shallows (turquoise, lighter when shallower). */

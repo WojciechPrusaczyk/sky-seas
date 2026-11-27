@@ -414,18 +414,18 @@ public record WorldParams(
                 200.0,
                 260.0),
             new SeabedForms(
-                650.0,
+                800.0,
                 0.10,
                 1.0, 1.0, 1.0, 0.8, 0.8,
-                0.5,
+                90.0,
                 7.0,
                 18.0,
                 42.0,
-                360.0, 0.055, -45.0,
-                170.0, 0.07, -34.0,
-                60, 0.75, 7.0, 26.0, 5.0, 38.0,
+                600.0, 0.2, -45.0,
+                260.0, 0.14, -34.0,
+                48, 0.75, 7.0, 26.0, 5.0, 38.0,
                 14.0, 3,
-                44, 0.45, 4.5, 9.0, 18.0, 55.0,
+                34, 0.5, 4.5, 9.0, 18.0, 55.0,
                 24.0));
 
     /** Distance at which the zone factor reaches 1 (start of the Edge). */
@@ -435,17 +435,16 @@ public record WorldParams(
 
     /**
      * Seabed provinces (round 3 of E3): soft regions of the seabed, each with its own set of
-     * forms, so the floor is rarely a flat plain. Weights are relative; the temperature tilts
-     * them (volcanic fields in cold water, plateaus in warm).
+     * forms, so the floor is rarely a flat plain. Weights are relative.
      *
-     * @param provinceScale           wavelength of the province noise
+     * @param provinceScale           size of a province cell (warped Voronoi)
      * @param plainsShare             share of the seabed left as plains with dunes
      * @param hillsWeight             hills and underwater mountain ranges
      * @param canyonsWeight           canyon networks down to near the bedrock
      * @param volcanicWeight          fields of small cones
      * @param plateausWeight          scarps, terraces and table plateaus
      * @param rockyWeight             pillars and columns
-     * @param provinceBlend           noise distance over which provinces blend (larger = softer borders)
+     * @param provinceBlend           blocks over which neighbouring provinces blend
      * @param midAmplitude            medium-scale bumps (every 50-150 blocks) outside plains
      * @param hillAmplitude           rolling hills in the hills province
      * @param mountainAmplitude       ridged mountain ranges in the hills province
