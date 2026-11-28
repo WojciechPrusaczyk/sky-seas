@@ -21,8 +21,8 @@ import pl.skyseas.shape.ContinentShape;
 public final class RiverFeature extends Feature<NoneFeatureConfiguration> {
     /** Deepest water column; a channel column without a bed within it hangs over the cliff. */
     private static final int MAX_DEPTH = 16;
-    /** Neighbours within this distance of a river mouth fall instead of getting a bank. */
-    private static final double MOUTH = 1.6;
+    /** Neighbours within the river's half width plus this of the mouth axis fall instead of getting a bank. */
+    private static final double MOUTH_MARGIN = 1.0;
     private static final int[][] DIRS = {{1, 0}, {-1, 0}, {0, 1}, {0, -1}};
 
     public RiverFeature() {
@@ -151,7 +151,9 @@ public final class RiverFeature extends Feature<NoneFeatureConfiguration> {
                 double vz = prm[last + 1] - prm[prev + 1];
                 double t = Math.max(0.0, Math.min(1.0, ((x + 0.5 - prm[prev]) * vx + (z + 0.5 - prm[prev + 1]) * vz)
                         / (vx * vx + vz * vz)));
-                if (Math.hypot(x + 0.5 - prm[prev] - t * vx, z + 0.5 - prm[prev + 1] - t * vz) < MOUTH) {
+                // The whole width falls: a narrower fall left a row of bank blocks in front of the water.
+                if (Math.hypot(x + 0.5 - prm[prev] - t * vx, z + 0.5 - prm[prev + 1] - t * vz)
+                        < prm[last + 3] + MOUTH_MARGIN) {
                     return true;
                 }
             }

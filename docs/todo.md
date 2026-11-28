@@ -14,6 +14,7 @@ Lista uwag użytkownika do zrobienia po pomiarach E7 (2026-11-28). Kolejność w
    - kamień przy brzegach (domurowane dziury) tworzy dziwne ściany, a przy zawijasach wygląda jeszcze gorzej: usunąć ten kamień;
    - na zakręcie przy zmianie wysokości terenu dzieją się dziwne rzeczy;
    - nie zawsze jedna nitka: czasem może się rozdzielić (rozwidlenie).
+   - na ujściu przed wodospadem zawsze stał rząd bloków. Zrobione (generatorVersion 35): wodospad na całą szerokość rzeki; wcześniej spadało tylko ok. 3 bloki przy osi, a resztę łatał brzeg.
    - Zrobione (generatorVersion 32): bez zawracania i pętli, dwie połowy rzeki uchodzą na różnych brzegach, poziom wody liczony też z brzegów (mniej dziur do łatania), łatanie ziemią zamiast kamienia, rozwidlenie w ok. 1 na 6 rzek. Do sprawdzenia w grze.
 3. **Cherry grove** generuje się zawsze bardzo mały: ma być nieco większy.
    - Zrobione (generatorVersion 34): płaty szumu `skyseas:cherry_patches` na powierzchni wysp (bez gór i klastrów tematycznych) dostają klimat komórki cherry grove. Próbka 654 punktów na wyspach: cherry 1% → 6%, gaje do ok. 350×350 bloków.
