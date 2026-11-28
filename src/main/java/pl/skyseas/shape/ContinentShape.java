@@ -107,7 +107,7 @@ public final class ContinentShape {
      */
     public static final int RIVER_COUNT = SPIRE0 + SPIRE_STRIDE * MAX_SPIRES;
     public static final int RIVER0 = RIVER_COUNT + 1;
-    public static final int MAX_RIVERS = 3;
+    public static final int MAX_RIVERS = 4;
     public static final int RIVER_HEADER = 5;
     public static final int RIVER_POINT = 4;
     public static final int MAX_RIVER_POINTS = 140;
@@ -711,34 +711,55 @@ public final class ContinentShape {
     /** Extra pull towards the coast per block of edge distance lost (blocks of height). */
     private static final double RIVER_EDGE_PULL = 0.25;
     private static final double RIVER_TURN = 0.6;
-    /** Shorter walks (about 160 blocks) are dropped: rivers should cross a good part of the land. */
-    private static final int RIVER_MIN_POINTS = 20;
+    /** Shorter branches (about 100 blocks) are dropped: a river crosses a good part of the land. */
+    private static final int RIVER_MIN_POINTS = 12;
     /** Beyond this distance past the half width the banks are above any terrain the river cuts. */
     private static final double RIVER_REACH = 1.0 + (RIVER_MAX_CUT + 1.0) / RIVER_BANK_SLOPE;
 
     /**
-     * Rivers of a continent (call after {@link #place}): 1-3 by size, each from a high spot
-     * away from the coast (not on a mountain) down the terrain to the coast, where it falls
-     * off the island. The water level never rises downstream and never sits more than
-     * {@link #RIVER_MAX_CUT} below the terrain; a walk that does not reach the coast is dropped.
+     * Rivers of a continent (call after {@link #place}): 1-2 by size, each crossing the land
+     * from coast to coast. A river is two branches stored as two rivers: both start at the
+     * same high spot away from the coast (not on a mountain), run in opposite directions
+     * down the terrain and fall off the island at their mouths, so the river has no source
+     * pool. The water level never rises downstream and never sits more than
+     * {@link #RIVER_MAX_CUT} below the terrain; a branch that does not reach the coast
+     * drops the whole river.
      */
     public static void placeRivers(WorldParams p, long seed, double[] prm, int off) {
         prm[off + RIVER_COUNT] = 0;
-        double r = prm[off + RADIUS];
-        int want = r < 300.0 ? 1 : (r < 480.0 ? 2 : 3);
+        int want = prm[off + RADIUS] < 400.0 ? 2 : 4;
         int count = 0;
-        for (int attempt = 0; attempt < 6 * want && count < want; attempt++) {
-            if (walkRiver(p, seed, prm, off, count, 2000 + 100 * attempt)) {
-                count++;
+        for (int attempt = 0; attempt < 3 * want && count < want; attempt++) {
+            int salt = 2000 + 100 * attempt;
+            if (walkRiver(p, seed, prm, off, count, salt, false)) {
+                prm[off + RIVER_COUNT] = count + 1;
+                if (walkRiver(p, seed, prm, off, count + 1, salt, true)) {
+                    count += 2;
+                }
                 prm[off + RIVER_COUNT] = count;
             }
         }
     }
 
-    private static boolean walkRiver(WorldParams p, long seed, double[] prm, int off, int index, int salt) {
+    /**
+     * One branch into river slot {@code index}; with {@code second} it starts at the source
+     * of the branch in slot {@code index - 1} and heads the other way.
+     */
+    private static boolean walkRiver(WorldParams p, long seed, double[] prm, int off, int index, int salt,
+            boolean second) {
         int o = off + RIVER0 + RIVER_STRIDE * index;
         double cx = prm[off + CX];
         double cz = prm[off + CZ];
+        // Width of the whole river (both branches): 1x (a stream) to 2x (a broad river).
+        double widen = 1.0 + u(seed, salt + 50);
+        if (second) {
+            int a = o - RIVER_STRIDE + RIVER_HEADER;
+            int b = a + RIVER_POINT;
+            double sx = prm[a];
+            double sz = prm[a + 1];
+            return walkFrom(p, seed, prm, off, index, o, sx, sz, column(p, prm, off, seed, sx, sz, TERRAIN),
+                    Math.atan2(sz - prm[b + 1], sx - prm[b]), widen, index - 1);
+        }
         // Source: the highest of a few interior spots off the mountains and away from other rivers.
         double sx = 0.0;
         double sz = 0.0;
@@ -747,7 +768,7 @@ public final class ContinentShape {
             double x = cx + ShapeMath.lerp(prm[off + BOX_MIN_X], prm[off + BOX_MAX_X], u(seed, salt + 2 * k));
             double z = cz + ShapeMath.lerp(prm[off + BOX_MIN_Z], prm[off + BOX_MAX_Z], u(seed, salt + 2 * k + 1));
             if (column(p, prm, off, seed, x, z, EDGE) < Math.max(70.0, 0.25 * prm[off + RADIUS]) || column(p, prm, off, seed, x, z, MOUNTAIN) > 30.0
-                    || nearRiver(prm, off, index, x, z, 150.0)) {
+                    || nearRiver(prm, off, 0, index, x, z, 150.0)) {
                 continue;
             }
             double t = column(p, prm, off, seed, x, z, TOP);
@@ -760,14 +781,21 @@ public final class ContinentShape {
         if (sTop < -1.0e8) {
             return false;
         }
-        double heading = Math.atan2(sz - cz, sx - cx);
+        return walkFrom(p, seed, prm, off, index, o, sx, sz, sTop, Math.atan2(sz - cz, sx - cx), widen, -1);
+    }
+
+    /** Walks a branch from its source down to the coast; {@code sibling} is the other branch or -1. */
+    private static boolean walkFrom(WorldParams p, long seed, double[] prm, int off, int index, int o,
+            double sx, double sz, double sTop, double heading, double widen, int sibling) {
+        // Rivers this branch must keep away from: all earlier ones but its own sibling.
+        int others = sibling < 0 ? index : sibling;
         double x = sx;
         double z = sz;
         double top = sTop;
         double edge = column(p, prm, off, seed, x, z, EDGE);
         double level = Math.floor(top - riverDepth(0.0));
         int n = 0;
-        setPoint(prm, o, n++, x, z, level, 5.0);
+        setPoint(prm, o, n++, x, z, level, 3.0 * widen);
         while (n < MAX_RIVER_POINTS) {
             double best = Double.MAX_VALUE;
             double bx = 0.0;
@@ -781,8 +809,11 @@ public final class ContinentShape {
                 double nz = z + RIVER_STEP * Math.sin(a);
                 double e = column(p, prm, off, seed, nx, nz, EDGE);
                 double t = e > 0.0 ? column(p, prm, off, seed, nx, nz, TOP) : top - 20.0;
+                boolean near = nearRiver(prm, off, 0, others, nx, nz, 40.0)
+                        || sibling >= 0 && Math.hypot(nx - sx, nz - sz) > 48.0
+                        && nearRiver(prm, off, sibling, sibling + 1, nx, nz, 40.0);
                 double score = t - top + RIVER_EDGE_PULL * (e - edge) + RIVER_TURN * Math.abs(k)
-                        + (nearRiver(prm, off, index, nx, nz, 40.0) ? 100.0 : 0.0);
+                        + (near ? 100.0 : 0.0);
                 if (score < best) {
                     best = score;
                     bx = nx;
@@ -799,7 +830,7 @@ public final class ContinentShape {
             z = bz;
             heading = bHeading;
             double frac = Math.min(1.0, n / 60.0);
-            double half = n < 2 ? 5.0 : 3.0 + 3.0 * frac;
+            double half = (3.0 + 3.0 * frac) * widen;
             if (bEdge <= 2.0) {
                 // The mouth: just past the rim, so the channel cuts through it.
                 for (int k = 0; k < 6 && column(p, prm, off, seed, x, z, EDGE) > -2.0; k++) {
@@ -854,8 +885,8 @@ public final class ContinentShape {
         prm[o + 4] = maxZ;
     }
 
-    private static boolean nearRiver(double[] prm, int off, int rivers, double x, double z, double distance) {
-        for (int r = 0; r < rivers; r++) {
+    private static boolean nearRiver(double[] prm, int off, int from, int to, double x, double z, double distance) {
+        for (int r = from; r < to; r++) {
             int o = off + RIVER0 + RIVER_STRIDE * r;
             for (int i = 0, n = (int) prm[o]; i < n; i++) {
                 int q = o + RIVER_HEADER + RIVER_POINT * i;
@@ -901,7 +932,7 @@ public final class ContinentShape {
     private static double channel(double d, double level, double half) {
         if (d < half) {
             double q = d / half;
-            return level - riverDepth(Math.min(1.0, (half - 3.0) / 3.0)) * (1.0 - q * q);
+            return level - riverDepth(ShapeMath.clamp((half - 3.0) / 3.0, 0.0, 1.0)) * (1.0 - q * q);
         }
         return level + 1.0 + (d - half) * RIVER_BANK_SLOPE;
     }

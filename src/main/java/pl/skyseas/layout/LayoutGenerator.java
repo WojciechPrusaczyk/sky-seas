@@ -549,14 +549,14 @@ public final class LayoutGenerator {
                     double top = ShapeMath.lerp(f.towerTopMin(), f.skyMaxY() - 2.0, band);
                     double h = Math.min(ShapeMath.lerp(f.towerHeightMin(), f.towerHeightMax(), Hash.unit(Hash.hash(s, 106))),
                             top - f.skyFormMinY() - 4.0);
-                    SkyFormShape.place(x, z, radius, top, h, SkyFormShape.towerTaper(radius, h), false, prm, 0);
+                    SkyFormShape.place(x, z, radius, top, h, SkyFormShape.towerTaper(radius, h), false, false, prm, 0);
                     spires(p, s, false, prm);
                     addSky(p, out, RegionLayout.TOWER, s, prm, 0);
                 } else {
                     double depth = islandDepth(small, radius, Hash.unit(Hash.hash(s, 106)));
                     double top = islandTop(p, s, depth, band);
                     depth = sunkDepth(p, top, depth);
-                    SkyFormShape.place(x, z, radius, top, depth, SkyFormShape.islandTaper(radius, depth), true, prm, 0);
+                    SkyFormShape.place(x, z, radius, top, depth, SkyFormShape.islandTaper(radius, depth), true, true, prm, 0);
                     spires(p, s, small, prm);
                     addSky(p, out, RegionLayout.SKY_ISLAND, s, prm, RegionLayout.FLAG_DETAIL);
                 }
@@ -845,7 +845,7 @@ public final class LayoutGenerator {
                     continue;
                 }
                 double depth = islandDepth(true, r, Hash.unit(Hash.hash(seed[i], 1)));
-                SkyFormShape.place(x, z, r, v[4 * i + 3], depth, SkyFormShape.islandTaper(r, depth), true, prm, 0);
+                SkyFormShape.place(x, z, r, v[4 * i + 3], depth, SkyFormShape.islandTaper(r, depth), true, true, prm, 0);
                 addSky(p, out, RegionLayout.CHAIN, seed[i], prm, RegionLayout.FLAG_DETAIL);
             }
         }
@@ -957,13 +957,13 @@ public final class LayoutGenerator {
                     : ShapeMath.clamp(r * ShapeMath.lerp(0.5, 0.9, Hash.unit(Hash.hash(ks, 4))), 18.0, 60.0);
             double top = islandTop(p, ks, depth, band);
             depth = sunkDepth(p, top, depth);
-            SkyFormShape.place(x, z, r, top, depth, SkyFormShape.islandTaper(r, depth), detail, prm, 0);
+            SkyFormShape.place(x, z, r, top, depth, SkyFormShape.islandTaper(r, depth), detail, true, prm, 0);
             spires(p, ks, small, prm);
             return top;
         }
         double h = ShapeMath.lerp(f.hallelujahHeightMin(), f.hallelujahHeightMax(), Hash.unit(Hash.hash(ks, 4)));
         double top = ShapeMath.lerp(f.skyFormMinY() + h + 4.0, f.skyMaxY() - 2.0, band);
-        SkyFormShape.place(x, z, r, top, h, SkyFormShape.towerTaper(r, h), false, prm, 0);
+        SkyFormShape.place(x, z, r, top, h, SkyFormShape.towerTaper(r, h), false, false, prm, 0);
         return top;
     }
 

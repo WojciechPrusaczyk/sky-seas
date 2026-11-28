@@ -25,5 +25,9 @@ final class Cascades {
         for (; y > level.getMinBuildHeight() && level.getBlockState(p.setY(y)).isAir(); y--) {
             level.setBlock(p, FALLING, 2);
         }
+        // Where it lands on ground, no grass under the water.
+        if (level.getBlockState(p.setY(y)).is(Blocks.GRASS_BLOCK)) {
+            level.setBlock(p, Blocks.DIRT.defaultBlockState(), 2);
+        }
     }
 }

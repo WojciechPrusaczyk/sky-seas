@@ -71,3 +71,13 @@ Census (r = 5 chunków):
 - Poprawka: poza zakresem 1,0, tyle samo co ograniczenie na granicy. W tym samym miejscu po poprawce nie ma płaszczyzn na siatce (prostokąty w przekroju to drzewa).
 - Pod dnem ten sam przypadek już nie zachodzi: `oceanic` poza zakresem maski daje 1,0, czyli tyle, ile `1 − 2·cave_mask` przy masce 0. `skyseas:shafts` (64 poza zakresem) jest liczone poza interpolacją, blok po bloku.
 - `generatorVersion` 29.
+
+## Runda 6: brzegi wysp, wulkany, rzeki od brzegu do brzegu
+
+- Brzegi wysp (poza wieżami i formami Alleluja): wierzch opada ku obrysowi w pasie 6–10 bloków, więc wybrzeże to niski, zaokrąglony brzeg zamiast pionowej ścianki. Spadek do 6 bloków na wyspach interpolowanych (zostaje 10 z 16 bloków obrzeża) i do 2,5 bloku na małych wyspach liczonych blok po bloku. Przy większym spadku obrzeże miało grubość jednej komórki (8 bloków) i na wąskich cyplach odrywały się kawałki (`LayoutTest.noDetachedSkyForms`).
+- Wulkany na dnie: krater tylko w stożkach wyższych niż 25 bloków (węższy, 0,15 promienia), niższe to pełne stożki z magmą na szczycie. Wcześniej małe wyglądały jak pierścienie.
+- Rzeki (uwagi z gry: same wąskie, brzydki początek w oczku wody):
+  - każda rzeka przecina kontynent od wybrzeża do wybrzeża: dwie odnogi startują z tego samego wysokiego punktu w przeciwnych kierunkach i obie kończą się wodospadem z krawędzi wyspy. Nie ma już oczka u źródła. 1 rzeka na kontynent o promieniu < 400, 2 na większych; odnoga co najmniej ok. 100 bloków. W próbie 3 seedów: 81 kontynentów, 69 rzek, odnoga średnio 265 bloków (rzeka ok. 530).
+  - szerokość losowana dla rzeki: od strumienia (połowa szerokości 3–6) do dwa razy szerszej.
+  - na progach gotowy, nieruchomy strumyk zamiast ticku płynu (tick rozlewał wodę po trawie, a płynąca woda nie zamarza); miejsce, w które spada wodospad, zmienia się z trawy na dirt.
+- `generatorVersion` 30.

@@ -7,7 +7,6 @@ import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.levelgen.feature.Feature;
 import net.minecraft.world.level.levelgen.feature.FeaturePlaceContext;
 import net.minecraft.world.level.levelgen.feature.configurations.NoneFeatureConfiguration;
-import net.minecraft.world.level.material.Fluids;
 import pl.skyseas.layout.Layout;
 import pl.skyseas.shape.ContinentShape;
 
@@ -15,9 +14,9 @@ import pl.skyseas.shape.ContinentShape;
  * {@code skyseas:river}: water in the river channels of sky continents
  * ({@link ContinentShape#riverLevel}), once per chunk at the lakes step. Each channel column
  * is filled with water sources from the river level down to its bed. Where the water would
- * meet open air beside it: a lower river section (a step) gets a single fluid tick, so
- * vanilla makes the small fall once; the mouth over the cliff becomes a straight waterfall
- * ({@link Cascades}); anywhere else the gap is closed with a bank block.
+ * meet open air beside it: a lower river section (a step) gets a small finished fall; the
+ * mouth over the cliff becomes a straight waterfall ({@link Cascades}); anywhere else the gap
+ * is closed with a bank block. No fluid ticks anywhere.
  */
 public final class RiverFeature extends Feature<NoneFeatureConfiguration> {
     /** Deepest water column; a channel column without a bed within it hangs over the cliff. */
@@ -92,8 +91,12 @@ public final class RiverFeature extends Feature<NoneFeatureConfiguration> {
                         nl = Double.NaN; // channel over the cliff: open air
                     }
                     if (!Double.isNaN(nl) && nl <= y) {
-                        // A step down to a lower section: let vanilla pour it once.
-                        level.scheduleTick(p.set(x, y, z), Fluids.WATER, Fluids.WATER.getTickDelay(level));
+                        // A step down to a lower section: a finished little fall, no ticks (a tick would let
+                        // the water spread over the grass banks, and flowing water never freezes).
+                        if (y == top) {
+                            level.setBlock(q.set(nx, y, nz), Cascades.FLOWING_1, 2);
+                            Cascades.fall(level, nx, y - 1, nz);
+                        }
                     } else if (!Double.isNaN(nl) && nl > y) {
                         // The neighbour is channel too and gets filled by its own column.
                         continue;
