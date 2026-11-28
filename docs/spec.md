@@ -517,8 +517,8 @@ Największe ryzyko to zmiana generatora po starcie świata (szwy); reszta to pun
 
 **Do weryfikacji**
 
-- [ ] Jak każda struktura podziemna wybiera Y (twierdze: przesunięcie pod poziom morza; kopalnie zwykłe i badlands; trial chambers; starożytne miasta) i gdzie najtaniej wpiąć regułę „pod dnem ze stropem”. Etap E6.
-- [ ] Czy rejestr warunków spawnu Lithostitched w wersji z paczki przyjmuje typy z innych modów; jeśli nie, mixin. Etap E6.
+- [x] Jak każda struktura podziemna wybiera Y (twierdze: przesunięcie pod poziom morza; kopalnie zwykłe i badlands; trial chambers; starożytne miasta) i gdzie najtaniej wpiąć regułę „pod dnem ze stropem”. Etap E6. Wynik: twierdze i zwykłe kopalnie `moveBelowSeaLevel` (wierzch losowo poniżej morza − 10), kopalnie badlands między poziomem morza a powierzchnią; mixin w miejscu wywołania. Trial chambers i miasta to jigsaw ze stałym `start_height` (−40…−20, −27) w JSON.
+- [x] Czy rejestr warunków spawnu Lithostitched w wersji z paczki przyjmuje typy z innych modów; jeśli nie, mixin. Etap E6. Wynik (1.7.7): tak, `lithostitched:placement_condition_type` to zwykły rejestr wbudowany; warunek testowany w pozycji startu struktury (`DelegatingStructure`).
 - [x] Czy TerraBlender wstrzykuje regiony i reguły powierzchni przy własnym kluczu `noise_settings`; jeśli nie, wariant B: nadpisanie `minecraft:overworld` zamiast osobnego presetu. Etap E4. Wynik (TerraBlender 4.1.0.8): tak; sprawdza typ wymiaru (tag overworld), `NoiseBasedChunkGenerator` i `instanceof MultiNoiseBiomeSource`, reguły powierzchni dopina do ustawień generatora.
 - [ ] Zachowanie aquiferów i warunku `above_preliminary_surface` przy dwóch powierzchniach w kolumnie (wyspa nad dnem). Etap E2.
 - [x] Progi klimatu w `OverworldBiomeBuilder` 1.21.1: oceany, wybrzeża, wyspy grzybowe, deep dark i `depth`. Etap E4. Wynik: zgodne z tabelą; wybrzeże −0,19…−0,11; biomy powierzchni `depth` 0 i 1, jaskiniowe 0,2–0,9, deep dark 1,1 przy erozji < −0,375 (`isDeepDarkRegion`: erozja < −0,225 i depth > 0,9).
