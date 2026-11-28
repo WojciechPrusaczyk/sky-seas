@@ -71,6 +71,8 @@ final class StructureAudit {
         String rule = "-";
         int count;
         int failed;
+        /** Underground structures reaching above the seabed (roof below 0). */
+        int exposed;
         double worst = Double.MAX_VALUE;
         String where = "";
     }
@@ -127,6 +129,9 @@ final class StructureAudit {
                     }
                     if (fail) {
                         row.failed++;
+                        if (value < 0.0 && holder.is(UNDERGROUND)) {
+                            row.exposed++;
+                        }
                     }
                     if (value < row.worst) {
                         row.worst = value;
@@ -135,7 +140,7 @@ final class StructureAudit {
                 }
             }
         }
-        StringBuilder csv = new StringBuilder("structure,rule,count,failed,worst,worst_at\n");
+        StringBuilder csv = new StringBuilder("structure,rule,count,failed,exposed,worst,worst_at\n");
         StringBuilder msg = new StringBuilder(String.format(Locale.ROOT,
                 "[Sky Seas] structure audit: radius %d, %d chunks, %.1f s", radius,
                 (c1x - c0x + 1) * (c1z - c0z + 1), (System.nanoTime() - t0) / 1e9));
@@ -143,9 +148,9 @@ final class StructureAudit {
             Row r = e.getValue();
             String worst = r.worst == Double.MAX_VALUE ? "-" : String.format(Locale.ROOT, "%.0f", r.worst);
             csv.append(e.getKey()).append(',').append(r.rule).append(',').append(r.count).append(',')
-                    .append(r.failed).append(',').append(worst).append(',').append(r.where).append('\n');
-            msg.append(String.format(Locale.ROOT, "%n  %-34s %4d  %-9s failed %3d  worst %s %s",
-                    e.getKey(), r.count, r.rule, r.failed, worst, r.failed > 0 ? "at " + r.where : ""));
+                    .append(r.failed).append(',').append(r.exposed).append(',').append(worst).append(',').append(r.where).append('\n');
+            msg.append(String.format(Locale.ROOT, "%n  %-34s %4d  %-9s failed %3d  exposed %3d  worst %s %s",
+                    e.getKey(), r.count, r.rule, r.failed, r.exposed, worst, r.failed > 0 ? "at " + r.where : ""));
         }
         Path dir = level.getServer().getServerDirectory().resolve("skyseas").resolve("audit");
         Files.createDirectories(dir);
