@@ -81,3 +81,18 @@ Census (r = 5 chunków):
   - szerokość losowana dla rzeki: od strumienia (połowa szerokości 3–6) do dwa razy szerszej.
   - na progach gotowy, nieruchomy strumyk zamiast ticku płynu (tick rozlewał wodę po trawie, a płynąca woda nie zamarza); miejsce, w które spada wodospad, zmienia się z trawy na dirt.
 - `generatorVersion` 30.
+
+## Pomiar na koniec etapu
+
+Bench (`/skyseas bench 400 vanilla`, seed −7480449446686930062, 3 rundy rozgrzewki + 7 mierzonych, mediana, ms na chunk, `generatorVersion` 30):
+
+| Etap | Sky Seas | Vanilla | Stosunek |
+| --- | --- | --- | --- |
+| biomes | 4,04 | 2,38 | 1,70× |
+| noise | 16,79 | 14,38 | 1,17× |
+| surface | 3,78 | 3,82 | 0,99× |
+| razem | 24,61 | 20,58 | 1,20× |
+
+- `noise` 1,17× vanilli, w celu (≤ 1,3×). Po E4 było 1,21×.
+- Wartości bezwzględne obu generatorów są wyższe niż po E4 (vanilla noise 14,4 zamiast 12,1 ms): inny seed i obciążenie maszyny. Porównywać należy stosunki.
+- Bench nie mierzy featur (rudy, kaskady, rzeki, spody wysp, lód). Ich kosztu nie zmierzyliśmy osobno; przepustowość pregeneracji z featurami (cel ≥ 75% vanilli, Chunky) jest w E7.
