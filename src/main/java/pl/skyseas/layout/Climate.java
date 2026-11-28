@@ -93,6 +93,29 @@ public final class Climate {
         return d >= SHALLOW_ROCK_DEPTH && d < DEEP_DARK_DEPTH ? Math.max(e, NO_DEEP_DARK_EROSION) : e;
     }
 
+    /** Cherry patch noise above this: the sky surface gets the cherry grove climate. */
+    private static final double CHERRY_FROM = 0.55;
+    /** Continent mountains (blocks) keep their own climate. */
+    private static final double CHERRY_MAX_MOUNTAIN = 20.0;
+    /** A cherry grove cell of the vanilla table: plateau (far inland, erosion class 1, mid slice, variant), temperate, dry. */
+    public static final double CHERRY_CONTINENTS = 0.5;
+    public static final double CHERRY_EROSION = -0.55;
+    public static final double CHERRY_TEMPERATURE = -0.1;
+    public static final double CHERRY_VEGETATION = -0.5;
+    public static final double CHERRY_RIDGES = 0.33;
+
+    /**
+     * Cherry groves: vanilla puts them where four noises meet a narrow cell, so they come out
+     * as small patches. On the sky surface (not under the rock, not on mountains, not in
+     * thematic clusters), a patch of the cherry noise above {@link #CHERRY_FROM} sets every
+     * climate parameter to the cherry grove cell, which gives groves of a few hundred blocks.
+     */
+    public static boolean inCherry(double island, double bottom, double top, int y, double point, double mountain,
+            double cherry) {
+        return cherry > CHERRY_FROM && inSky(island, bottom, y) && y >= top - ROCK && point <= Layout.NO_CLIMATE
+                && mountain < CHERRY_MAX_MOUNTAIN;
+    }
+
     /** Vanilla frozen ocean below this temperature, cold ocean from it. */
     private static final double FROZEN = -0.45;
 

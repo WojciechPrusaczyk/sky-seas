@@ -18,7 +18,8 @@ import pl.skyseas.layout.Climate;
  */
 public record ClimateFunction(Kind kind, DensityFunction input, DensityFunction height, DensityFunction island,
                               DensityFunction bottom, DensityFunction top, DensityFunction point,
-                              DensityFunction mountain, DensityFunction warm, DensityFunction patch) implements DensityFunction {
+                              DensityFunction mountain, DensityFunction warm, DensityFunction patch,
+                              DensityFunction cherry) implements DensityFunction {
 
     public enum Kind {
         CONTINENTS("climate_continents", -1.2, 1.0),
@@ -47,8 +48,9 @@ public record ClimateFunction(Kind kind, DensityFunction input, DensityFunction 
                     DensityFunction.HOLDER_HELPER_CODEC.fieldOf("point").forGetter(ClimateFunction::point),
                     DensityFunction.HOLDER_HELPER_CODEC.fieldOf("mountain").forGetter(ClimateFunction::mountain),
                     DensityFunction.HOLDER_HELPER_CODEC.fieldOf("warm").forGetter(ClimateFunction::warm),
-                    DensityFunction.HOLDER_HELPER_CODEC.optionalFieldOf("patch", DensityFunctions.zero()).forGetter(ClimateFunction::patch)
-            ).apply(i, (in, h, is, b, t, p, m, w, pa) -> new ClimateFunction(this, in, h, is, b, t, p, m, w, pa)));
+                    DensityFunction.HOLDER_HELPER_CODEC.optionalFieldOf("patch", DensityFunctions.zero()).forGetter(ClimateFunction::patch),
+                    DensityFunction.HOLDER_HELPER_CODEC.optionalFieldOf("cherry", DensityFunctions.zero()).forGetter(ClimateFunction::cherry)
+            ).apply(i, (in, h, is, b, t, p, m, w, pa, c) -> new ClimateFunction(this, in, h, is, b, t, p, m, w, pa, c)));
             this.codec = KeyDispatchDataCodec.of(dataCodec);
         }
     }
@@ -58,6 +60,16 @@ public record ClimateFunction(Kind kind, DensityFunction input, DensityFunction 
         int y = ctx.blockY();
         double is = island.compute(ctx);
         double b = bottom.compute(ctx);
+        if (kind != Kind.DEPTH && Climate.inCherry(is, b, top.compute(ctx), y, point.compute(ctx), mountain.compute(ctx),
+                cherry.compute(ctx))) {
+            return switch (kind) {
+                case CONTINENTS -> Climate.CHERRY_CONTINENTS;
+                case EROSION -> Climate.CHERRY_EROSION;
+                case TEMPERATURE -> Climate.CHERRY_TEMPERATURE;
+                case VEGETATION -> Climate.CHERRY_VEGETATION;
+                default -> Climate.CHERRY_RIDGES; // positive: cherry grove is a plateau variant
+            };
+        }
         return switch (kind) {
             case CONTINENTS -> Climate.continents(is, b, top.compute(ctx), height.compute(ctx), y, input.compute(ctx));
             case EROSION -> Climate.erosion(is, b, top.compute(ctx), height.compute(ctx), y, point.compute(ctx),
@@ -79,7 +91,7 @@ public record ClimateFunction(Kind kind, DensityFunction input, DensityFunction 
     public DensityFunction mapAll(Visitor visitor) {
         return visitor.apply(new ClimateFunction(kind, input.mapAll(visitor), height.mapAll(visitor), island.mapAll(visitor),
                 bottom.mapAll(visitor), top.mapAll(visitor), point.mapAll(visitor), mountain.mapAll(visitor),
-                warm.mapAll(visitor), patch.mapAll(visitor)));
+                warm.mapAll(visitor), patch.mapAll(visitor), cherry.mapAll(visitor)));
     }
 
     @Override

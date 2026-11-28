@@ -7,5 +7,6 @@
   "top": "skyseas:climate/sky_top",
   "point": "skyseas:climate/sky_vegetation",
   "mountain": "skyseas:climate/sky_mountain",
-  "warm": "skyseas:climate/warm_bias"
+  "warm": "skyseas:climate/warm_bias",
+  "cherry": "skyseas:climate/cherry"
 }
