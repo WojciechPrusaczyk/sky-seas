@@ -1,0 +1,16 @@
+{
+  "feature": "minecraft:cave_vine",
+  "placement": [
+    {
+      "type": "minecraft:count",
+      "count": 10
+    },
+    {
+      "type": "minecraft:in_square"
+    },
+    {
+      "type": "skyseas:island_underside",
+      "small_islands_only": true
+    }
+  ]
+}

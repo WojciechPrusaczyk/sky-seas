@@ -1,0 +1,6 @@
+{
+  "type": "neoforge:add_features",
+  "biomes": "#minecraft:is_overworld",
+  "features": "skyseas:seabed_materials",
+  "step": "raw_generation"
+}

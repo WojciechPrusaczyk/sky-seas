@@ -17,6 +17,8 @@ import pl.skyseas.layout.Hash;
  * at their centre, so they are never cut in half by a border.
  */
 public final class SeabedProvinces {
+    /** Cones taller than this (blocks) get a crater. */
+    private static final double CONE_CRATER_HEIGHT = 25.0;
     public static final int HILLS = 0;
     public static final int CANYONS = 1;
     public static final int VOLCANIC = 2;
@@ -230,6 +232,18 @@ public final class SeabedProvinces {
     }
 
     private static double cones(WorldParams p, long seed, double x, double z) {
+        return cones(p, seed, x, z, false);
+    }
+
+    /**
+     * Heat of the cone vents at a column, 0..1: high on the rim of a crater and at the top of
+     * a small cone without one (magma in E5).
+     */
+    public static double coneHeat(WorldParams p, long seed, double x, double z) {
+        return cones(p, seed, x, z, true);
+    }
+
+    private static double cones(WorldParams p, long seed, double x, double z, boolean heat) {
         WorldParams.SeabedForms f = p.seabedForms();
         int cell = f.coneCell();
         int ci = (int) Math.floor(x / cell);
@@ -257,13 +271,20 @@ public final class SeabedProvinces {
                 }
                 double hgt = ShapeMath.lerp(f.coneHeightMin(), f.coneHeightMax(),
                         ShapeMath.clamp(size + 0.3 * (Hash.unit(Hash.hash(s, 5)) - 0.5), 0.0, 1.0));
-                double rc = 0.28 * r;
+                // Only the tallest cones have a (narrow) crater; the rest are full cones: wide craters on
+                // small cones read as rings.
+                boolean cratered = hgt > CONE_CRATER_HEIGHT;
+                double rc = cratered ? 0.15 * r : 0.0;
+                if (heat) {
+                    double v = cratered ? 1.0 - d / (0.2 * r) : 1.0 - d / (0.15 * r);
+                    best = Math.max(best, ShapeMath.clamp(v, 0.0, 1.0));
+                    continue;
+                }
                 double v;
                 if (d >= rc) {
                     v = hgt * Math.pow((r - d) / (r - rc), 1.4);
                 } else {
-                    double crater = hgt > 12.0 ? 0.35 * hgt : 0.0;
-                    v = hgt - crater * (1.0 - (d / rc) * (d / rc));
+                    v = hgt - 0.2 * hgt * (1.0 - (d / rc) * (d / rc));
                 }
                 best = Math.max(best, v);
             }

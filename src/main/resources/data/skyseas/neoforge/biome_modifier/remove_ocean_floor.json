@@ -1,0 +1,23 @@
+{
+  "type": "neoforge:remove_features",
+  "biomes": "#minecraft:is_ocean",
+  "features": [
+    "minecraft:disk_sand",
+    "minecraft:disk_clay",
+    "minecraft:disk_gravel",
+    "minecraft:seagrass_deep_cold",
+    "minecraft:kelp_cold",
+    "minecraft:seagrass_deep",
+    "minecraft:seagrass_deep_warm",
+    "minecraft:kelp_warm",
+    "minecraft:seagrass_normal",
+    "minecraft:seagrass_cold",
+    "minecraft:seagrass_warm",
+    "minecraft:warm_ocean_vegetation",
+    "minecraft:sea_pickle"
+  ],
+  "steps": [
+    "underground_ores",
+    "vegetal_decoration"
+  ]
+}

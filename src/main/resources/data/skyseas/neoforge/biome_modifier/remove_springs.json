@@ -1,0 +1,11 @@
+{
+  "type": "neoforge:remove_features",
+  "biomes": "#minecraft:is_overworld",
+  "features": [
+    "minecraft:spring_lava",
+    "minecraft:spring_water"
+  ],
+  "steps": [
+    "fluid_springs"
+  ]
+}

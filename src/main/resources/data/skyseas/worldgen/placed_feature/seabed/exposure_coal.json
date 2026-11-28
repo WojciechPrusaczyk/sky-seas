@@ -1,0 +1,26 @@
+{
+  "feature": "skyseas:seabed/exposure_coal",
+  "placement": [
+    {
+      "type": "minecraft:count",
+      "count": 2
+    },
+    {
+      "type": "skyseas:zone_count",
+      "min": 1.0,
+      "max": 1.0
+    },
+    {
+      "type": "minecraft:in_square"
+    },
+    {
+      "type": "skyseas:seabed"
+    },
+    {
+      "type": "skyseas:depth_chance",
+      "from_y": 40,
+      "to_y": -40,
+      "min": 0.3
+    }
+  ]
+}

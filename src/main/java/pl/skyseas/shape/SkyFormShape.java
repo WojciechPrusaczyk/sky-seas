@@ -25,7 +25,9 @@ public final class SkyFormShape {
     /** Thickness at the outline. */
     public static final int RIM = 6;
     public static final int SPIRE_COUNT = 7;
-    public static final int SPIRE0 = 8;
+    /** Thickness kept at the outline under the coast shoulder; 0 = no shoulder (towers, Hallelujah). */
+    public static final int SHOULDER = 8;
+    public static final int SPIRE0 = 9;
     public static final int MAX_SPIRES = 8;
     public static final int STRIDE = SPIRE0 + ContinentShape.SPIRE_STRIDE * MAX_SPIRES;
 
@@ -51,6 +53,13 @@ public final class SkyFormShape {
     public static final double INTERPOLATED_RIM = 16.0;
     private static final double DETAIL_RIM = 5.0;
     private static final double TOP_NOISE = 1.5;
+    /** Coast shoulder: drop at the outline as a share of the rim thickness, over this width (blocks). */
+    private static final double SHOULDER_MIN = 0.6;
+    private static final double SHOULDER_MAX = 1.0;
+    private static final double SHOULDER_KEEP = 10.0;
+    private static final double SHOULDER_KEEP_DETAIL = 2.5;
+    private static final double SHOULDER_WIDTH_MIN = 6.0;
+    private static final double SHOULDER_WIDTH_MAX = 10.0;
     private static final double UNDERSIDE_NOISE = 3.0;
     /** Bridge thickness at the abutments, where it grows out of the island. */
     private static final double ABUTMENT_THICKNESS = 16.0;
@@ -67,7 +76,7 @@ public final class SkyFormShape {
      * rim may be thin.
      */
     public static void place(double x, double z, double radius, double top, double depth, double taper,
-                             boolean detail, double[] out, int off) {
+                             boolean detail, boolean shoulder, double[] out, int off) {
         out[off + CX] = x;
         out[off + CZ] = z;
         out[off + RADIUS] = radius;
@@ -76,6 +85,8 @@ public final class SkyFormShape {
         out[off + DEPTH] = depth;
         out[off + TAPER] = taper;
         out[off + SPIRE_COUNT] = 0;
+        // Per-block forms may end thin; interpolated ones need more, or the tip breaks into flakes.
+        out[off + SHOULDER] = shoulder ? (detail ? SHOULDER_KEEP_DETAIL : SHOULDER_KEEP) : 0.0;
     }
 
     /** Island: a bowl reaching full depth about 40% of the way in. */
@@ -187,6 +198,21 @@ public final class SkyFormShape {
         }
         double top = prm[off + TOP] + TOP_NOISE * SimplexNoise.noise2(seed + 1, x / 24.0, z / 24.0);
         if (kind == ContinentShape.TOP) {
+            // Rounded shoulder: the top drops towards the outline by about the rim thickness, so the
+            // coast is a low lip instead of a straight wall of rim height. The
+            // underside keeps its height (it is measured from the unlowered top).
+            if (e < SHOULDER_WIDTH_MAX && prm[off + SHOULDER] > 0.0) {
+                double n = SimplexNoise.noise2(seed + 3, x / 30.0, z / 30.0);
+                double width = ShapeMath.lerp(SHOULDER_WIDTH_MIN, SHOULDER_WIDTH_MAX, 0.5 + 0.5 * n);
+                double t = 1.0 - ShapeMath.smoothstep(0.0, width, Math.max(e, 0.0));
+                double drop = Math.min(prm[off + RIM] * ShapeMath.lerp(SHOULDER_MIN, SHOULDER_MAX, 0.5 - 0.5 * n),
+                        prm[off + RIM] - prm[off + SHOULDER]);
+                // Never through the body: local thickness minus the most the underside noise can add, minus the keep.
+                double rim = prm[off + RIM];
+                double thick = ShapeMath.clamp(prm[off + TAPER] * e, rim, prm[off + DEPTH]);
+                double room = thick - UNDERSIDE_NOISE * ShapeMath.smoothstep(rim, rim + 6.0, thick) - prm[off + SHOULDER];
+                top -= Math.max(0.0, Math.min(drop * t * t, room));
+            }
             return top;
         }
         double rim = prm[off + RIM];

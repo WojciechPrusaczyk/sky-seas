@@ -1,0 +1,21 @@
+{
+  "feature": "skyseas:seabed/sea_pickle",
+  "placement": [
+    {
+      "type": "minecraft:rarity_filter",
+      "chance": 3
+    },
+    {
+      "type": "minecraft:in_square"
+    },
+    {
+      "type": "skyseas:seabed"
+    },
+    {
+      "type": "skyseas:depth_chance",
+      "from_y": -10,
+      "to_y": -35,
+      "min": 0.0
+    }
+  ]
+}

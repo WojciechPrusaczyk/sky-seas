@@ -490,6 +490,83 @@ public final class Layout {
     }
 
     /** Ocean form whose surface is highest at the column (above the given base), or -1. */
+    /**
+     * Parameter offsets (in {@code regionAt(x0, z0).params}) of the continents indexed in the
+     * 16x16 chunk at x0, z0; returns how many were written to {@code out}.
+     */
+    public int continentsInChunk(int x0, int z0, int[] out) {
+        RegionLayout r = regionAt(x0, z0);
+        int b = r.bucket(x0 + 8, z0 + 8);
+        int n = 0;
+        for (int k = r.skyStart(b), end = r.skyEnd(b); k < end && n < out.length; k++) {
+            int i = r.skyItem(k);
+            if (r.type[i] == RegionLayout.CONTINENT) {
+                out[n++] = r.paramOffset[i];
+            }
+        }
+        return n;
+    }
+
+    /** Fields of a spire record filled by {@link #spiresInChunk}. */
+    public static final int SPIRE_X = 0;
+    public static final int SPIRE_Z = 1;
+    public static final int SPIRE_TOP = 2;
+    public static final int SPIRE_LENGTH = 3;
+    public static final int SPIRE_RADIUS = 4;
+    public static final int SPIRE_FIELDS = 5;
+
+    /**
+     * Hanging spires whose axis stands in the 16x16 chunk at x0, z0: up to
+     * {@code out.length / SPIRE_FIELDS} records {x, z, top, length, radius} (tip = top - length).
+     */
+    public int spiresInChunk(int x0, int z0, double[] out) {
+        RegionLayout r = regionAt(x0, z0);
+        int b = r.bucket(x0 + 8, z0 + 8);
+        int n = 0;
+        for (int k = r.skyStart(b), end = r.skyEnd(b); k < end; k++) {
+            int i = r.skyItem(k);
+            int o0 = spire0(r, i);
+            for (int s = 0, c = spireCount(r, i); s < c && (n + 1) * SPIRE_FIELDS <= out.length; s++) {
+                int o = o0 + ContinentShape.SPIRE_STRIDE * s;
+                double x = r.params[o];
+                double z = r.params[o + 1];
+                if (x < x0 || x >= x0 + 16 || z < z0 || z >= z0 + 16) {
+                    continue;
+                }
+                System.arraycopy(r.params, o, out, n * SPIRE_FIELDS, SPIRE_FIELDS);
+                n++;
+            }
+        }
+        return n;
+    }
+
+    /**
+     * Volcano forms of the layout at a column: -1 outside any, else 0..1 heat, high on the
+     * crater rim and in the crater floor (magma in E5), low on the flanks.
+     */
+    public double volcanoHeat(int x, int z) {
+        RegionLayout r = regionAt(x, z);
+        int b = r.bucket(x, z);
+        double best = -1.0;
+        for (int k = r.oceanStart(b), end = r.oceanEnd(b); k < end; k++) {
+            int i = r.oceanItem(k);
+            if (r.type[i] != RegionLayout.VOLCANO) {
+                continue;
+            }
+            int off = r.paramOffset[i];
+            double d = Math.hypot(x - r.params[off + OceanShape.CX], z - r.params[off + OceanShape.CZ]);
+            double radius = r.params[off + OceanShape.RADIUS];
+            if (d >= radius) {
+                continue;
+            }
+            double crater = r.params[off + OceanShape.CRATER_RADIUS];
+            double rim = 1.0 - Math.abs(d - crater) / (0.3 * crater + 3.0);
+            double floor = d < 0.6 * crater ? 0.7 : 0.0;
+            best = Math.max(best, ShapeMath.clamp(Math.max(rim, floor), 0.0, 1.0));
+        }
+        return best;
+    }
+
     public int oceanAt(RegionLayout r, int x, int z, double base) {
         int b = r.bucket(x, z);
         int best = -1;

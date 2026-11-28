@@ -1,0 +1,9 @@
+{
+  "type": "neoforge:add_features",
+  "biomes": [
+    "minecraft:lukewarm_ocean",
+    "minecraft:warm_ocean"
+  ],
+  "features": "skyseas:seabed/seagrass_warm",
+  "step": "vegetal_decoration"
+}

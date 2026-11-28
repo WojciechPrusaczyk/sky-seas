@@ -248,7 +248,7 @@ public record WorldParams(
         SeabedForms seabedForms) {
 
     /** Bumped whenever a code change alters generated chunks (see CLAUDE.md). */
-    public static final int GENERATOR_VERSION = 18;
+    public static final int GENERATOR_VERSION = 30;
 
     public static final WorldParams DEFAULTS = new WorldParams(
             -64,

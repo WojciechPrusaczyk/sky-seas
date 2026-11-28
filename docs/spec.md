@@ -181,7 +181,7 @@ Kształt świata to jeden `final_density` w `noise_settings`: maksimum z wysp na
 ```text
 oceanic   = seabed(x,y,z)                         # >0 skała pod dnem i wyspy oceaniczne
 caves     = vanilla_caves(x,y,z)                  # cheese, spaghetti, noodle, entrances z overworld
-oceanicCv = min(oceanic, max(caves, 1 - cave_mask))   # jaskinie tylko tam, gdzie pozwala maska
+oceanicCv = min(oceanic, max(caves, 1 - 2 * cave_mask))   # jaskinie tylko tam, gdzie pozwala maska; przy pełnej masce dolne ograniczenie −1, nie 0
 sky       = sky_islands(x,y,z)                    # >0 duże bryły na niebie
 large     = interpolated(max(sky, oceanicCv))
 small     = sky_details(x,y,z)                    # łańcuchy, małe wyspy, mostki; per blok, odrzucanie po obrysie
@@ -232,7 +232,7 @@ Biomy wybiera vanillowe `multi_noise` z presetem `minecraft:overworld` (zgodnoś
 | --- | --- | --- | --- |
 | `continents` | Kontynent: daleko w głąb lądu (≥ 0,3); archipelag i Alleluja: 0,03–0,3; łańcuchy: ok. 0,03 | Głęboki ocean (≤ −0,455) przy wodzie > 30 bloków, ocean (−0,455…−0,19) płycej; nad wyspą oceaniczną wybrzeże (−0,19…0,03); wyspy grzybowe < −1,05 | Środek lądu (0,1–0,3), żeby wybierały się biomy jaskiniowe |
 | `erosion` | Vanillowy szum; góry kontynentów i bryły Alleluja niska (szczyty), płaskie tereny wysoka | Vanillowy szum | Vanillowy szum |
-| `ridges` | Vanillowy szum | Vanillowy szum | Vanillowy szum |
+| `ridges` | Vanillowy znak, stała wielkość 0,35 (PV „mid”, bez dolin rzecznych i pasków), w górach kontynentów ku 2/3 (szczyty); `skyseas:climate_ridges` | Vanillowy szum | Vanillowy szum |
 | `temperature` | Vanillowy szum 2D, chłodzenie o 0,1 na każde 25 bloków powyżej Y 200, bias z układu | Ten sam szum 2D (spójny region) | Vanillowy szum 2D |
 | `vegetation` | Vanillowy szum 2D, przesunięcie klastrów ku ich biomowi | Vanillowy szum 2D | Vanillowy szum 2D |
 | `depth` | 0 na powierzchni i w powietrzu | 0 | `(Y powierzchni − y) / depthScale` (domyślnie 100): biomy jaskiniowe od ok. 20 bloków, deep dark od ok. 110 bloków, czyli tylko pod grubą skałą |

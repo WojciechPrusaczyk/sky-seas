@@ -1,0 +1,18 @@
+{
+  "feature": "skyseas:seabed/seagrass_tall",
+  "placement": [
+    {
+      "type": "minecraft:in_square"
+    },
+    {
+      "type": "skyseas:seabed"
+    },
+    {
+      "type": "minecraft:count",
+      "count": 80
+    },
+    {
+      "type": "minecraft:biome"
+    }
+  ]
+}
