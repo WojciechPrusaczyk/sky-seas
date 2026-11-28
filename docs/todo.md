@@ -14,10 +14,12 @@ Lista uwag użytkownika do zrobienia po pomiarach E7 (2026-11-28). Kolejność w
    - kamień przy brzegach (domurowane dziury) tworzy dziwne ściany, a przy zawijasach wygląda jeszcze gorzej: usunąć ten kamień;
    - na zakręcie przy zmianie wysokości terenu dzieją się dziwne rzeczy;
    - nie zawsze jedna nitka: czasem może się rozdzielić (rozwidlenie).
+   - Zrobione (generatorVersion 32): bez zawracania i pętli, dwie połowy rzeki uchodzą na różnych brzegach, poziom wody liczony też z brzegów (mniej dziur do łatania), łatanie ziemią zamiast kamienia, rozwidlenia w ok. 1/3 rzek. Do sprawdzenia w grze.
 3. **Cherry grove** generuje się zawsze bardzo mały: ma być nieco większy.
 4. **Za dużo zimowych biomów**, ogólnie i na wyższych partiach wysp: zmniejszyć szansę.
 5. **Aquamirae:** jego biom pojawia się bardzo często i jest zawsze bardzo duży.
 
 6. **Ice spikes na wyspie:** pod lodowymi iglicami biomu ice spikes na wyspie na niebie leci słup lodu aż do oceanu (feature iglicy schodzi w dół aż do bloku stałego).
+   - Zrobione: `skyseas:ice_spike` (podmiana `minecraft:ice_spike`) nie stawia lodu w powietrzu pod powierzchnią terenu.
 
 Znane problemy z E6 (twierdze nad rowami, wioski przy krawędzi, miasta wystające ze zbocza) są w `docs/status-e6.md`.
