@@ -19,12 +19,14 @@ public final class SkySeas {
     public static final String MOD_ID = "skyseas";
     public static final Logger LOGGER = LogUtils.getLogger();
 
-    public SkySeas(IEventBus modBus) {
+    public SkySeas(IEventBus modBus, net.neoforged.fml.ModContainer container) {
+        container.registerConfig(net.neoforged.fml.config.ModConfig.Type.COMMON, pl.skyseas.params.ParamsConfig.SPEC);
         SkySeasRegistries.register(modBus);
         pl.skyseas.world.SkySeasWorldgen.register(modBus);
         pl.skyseas.structure.SkySeasStructures.register(modBus);
         NeoForge.EVENT_BUS.addListener(SkySeasCommand::onRegisterCommands);
         NeoForge.EVENT_BUS.addListener(SpawnHandler::onCreateSpawn);
+        NeoForge.EVENT_BUS.addListener(pl.skyseas.params.ParamsSnapshot::onServerAboutToStart);
         NeoForge.EVENT_BUS.addListener(pl.skyseas.command.FlyThrough::onTickPre);
         NeoForge.EVENT_BUS.addListener(pl.skyseas.command.FlyThrough::onTickPost);
     }

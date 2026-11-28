@@ -298,7 +298,7 @@ public final class SkySeasCommand {
             DensityFunction.SinglePointContext point = new DensityFunction.SinglePointContext(pos.getX(), pos.getY(), pos.getZ());
             double h = seabed.compute(point);
             sb.append(String.format(Locale.ROOT, "\n  seabed Y: %.1f, rock thickness: %.1f, zone factor: %.3f",
-                    h, SeabedColumn.rockThickness(WorldParams.DEFAULTS, h), zone.compute(point)));
+                    h, SeabedColumn.rockThickness(WorldParams.current(), h), zone.compute(point)));
         } else {
             sb.append("\n  seabed: not a Sky Seas generator");
         }

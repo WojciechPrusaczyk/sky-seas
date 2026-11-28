@@ -48,7 +48,7 @@ public final class SeabedMaterialsFeature extends Feature<NoneFeatureConfigurati
         if (layout == null || seabed == null) {
             return false;
         }
-        WorldParams p = WorldParams.DEFAULTS;
+        WorldParams p = WorldParams.current();
         long seed = layout.seabedSeed();
         int x0 = ctx.origin().getX() & ~15;
         int z0 = ctx.origin().getZ() & ~15;

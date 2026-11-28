@@ -44,7 +44,7 @@ public final class VentFeature extends Feature<NoneFeatureConfiguration> {
         boolean temperate = biome.is(Biomes.OCEAN) || biome.is(Biomes.DEEP_OCEAN) || biome.is(Biomes.LUKEWARM_OCEAN)
                 || biome.is(Biomes.DEEP_LUKEWARM_OCEAN);
         boolean volcanic = layout.volcanoHeat(origin.getX(), origin.getZ()) >= 0.0
-                || SeabedProvinces.weight(WorldParams.DEFAULTS, layout.seabedSeed(), origin.getX(), origin.getZ(),
+                || SeabedProvinces.weight(WorldParams.current(), layout.seabedSeed(), origin.getX(), origin.getZ(),
                 SeabedProvinces.VOLCANIC) > 0.5;
         if (!(volcanic ? cold || temperate : cold && ctx.random().nextDouble() < COLD_ONLY_SHARE)) {
             return false;

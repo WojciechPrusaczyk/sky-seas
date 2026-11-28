@@ -32,7 +32,7 @@ public record SkyDetailsFunction(DensityFunction root, DensityFunction floor, De
         if (layout == null || y < floor.compute(ctx) || y > ceiling.compute(ctx)) {
             return SkyColumn.MIN;
         }
-        return SkyColumn.scale(WorldParams.DEFAULTS, layout.detailDensity(ctx.blockX(), y, ctx.blockZ()));
+        return SkyColumn.scale(WorldParams.current(), layout.detailDensity(ctx.blockX(), y, ctx.blockZ()));
     }
 
     @Override
