@@ -1,0 +1,9 @@
+{
+  "type": "lithostitched:set_structure_spawn_condition",
+  "structures": "#skyseas:requires_rock_above",
+  "spawn_condition": {
+    "type": "skyseas:rock_above",
+    "min": 12
+  },
+  "append": true
+}

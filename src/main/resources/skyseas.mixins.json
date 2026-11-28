@@ -1,0 +1,13 @@
+{
+  "required": true,
+  "minVersion": "0.8",
+  "package": "pl.skyseas.mixin",
+  "compatibilityLevel": "JAVA_21",
+  "mixins": [
+    "MineshaftStructureMixin",
+    "StrongholdStructureMixin"
+  ],
+  "injectors": {
+    "defaultRequire": 1
+  }
+}

@@ -52,6 +52,16 @@ class ClimateTest {
     }
 
     @Test
+    void deepDarkOnlyDeepUnderOceanLand() {
+        double scale = WorldParams.DEFAULTS.climateDepthScale();
+        // Ancient city anchor (Y -27) under an ocean island: deep dark erosion (below -0.375).
+        assertTrue(Climate.erosion(NONE, Layout.NO_BOTTOM, Layout.NO_TOP, 75, -27, NONE, 0.0, 0.5, scale) < -0.375);
+        // Under the plain seabed and under shallow ocean land: the vanilla value.
+        assertEquals(0.5, Climate.erosion(NONE, Layout.NO_BOTTOM, Layout.NO_TOP, -10, -60, NONE, 0.0, 0.5, scale), 1e-9);
+        assertEquals(0.5, Climate.erosion(NONE, Layout.NO_BOTTOM, Layout.NO_TOP, 70, 40, NONE, 0.0, 0.5, scale), 1e-9);
+    }
+
+    @Test
     void coolingAndClusterPull() {
         assertEquals(0.3, Climate.temperature(RegionLayout.CONTINENT, 150, 180, NONE, 0.0, 0.3), 1e-9);
         assertEquals(0.3 - 0.4, Climate.temperature(RegionLayout.CONTINENT, 150, 300, NONE, 0.0, 0.3), 1e-9);

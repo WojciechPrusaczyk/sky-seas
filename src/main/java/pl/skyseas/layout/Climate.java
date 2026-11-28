@@ -38,6 +38,8 @@ public final class Climate {
     private static final double SHALLOW_ROCK_DEPTH = 0.3;
     private static final double DEEP_DARK_DEPTH = 0.9;
     private static final double NO_DEEP_DARK_EROSION = -0.3;
+    /** Under ocean land deeper than {@link #DEEP_DARK_DEPTH}: always deep dark (ancient cities, decision 2026-11-28). */
+    private static final double DEEP_DARK_EROSION = -0.6;
     private static final double COOL_FROM_Y = 200.0;
     private static final double COOL_PER_BLOCK = 0.1 / 25.0;
     private static final double WARM = 0.7;
@@ -75,6 +77,7 @@ public final class Climate {
      * {@code point}: cluster erosion or {@link Layout#NO_CLIMATE}; {@code mountain}: continent mountain height (blocks).
      * Under rock thinner than deep dark needs, erosion stays above the deep dark range: with
      * inland continentalness under rock, vanilla would pick deep dark already at depth ~0.5.
+     * Deep under ocean land it is always deep dark, so ancient cities (Y -27) find it there.
      */
     public static double erosion(double island, double bottom, double top, double height, int y, double point,
                                  double mountain, double vanilla, double scale) {
@@ -84,6 +87,9 @@ public final class Climate {
                     : ShapeMath.lerp(vanilla, PEAK_EROSION, ShapeMath.smoothstep(10.0, 45.0, mountain));
         }
         double d = depth(island, bottom, top, height, y, scale);
+        if (d >= DEEP_DARK_DEPTH && height >= SEA_LEVEL && !inSky(island, bottom, y)) {
+            return DEEP_DARK_EROSION;
+        }
         return d >= SHALLOW_ROCK_DEPTH && d < DEEP_DARK_DEPTH ? Math.max(e, NO_DEEP_DARK_EROSION) : e;
     }
 

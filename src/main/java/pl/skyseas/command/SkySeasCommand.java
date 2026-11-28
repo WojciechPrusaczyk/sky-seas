@@ -57,7 +57,10 @@ public final class SkySeasCommand {
                 .then(Commands.literal("census")
                         .then(Commands.argument("radius", IntegerArgumentType.integer(0, 8)).executes(SkySeasCommand::census)))
                 .then(Commands.literal("audit")
-                        .then(Commands.argument("radius", IntegerArgumentType.integer(64, 32768)).executes(SkySeasCommand::audit)))
+                        .then(Commands.argument("radius", IntegerArgumentType.integer(64, 32768)).executes(SkySeasCommand::audit))
+                        .then(Commands.literal("structures")
+                                .then(Commands.argument("radius", IntegerArgumentType.integer(64, 32768))
+                                        .executes(SkySeasCommand::auditStructures))))
                 .then(Commands.literal("bench")
                         .then(Commands.argument("chunks", IntegerArgumentType.integer(1, MAX_BENCH_CHUNKS))
                                 .executes(ctx -> bench(ctx, false, false))
@@ -385,6 +388,19 @@ public final class SkySeasCommand {
             return 0;
         }
         source.sendSuccess(() -> Component.literal("[Sky Seas] auditing: radius " + radius), false);
+        return 1;
+    }
+
+    private static int auditStructures(CommandContext<CommandSourceStack> ctx) {
+        CommandSourceStack source = ctx.getSource();
+        int radius = IntegerArgumentType.getInteger(ctx, "radius");
+        BlockPos pos = BlockPos.containing(source.getPosition());
+        if (!StructureAudit.start(source.getLevel(), pos.getX(), pos.getZ(), radius,
+                msg -> source.sendSuccess(() -> Component.literal(msg), true))) {
+            source.sendFailure(Component.literal("[Sky Seas] a structure audit is already running"));
+            return 0;
+        }
+        source.sendSuccess(() -> Component.literal("[Sky Seas] auditing structures: radius " + radius), false);
         return 1;
     }
 

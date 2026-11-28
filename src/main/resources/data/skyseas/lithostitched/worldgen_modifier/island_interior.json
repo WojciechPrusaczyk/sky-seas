@@ -1,0 +1,9 @@
+{
+  "type": "lithostitched:set_structure_spawn_condition",
+  "structures": "#skyseas:requires_island_interior",
+  "spawn_condition": {
+    "type": "skyseas:island_interior",
+    "min_edge": 24
+  },
+  "append": true
+}
