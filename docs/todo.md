@@ -18,6 +18,12 @@ Lista uwag użytkownika do zrobienia po pomiarach E7 (2026-11-28). Kolejność w
 3. **Cherry grove** generuje się zawsze bardzo mały: ma być nieco większy.
 4. **Za dużo zimowych biomów**, ogólnie i na wyższych partiach wysp: zmniejszyć szansę.
 5. **Aquamirae:** jego biom pojawia się bardzo często i jest zawsze bardzo duży.
+   - Aquamirae nie ma własnego biomu: Ice Maze to vanillowe biomy z jego configu (domyślnie `deep_frozen_ocean` i `deep_cold_ocean`). U nas całe morze jest „deep”, więc labirynt zajmował ok. 28% świata w pasach po 2–5 tys. bloków.
+   - Zrobione (generatorVersion 33, decyzja 2026-11-28):
+     - w configu paczki `config/obscuria/aquamirae-common.toml` zostaje `ice_maze_biomes = ["minecraft:deep_frozen_ocean"]` (to samo trzeba ustawić na serwerze);
+     - w generatorze mroźna woda jest tylko w płatach szumu `skyseas:frozen_patches` (100–600 bloków), poza nimi zimna.
+   - Teraz labirynt to ok. 7% świata.
+   - Znane: wyspy oceaniczne wybierają typ według temperatury z `ClimateProbe` bez płatów, więc wyspa „lodowa” może stać w zimnej wodzie.
 
 6. **Ice spikes na wyspie:** pod lodowymi iglicami biomu ice spikes na wyspie na niebie leci słup lodu aż do oceanu (feature iglicy schodzi w dół aż do bloku stałego).
    - Zrobione: `skyseas:ice_spike` (podmiana `minecraft:ice_spike`) nie stawia lodu w powietrzu pod powierzchnią terenu.

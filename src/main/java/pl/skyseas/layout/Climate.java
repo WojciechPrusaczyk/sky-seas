@@ -93,7 +93,16 @@ public final class Climate {
         return d >= SHALLOW_ROCK_DEPTH && d < DEEP_DARK_DEPTH ? Math.max(e, NO_DEEP_DARK_EROSION) : e;
     }
 
-    public static double temperature(double island, double bottom, int y, double point, double warm, double base) {
+    /** Vanilla frozen ocean below this temperature, cold ocean from it. */
+    private static final double FROZEN = -0.45;
+
+    /**
+     * {@code patch}: a noise in -1..1. Below the sky, frozen water only where the patch noise
+     * is positive, cold elsewhere: vanilla temperature bands are thousands of blocks wide,
+     * and an all deep sea turns them into huge frozen seas (Aquamirae's Ice Maze, decision 2026-11-28).
+     */
+    public static double temperature(double island, double bottom, int y, double point, double warm, double base,
+            double patch) {
         if (inSky(island, bottom, y)) {
             double t = point > Layout.NO_CLIMATE ? ShapeMath.lerp(base, point, PULL) : base;
             return t - Math.max(0.0, y - COOL_FROM_Y) * COOL_PER_BLOCK;
@@ -101,7 +110,7 @@ public final class Climate {
         if (warm > 0.0 && y < WARM_MAX_Y) {
             return ShapeMath.lerp(base, Math.max(base, WARM), warm);
         }
-        return base;
+        return base < FROZEN && patch < 0.0 ? FROZEN + 0.01 : base; // just inside cold: -0.45 is on the border
     }
 
     public static double vegetation(double island, double bottom, int y, double point, double base) {

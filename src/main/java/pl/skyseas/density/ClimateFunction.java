@@ -4,6 +4,7 @@ import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import net.minecraft.util.KeyDispatchDataCodec;
 import net.minecraft.world.level.levelgen.DensityFunction;
+import net.minecraft.world.level.levelgen.DensityFunctions;
 import pl.skyseas.config.WorldParams;
 import pl.skyseas.layout.Climate;
 
@@ -17,7 +18,7 @@ import pl.skyseas.layout.Climate;
  */
 public record ClimateFunction(Kind kind, DensityFunction input, DensityFunction height, DensityFunction island,
                               DensityFunction bottom, DensityFunction top, DensityFunction point,
-                              DensityFunction mountain, DensityFunction warm) implements DensityFunction {
+                              DensityFunction mountain, DensityFunction warm, DensityFunction patch) implements DensityFunction {
 
     public enum Kind {
         CONTINENTS("climate_continents", -1.2, 1.0),
@@ -45,8 +46,9 @@ public record ClimateFunction(Kind kind, DensityFunction input, DensityFunction 
                     DensityFunction.HOLDER_HELPER_CODEC.fieldOf("top").forGetter(ClimateFunction::top),
                     DensityFunction.HOLDER_HELPER_CODEC.fieldOf("point").forGetter(ClimateFunction::point),
                     DensityFunction.HOLDER_HELPER_CODEC.fieldOf("mountain").forGetter(ClimateFunction::mountain),
-                    DensityFunction.HOLDER_HELPER_CODEC.fieldOf("warm").forGetter(ClimateFunction::warm)
-            ).apply(i, (in, h, is, b, t, p, m, w) -> new ClimateFunction(this, in, h, is, b, t, p, m, w)));
+                    DensityFunction.HOLDER_HELPER_CODEC.fieldOf("warm").forGetter(ClimateFunction::warm),
+                    DensityFunction.HOLDER_HELPER_CODEC.optionalFieldOf("patch", DensityFunctions.zero()).forGetter(ClimateFunction::patch)
+            ).apply(i, (in, h, is, b, t, p, m, w, pa) -> new ClimateFunction(this, in, h, is, b, t, p, m, w, pa)));
             this.codec = KeyDispatchDataCodec.of(dataCodec);
         }
     }
@@ -60,7 +62,8 @@ public record ClimateFunction(Kind kind, DensityFunction input, DensityFunction 
             case CONTINENTS -> Climate.continents(is, b, top.compute(ctx), height.compute(ctx), y, input.compute(ctx));
             case EROSION -> Climate.erosion(is, b, top.compute(ctx), height.compute(ctx), y, point.compute(ctx),
                     mountain.compute(ctx), input.compute(ctx), WorldParams.current().climateDepthScale());
-            case TEMPERATURE -> Climate.temperature(is, b, y, point.compute(ctx), warm.compute(ctx), input.compute(ctx));
+            case TEMPERATURE -> Climate.temperature(is, b, y, point.compute(ctx), warm.compute(ctx), input.compute(ctx),
+                    patch.compute(ctx));
             case VEGETATION -> Climate.vegetation(is, b, y, point.compute(ctx), input.compute(ctx));
             case DEPTH -> Climate.depth(is, b, top.compute(ctx), height.compute(ctx), y, WorldParams.current().climateDepthScale());
             case RIDGES -> Climate.ridges(is, b, y, mountain.compute(ctx), input.compute(ctx));
@@ -76,7 +79,7 @@ public record ClimateFunction(Kind kind, DensityFunction input, DensityFunction 
     public DensityFunction mapAll(Visitor visitor) {
         return visitor.apply(new ClimateFunction(kind, input.mapAll(visitor), height.mapAll(visitor), island.mapAll(visitor),
                 bottom.mapAll(visitor), top.mapAll(visitor), point.mapAll(visitor), mountain.mapAll(visitor),
-                warm.mapAll(visitor)));
+                warm.mapAll(visitor), patch.mapAll(visitor)));
     }
 
     @Override

@@ -63,11 +63,15 @@ class ClimateTest {
 
     @Test
     void coolingAndClusterPull() {
-        assertEquals(0.3, Climate.temperature(RegionLayout.CONTINENT, 150, 180, NONE, 0.0, 0.3), 1e-9);
-        assertEquals(0.3 - 0.4, Climate.temperature(RegionLayout.CONTINENT, 150, 300, NONE, 0.0, 0.3), 1e-9);
-        assertEquals(0.3, Climate.temperature(NONE, Layout.NO_BOTTOM, 300, NONE, 0.0, 0.3), 1e-9);
+        assertEquals(0.3, Climate.temperature(RegionLayout.CONTINENT, 150, 180, NONE, 0.0, 0.3, 0.0), 1e-9);
+        assertEquals(0.3 - 0.4, Climate.temperature(RegionLayout.CONTINENT, 150, 300, NONE, 0.0, 0.3, 0.0), 1e-9);
+        assertEquals(0.3, Climate.temperature(NONE, Layout.NO_BOTTOM, 300, NONE, 0.0, 0.3, 0.0), 1e-9);
         assertEquals(0.2 * 0.5 + 0.8 * -0.5, Climate.vegetation(RegionLayout.ARCHIPELAGO, 100, 150, -0.5, 0.5), 1e-9);
-        assertTrue(Climate.temperature(NONE, Layout.NO_BOTTOM, 40, NONE, 1.0, -0.2) > 0.55);
+        assertTrue(Climate.temperature(NONE, Layout.NO_BOTTOM, 40, NONE, 1.0, -0.2, 0.0) > 0.55);
+        // Frozen water only in patches: elsewhere cold.
+        assertEquals(-0.8, Climate.temperature(NONE, Layout.NO_BOTTOM, 40, NONE, 0.0, -0.8, 0.3), 1e-9);
+        assertEquals(-0.44, Climate.temperature(NONE, Layout.NO_BOTTOM, 40, NONE, 0.0, -0.8, -0.3), 1e-9);
+        assertEquals(-0.8, Climate.temperature(RegionLayout.CONTINENT, 150, 180, NONE, 0.0, -0.8, -0.3), 1e-9);
         assertTrue(Climate.erosion(RegionLayout.CONTINENT, 100, 230, -20, 228, NONE, 60.0, 0.5, 100.0) < -0.78);
         // No deep dark erosion under the seabed, but kept under thick sky rock.
         assertTrue(Climate.erosion(NONE, Layout.NO_BOTTOM, Layout.NO_TOP, -5, -60, NONE, 0.0, -0.9, 100.0) > -0.375);
