@@ -40,8 +40,14 @@ public final class Climate {
     private static final double NO_DEEP_DARK_EROSION = -0.3;
     /** Under ocean land deeper than {@link #DEEP_DARK_DEPTH}: always deep dark (ancient cities, decision 2026-11-28). */
     private static final double DEEP_DARK_EROSION = -0.6;
-    private static final double COOL_FROM_Y = 200.0;
-    private static final double COOL_PER_BLOCK = 0.1 / 25.0;
+    /** Altitude cooling (spec: 0.1 per 25 blocks over Y 200; milder on request 2026-11-28: too much snow). */
+    private static final double COOL_FROM_Y = 220.0;
+    private static final double COOL_PER_BLOCK = 0.1 / 40.0;
+    /** Sky land outside thematic clusters is this much warmer than the vanilla noise: fewer snowy biomes. */
+    private static final double SKY_WARM = 0.1;
+    /** Below this, sky temperatures are squeezed by {@link #COLD_SQUEEZE}: the cold tail (snow) shrinks, warm biomes stay. */
+    private static final double COLD_FROM = -0.25;
+    private static final double COLD_SQUEEZE = 0.6;
     private static final double WARM = 0.7;
     /** The warm bias stays in the sea and on ocean land. */
     private static final double WARM_MAX_Y = 100.0;
@@ -127,8 +133,11 @@ public final class Climate {
     public static double temperature(double island, double bottom, int y, double point, double warm, double base,
             double patch) {
         if (inSky(island, bottom, y)) {
-            double t = point > Layout.NO_CLIMATE ? ShapeMath.lerp(base, point, PULL) : base;
-            return t - Math.max(0.0, y - COOL_FROM_Y) * COOL_PER_BLOCK;
+            if (point > Layout.NO_CLIMATE) {
+                return ShapeMath.lerp(base, point, PULL) - Math.max(0.0, y - COOL_FROM_Y) * COOL_PER_BLOCK;
+            }
+            double t = base + SKY_WARM - Math.max(0.0, y - COOL_FROM_Y) * COOL_PER_BLOCK;
+            return t < COLD_FROM ? COLD_FROM + (t - COLD_FROM) * COLD_SQUEEZE : t;
         }
         if (warm > 0.0 && y < WARM_MAX_Y) {
             return ShapeMath.lerp(base, Math.max(base, WARM), warm);

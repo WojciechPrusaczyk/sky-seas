@@ -19,6 +19,7 @@ Lista uwag użytkownika do zrobienia po pomiarach E7 (2026-11-28). Kolejność w
 3. **Cherry grove** generuje się zawsze bardzo mały: ma być nieco większy.
    - Zrobione (generatorVersion 34): płaty szumu `skyseas:cherry_patches` na powierzchni wysp (bez gór i klastrów tematycznych) dostają klimat komórki cherry grove. Próbka 654 punktów na wyspach: cherry 1% → 6%, gaje do ok. 350×350 bloków.
 4. **Za dużo zimowych biomów**, ogólnie i na wyższych partiach wysp: zmniejszyć szansę.
+   - Zrobione (generatorVersion 36): na wyspach poza klastrami tematycznymi temperatura +0,1, zimny koniec poniżej −0,25 ściśnięty ×0,6, chłodzenie z wysokością łagodniejsze (0,1 na 40 bloków od Y 220). Próbka 654 punktów: śnieżne biomy 26% → 12% (w tym 4% to szczyty gór); biomy ciepłe bez zmian.
 5. **Aquamirae:** jego biom pojawia się bardzo często i jest zawsze bardzo duży.
    - Aquamirae nie ma własnego biomu: Ice Maze to vanillowe biomy z jego configu (domyślnie `deep_frozen_ocean` i `deep_cold_ocean`). U nas całe morze jest „deep”, więc labirynt zajmował ok. 28% świata w pasach po 2–5 tys. bloków.
    - Zrobione (generatorVersion 33, decyzja 2026-11-28):
