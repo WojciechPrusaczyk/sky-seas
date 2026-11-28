@@ -107,7 +107,7 @@ public final class ContinentShape {
      */
     public static final int RIVER_COUNT = SPIRE0 + SPIRE_STRIDE * MAX_SPIRES;
     public static final int RIVER0 = RIVER_COUNT + 1;
-    public static final int MAX_RIVERS = 4;
+    public static final int MAX_RIVERS = 6;
     public static final int RIVER_HEADER = 5;
     public static final int RIVER_POINT = 4;
     public static final int MAX_RIVER_POINTS = 140;
@@ -710,7 +710,17 @@ public final class ContinentShape {
     private static final double RIVER_MAX_CUT = 14.0;
     /** Extra pull towards the coast per block of edge distance lost (blocks of height). */
     private static final double RIVER_EDGE_PULL = 0.25;
-    private static final double RIVER_TURN = 0.6;
+    /** Cost of turning per 22.5 degrees (turns are at most 45 degrees per step). */
+    private static final double RIVER_TURN = 1.0;
+    /** Largest angle between a branch's course and its initial heading. */
+    private static final double RIVER_MAX_BEND = Math.toRadians(110.0);
+    /** Pull of a branch towards its initial heading (blocks of height at 90 degrees off): the two
+     * branches of a river end on opposite coasts instead of both running down the same slope. */
+    private static final double RIVER_AIM = 4.0;
+    /** A river keeps this far from its own course (earlier points), so it never loops back into itself. */
+    private static final double RIVER_SELF_GAP = 32.0;
+    /** Chance of a fork (a third branch leaving one of the two) per river. */
+    private static final double RIVER_FORK_CHANCE = 0.4;
     /** Shorter branches (about 100 blocks) are dropped: a river crosses a good part of the land. */
     private static final int RIVER_MIN_POINTS = 12;
     /** Beyond this distance past the half width the banks are above any terrain the river cuts. */
@@ -729,16 +739,46 @@ public final class ContinentShape {
         prm[off + RIVER_COUNT] = 0;
         int want = prm[off + RADIUS] < 400.0 ? 2 : 4;
         int count = 0;
-        for (int attempt = 0; attempt < 3 * want && count < want; attempt++) {
+        int rivers = 0;
+        for (int attempt = 0; attempt < 4 * want && rivers < want / 2 && count + 2 <= MAX_RIVERS; attempt++) {
             int salt = 2000 + 100 * attempt;
             if (walkRiver(p, seed, prm, off, count, salt, false)) {
                 prm[off + RIVER_COUNT] = count + 1;
                 if (walkRiver(p, seed, prm, off, count + 1, salt, true)) {
                     count += 2;
+                    rivers++;
+                    prm[off + RIVER_COUNT] = count;
+                    if (count < MAX_RIVERS && u(seed, salt + 60) < RIVER_FORK_CHANCE) {
+                        for (int f = 0; f < 4; f++) {
+                            int fs = salt + 10 * f;
+                            if (fork(p, seed, prm, off, count, count - 2 + (u(seed, fs + 61) < 0.5 ? 0 : 1), fs)) {
+                                count++;
+                                break;
+                            }
+                        }
+                    }
                 }
                 prm[off + RIVER_COUNT] = count;
             }
         }
+    }
+
+    /**
+     * A fork into slot {@code index}: leaves the branch {@code parent} in its middle third,
+     * 40 degrees off its course, at its water level, narrower, and runs to the coast.
+     */
+    private static boolean fork(WorldParams p, long seed, double[] prm, int off, int index, int parent, int salt) {
+        int po = off + RIVER0 + RIVER_STRIDE * parent;
+        int pn = (int) prm[po];
+        int i = pn / 3 + (int) (u(seed, salt + 62) * (pn / 3));
+        int a = po + RIVER_HEADER + RIVER_POINT * i;
+        int b = a + RIVER_POINT;
+        double heading = Math.atan2(prm[b + 1] - prm[a + 1], prm[b] - prm[a])
+                + (u(seed, salt + 63) < 0.5 ? -1.0 : 1.0) * Math.toRadians(40.0);
+        double widen = Math.max(1.0, 0.7 * prm[a + 3] / 3.0);
+        prm[off + RIVER_COUNT] = index + 1;
+        return walkFrom(p, seed, prm, off, index, off + RIVER0 + RIVER_STRIDE * index, prm[a], prm[a + 1],
+                prm[a + 2] + riverDepth(0.0), heading, widen, parent);
     }
 
     /**
@@ -781,14 +821,19 @@ public final class ContinentShape {
         if (sTop < -1.0e8) {
             return false;
         }
-        return walkFrom(p, seed, prm, off, index, o, sx, sz, sTop, Math.atan2(sz - cz, sx - cx), widen, -1);
+        // Any direction: a river along a ridge of the land falls both ways, one across a slope does not.
+        return walkFrom(p, seed, prm, off, index, o, sx, sz, sTop, 2.0 * Math.PI * u(seed, salt + 70), widen, -1);
     }
 
-    /** Walks a branch from its source down to the coast; {@code sibling} is the other branch or -1. */
+    /**
+     * Walks a branch from its source down to the coast; {@code sibling} is the branch it
+     * starts on (the other half of the river, or a fork's parent) or -1.
+     */
     private static boolean walkFrom(WorldParams p, long seed, double[] prm, int off, int index, int o,
             double sx, double sz, double sTop, double heading, double widen, int sibling) {
         // Rivers this branch must keep away from: all earlier ones but its own sibling.
         int others = sibling < 0 ? index : sibling;
+        double h0 = heading;
         double x = sx;
         double z = sz;
         double top = sTop;
@@ -803,16 +848,23 @@ public final class ContinentShape {
             double bTop = 0.0;
             double bEdge = 0.0;
             double bHeading = 0.0;
-            for (int k = -3; k <= 3; k++) {
+            double half = (3.0 + 3.0 * Math.min(1.0, n / 60.0)) * widen;
+            for (int k = -2; k <= 2; k++) {
                 double a = heading + k * Math.PI / 8.0;
+                if (Math.abs(Math.atan2(Math.sin(a - h0), Math.cos(a - h0))) > RIVER_MAX_BEND) {
+                    continue; // no U-turns: a branch keeps going away from its source
+                }
                 double nx = x + RIVER_STEP * Math.cos(a);
                 double nz = z + RIVER_STEP * Math.sin(a);
                 double e = column(p, prm, off, seed, nx, nz, EDGE);
                 double t = e > 0.0 ? column(p, prm, off, seed, nx, nz, TOP) : top - 20.0;
                 boolean near = nearRiver(prm, off, 0, others, nx, nz, 40.0)
+                        || sibling >= 0 && nearRiver(prm, off, sibling + 1, index, nx, nz, 40.0)
                         || sibling >= 0 && Math.hypot(nx - sx, nz - sz) > 48.0
-                        && nearRiver(prm, off, sibling, sibling + 1, nx, nz, 40.0);
+                        && nearRiver(prm, off, sibling, sibling + 1, nx, nz, 40.0)
+                        || nearOwn(prm, o, n - 4, nx, nz);
                 double score = t - top + RIVER_EDGE_PULL * (e - edge) + RIVER_TURN * Math.abs(k)
+                        + RIVER_AIM * (1.0 - Math.cos(a - h0))
                         + (near ? 100.0 : 0.0);
                 if (score < best) {
                     best = score;
@@ -830,18 +882,30 @@ public final class ContinentShape {
             z = bz;
             heading = bHeading;
             double frac = Math.min(1.0, n / 60.0);
-            double half = (3.0 + 3.0 * frac) * widen;
             if (bEdge <= 2.0) {
                 // The mouth: just past the rim, so the channel cuts through it.
                 for (int k = 0; k < 6 && column(p, prm, off, seed, x, z, EDGE) > -2.0; k++) {
                     x += 2.0 * Math.cos(heading);
                     z += 2.0 * Math.sin(heading);
                 }
+                if (column(p, prm, off, seed, x, z, EDGE) > 0.0) {
+                    return false; // grazing the coast: no clean mouth
+                }
                 setPoint(prm, o, n++, x, z, level, half);
                 finishRiver(prm, o, n);
                 return n >= RIVER_MIN_POINTS;
             }
-            level = Math.min(level, Math.floor(bTop - riverDepth(frac)));
+            // Both banks must hold the water: the level follows the lowest of the axis and the banks.
+            double bank = bTop;
+            double reach = half + 3.0;
+            for (int side = -1; side <= 1; side += 2) {
+                double qx = x - side * reach * Math.sin(heading);
+                double qz = z + side * reach * Math.cos(heading);
+                if (column(p, prm, off, seed, qx, qz, EDGE) > 0.0) {
+                    bank = Math.min(bank, column(p, prm, off, seed, qx, qz, TOP));
+                }
+            }
+            level = Math.min(level, Math.floor(Math.min(bTop - riverDepth(frac), bank - 1.0)));
             if (bTop - level > RIVER_MAX_CUT) {
                 return false;
             }
@@ -885,6 +949,18 @@ public final class ContinentShape {
         prm[o + 4] = maxZ;
     }
 
+    /** Whether a point is within {@link #RIVER_SELF_GAP} of the first {@code points} points of the river at {@code o}. */
+    private static boolean nearOwn(double[] prm, int o, int points, double x, double z) {
+        for (int i = 0; i < points; i++) {
+            int q = o + RIVER_HEADER + RIVER_POINT * i;
+            if (Math.abs(prm[q] - x) < RIVER_SELF_GAP && Math.abs(prm[q + 1] - z) < RIVER_SELF_GAP
+                    && Math.hypot(prm[q] - x, prm[q + 1] - z) < RIVER_SELF_GAP) {
+                return true;
+            }
+        }
+        return false;
+    }
+
     private static boolean nearRiver(double[] prm, int off, int from, int to, double x, double z, double distance) {
         for (int r = from; r < to; r++) {
             int o = off + RIVER0 + RIVER_STRIDE * r;
@@ -911,18 +987,26 @@ public final class ContinentShape {
             if (x < prm[o + 1] || x > prm[o + 2] || z < prm[o + 3] || z > prm[o + 4]) {
                 continue;
             }
+            // The nearest segment shapes the column: at bends, segments of different levels overlap.
             int n = (int) prm[o];
+            double best = Double.MAX_VALUE;
+            int seg = -1;
             for (int i = 0; i + 1 < n; i++) {
                 int a = o + RIVER_HEADER + RIVER_POINT * i;
                 int b = a + RIVER_POINT;
-                double half = prm[b + 3];
-                double lim = half + RIVER_REACH;
+                double lim = prm[b + 3] + RIVER_REACH;
                 if (Math.min(prm[a], prm[b]) - lim > x || Math.max(prm[a], prm[b]) + lim < x
                         || Math.min(prm[a + 1], prm[b + 1]) - lim > z || Math.max(prm[a + 1], prm[b + 1]) + lim < z) {
                     continue;
                 }
                 double d = segmentDistance(x, z, prm[a], prm[a + 1], prm[b], prm[b + 1]);
-                result = Math.min(result, channel(d, prm[b + 2], half));
+                if (d < best) {
+                    best = d;
+                    seg = b;
+                }
+            }
+            if (seg >= 0) {
+                result = Math.min(result, channel(best, prm[seg + 2], prm[seg + 3]));
             }
         }
         return result;
@@ -948,7 +1032,10 @@ public final class ContinentShape {
             if (x < prm[o + 1] || x > prm[o + 2] || z < prm[o + 3] || z > prm[o + 4]) {
                 continue;
             }
+            // The nearest segment of each river, as in riverTop; the lowest river wins.
             int n = (int) prm[o];
+            double best = Double.MAX_VALUE;
+            int seg = -1;
             for (int i = 0; i + 1 < n; i++) {
                 int a = o + RIVER_HEADER + RIVER_POINT * i;
                 int b = a + RIVER_POINT;
@@ -957,10 +1044,14 @@ public final class ContinentShape {
                         || Math.min(prm[a + 1], prm[b + 1]) - half > z || Math.max(prm[a + 1], prm[b + 1]) + half < z) {
                     continue;
                 }
-                if (segmentDistance(x, z, prm[a], prm[a + 1], prm[b], prm[b + 1]) < half
-                        && !(prm[b + 2] >= level)) {
-                    level = prm[b + 2];
+                double d = segmentDistance(x, z, prm[a], prm[a + 1], prm[b], prm[b + 1]);
+                if (d < best) {
+                    best = d;
+                    seg = b;
                 }
+            }
+            if (seg >= 0 && best < prm[seg + 3] + 0.5 && !(prm[seg + 2] >= level)) {
+                level = prm[seg + 2];
             }
         }
         return level;

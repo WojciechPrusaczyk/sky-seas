@@ -26,6 +26,7 @@ public final class SkySeas {
         pl.skyseas.structure.SkySeasStructures.register(modBus);
         NeoForge.EVENT_BUS.addListener(SkySeasCommand::onRegisterCommands);
         NeoForge.EVENT_BUS.addListener(SpawnHandler::onCreateSpawn);
+        NeoForge.EVENT_BUS.addListener(pl.skyseas.world.WaterMobs::onSpawnPlacementCheck);
         NeoForge.EVENT_BUS.addListener(pl.skyseas.params.ParamsSnapshot::onServerAboutToStart);
         NeoForge.EVENT_BUS.addListener(pl.skyseas.command.FlyThrough::onTickPre);
         NeoForge.EVENT_BUS.addListener(pl.skyseas.command.FlyThrough::onTickPost);

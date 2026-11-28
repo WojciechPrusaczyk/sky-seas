@@ -33,6 +33,8 @@ public final class SkySeasWorldgen {
             FEATURES.register("cascade", CascadeFeature::new);
     public static final DeferredHolder<Feature<?>, Feature<NoneFeatureConfiguration>> FROZEN_SEA =
             FEATURES.register("frozen_sea", IceFeature::new);
+    public static final DeferredHolder<Feature<?>, Feature<NoneFeatureConfiguration>> ICE_SPIKE =
+            FEATURES.register("ice_spike", IceSpikeFeature::new);
     public static final DeferredHolder<Feature<?>, Feature<NoneFeatureConfiguration>> DIAMOND_NESTS =
             FEATURES.register("diamond_nests", DiamondNestFeature::new);
     public static final DeferredHolder<Feature<?>, Feature<NoneFeatureConfiguration>> SEABED_VENT =

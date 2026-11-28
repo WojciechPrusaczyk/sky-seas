@@ -4,6 +4,8 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.world.level.WorldGenLevel;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.block.state.properties.BlockStateProperties;
+import net.minecraft.world.level.block.state.properties.DoubleBlockHalf;
 import net.minecraft.world.level.levelgen.feature.Feature;
 import net.minecraft.world.level.levelgen.feature.FeaturePlaceContext;
 import net.minecraft.world.level.levelgen.feature.configurations.NoneFeatureConfiguration;
@@ -21,8 +23,8 @@ import pl.skyseas.shape.ContinentShape;
 public final class RiverFeature extends Feature<NoneFeatureConfiguration> {
     /** Deepest water column; a channel column without a bed within it hangs over the cliff. */
     private static final int MAX_DEPTH = 16;
-    /** Neighbours within this distance of a river mouth fall instead of getting a bank. */
-    private static final double MOUTH = 1.6;
+    /** Neighbours within the river's half width plus this of the mouth axis fall instead of getting a bank. */
+    private static final double MOUTH_MARGIN = 1.0;
     private static final int[][] DIRS = {{1, 0}, {-1, 0}, {0, 1}, {0, -1}};
 
     public RiverFeature() {
@@ -72,6 +74,11 @@ public final class RiverFeature extends Feature<NoneFeatureConfiguration> {
                 level.setBlock(p.set(x, y, z), Cascades.SOURCE, 2);
                 placed = true;
             }
+            // The upper half of a tall plant whose lower half is now water.
+            if (level.getBlockState(p.set(x, top + 1, z)).hasProperty(BlockStateProperties.DOUBLE_BLOCK_HALF)
+                    && level.getBlockState(p).getValue(BlockStateProperties.DOUBLE_BLOCK_HALF) == DoubleBlockHalf.UPPER) {
+                level.setBlock(p, Blocks.AIR.defaultBlockState(), 2);
+            }
             // No grass under water: dirt, with patches of gravel.
             BlockState floor = level.getBlockState(p.set(x, bed, z));
             if (bed < top && (floor.is(Blocks.GRASS_BLOCK) || floor.is(Blocks.PODZOL) || floor.is(Blocks.MYCELIUM)
@@ -104,8 +111,12 @@ public final class RiverFeature extends Feature<NoneFeatureConfiguration> {
                         level.setBlock(q.set(nx, y, nz), Cascades.FLOWING_1, 2);
                         Cascades.fall(level, nx, y - 1, nz);
                     } else {
+                        // Rare after the layout checks the banks: a bank block of soil, not a stone wall.
                         BlockState below = level.getBlockState(q.set(nx, y - 1, nz));
-                        level.setBlock(q.set(nx, y, nz), below.isSolid() ? below : Blocks.STONE.defaultBlockState(), 2);
+                        BlockState bank = below.is(Blocks.STONE) || below.is(Blocks.DEEPSLATE) ? below
+                                : level.getBlockState(q.set(nx, y + 1, nz)).isAir() ? Blocks.GRASS_BLOCK.defaultBlockState()
+                                : Blocks.DIRT.defaultBlockState();
+                        level.setBlock(q.set(nx, y, nz), bank, 2);
                     }
                 }
             }
@@ -125,15 +136,20 @@ public final class RiverFeature extends Feature<NoneFeatureConfiguration> {
         return level;
     }
 
-    /** Highest solid block at or below {@code top} within {@link #MAX_DEPTH}, or MIN_VALUE when it hangs over air. */
+    /**
+     * Highest bed block at or below {@code top} within {@link #MAX_DEPTH}, or MIN_VALUE when it
+     * hangs over air. Plants are not bed: features of neighbour chunks can put flowers, ferns or
+     * mushrooms in the channel before its water, and the water then replaces them.
+     */
     private static int bed(WorldGenLevel level, BlockPos.MutableBlockPos p, int x, int top, int z) {
         for (int y = top; y > top - MAX_DEPTH; y--) {
-            if (!level.getBlockState(p.set(x, y, z)).isAir()) {
+            if (!Cascades.passable(level.getBlockState(p.set(x, y, z)))) {
                 return y;
             }
         }
         return Integer.MIN_VALUE;
     }
+
 
     private static boolean nearMouth(double[] prm, int[] offs, int n, int x, int z) {
         for (int c = 0; c < n; c++) {
@@ -147,7 +163,9 @@ public final class RiverFeature extends Feature<NoneFeatureConfiguration> {
                 double vz = prm[last + 1] - prm[prev + 1];
                 double t = Math.max(0.0, Math.min(1.0, ((x + 0.5 - prm[prev]) * vx + (z + 0.5 - prm[prev + 1]) * vz)
                         / (vx * vx + vz * vz)));
-                if (Math.hypot(x + 0.5 - prm[prev] - t * vx, z + 0.5 - prm[prev + 1] - t * vz) < MOUTH) {
+                // The whole width falls: a narrower fall left a row of bank blocks in front of the water.
+                if (Math.hypot(x + 0.5 - prm[prev] - t * vx, z + 0.5 - prm[prev + 1] - t * vz)
+                        < prm[last + 3] + MOUTH_MARGIN) {
                     return true;
                 }
             }

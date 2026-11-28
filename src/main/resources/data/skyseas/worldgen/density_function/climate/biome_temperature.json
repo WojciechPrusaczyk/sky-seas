@@ -7,5 +7,15 @@
   "top": "skyseas:climate/sky_top",
   "point": "skyseas:climate/sky_temperature",
   "mountain": "skyseas:climate/sky_mountain",
-  "warm": "skyseas:climate/warm_bias"
+  "warm": "skyseas:climate/warm_bias",
+  "patch": {
+    "type": "minecraft:flat_cache",
+    "argument": {
+      "type": "minecraft:noise",
+      "noise": "skyseas:frozen_patches",
+      "xz_scale": 1.0,
+      "y_scale": 0.0
+    }
+  },
+  "cherry": "skyseas:climate/cherry"
 }

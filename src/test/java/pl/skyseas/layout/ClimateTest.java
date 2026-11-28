@@ -1,6 +1,7 @@
 package pl.skyseas.layout;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import org.junit.jupiter.api.Test;
@@ -63,11 +64,21 @@ class ClimateTest {
 
     @Test
     void coolingAndClusterPull() {
-        assertEquals(0.3, Climate.temperature(RegionLayout.CONTINENT, 150, 180, NONE, 0.0, 0.3), 1e-9);
-        assertEquals(0.3 - 0.4, Climate.temperature(RegionLayout.CONTINENT, 150, 300, NONE, 0.0, 0.3), 1e-9);
-        assertEquals(0.3, Climate.temperature(NONE, Layout.NO_BOTTOM, 300, NONE, 0.0, 0.3), 1e-9);
+        assertEquals(0.4, Climate.temperature(RegionLayout.CONTINENT, 150, 180, NONE, 0.0, 0.3, 0.0), 1e-9);
+        assertEquals(0.4 - 0.2, Climate.temperature(RegionLayout.CONTINENT, 150, 300, NONE, 0.0, 0.3, 0.0), 1e-9);
+        assertEquals(0.3, Climate.temperature(NONE, Layout.NO_BOTTOM, 300, NONE, 0.0, 0.3, 0.0), 1e-9);
         assertEquals(0.2 * 0.5 + 0.8 * -0.5, Climate.vegetation(RegionLayout.ARCHIPELAGO, 100, 150, -0.5, 0.5), 1e-9);
-        assertTrue(Climate.temperature(NONE, Layout.NO_BOTTOM, 40, NONE, 1.0, -0.2) > 0.55);
+        assertTrue(Climate.temperature(NONE, Layout.NO_BOTTOM, 40, NONE, 1.0, -0.2, 0.0) > 0.55);
+        // Cherry patches: sky surface only, not under rock, not on mountains or in clusters.
+        assertTrue(Climate.inCherry(RegionLayout.CONTINENT, 120, 150, 150, NONE, 0.0, 0.8));
+        assertFalse(Climate.inCherry(RegionLayout.CONTINENT, 120, 150, 150, NONE, 0.0, 0.2));
+        assertFalse(Climate.inCherry(RegionLayout.CONTINENT, 120, 150, 130, NONE, 0.0, 0.8));
+        assertFalse(Climate.inCherry(RegionLayout.CONTINENT, 120, 150, 150, NONE, 40.0, 0.8));
+        assertFalse(Climate.inCherry(NONE, Layout.NO_BOTTOM, 150, 60, NONE, 0.0, 0.8));
+        // Frozen water only in patches: elsewhere cold.
+        assertEquals(-0.8, Climate.temperature(NONE, Layout.NO_BOTTOM, 40, NONE, 0.0, -0.8, 0.3), 1e-9);
+        assertEquals(-0.44, Climate.temperature(NONE, Layout.NO_BOTTOM, 40, NONE, 0.0, -0.8, -0.3), 1e-9);
+        assertEquals(-0.25 + (-0.7 + 0.25) * 0.6, Climate.temperature(RegionLayout.CONTINENT, 150, 180, NONE, 0.0, -0.8, -0.3), 1e-9);
         assertTrue(Climate.erosion(RegionLayout.CONTINENT, 100, 230, -20, 228, NONE, 60.0, 0.5, 100.0) < -0.78);
         // No deep dark erosion under the seabed, but kept under thick sky rock.
         assertTrue(Climate.erosion(NONE, Layout.NO_BOTTOM, Layout.NO_TOP, -5, -60, NONE, 0.0, -0.9, 100.0) > -0.375);

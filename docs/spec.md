@@ -233,7 +233,7 @@ Biomy wybiera vanillowe `multi_noise` z presetem `minecraft:overworld` (zgodnoś
 | `continents` | Kontynent: daleko w głąb lądu (≥ 0,3); archipelag i Alleluja: 0,03–0,3; łańcuchy: ok. 0,03 | Głęboki ocean (≤ −0,455) przy wodzie > 30 bloków, ocean (−0,455…−0,19) płycej; nad wyspą oceaniczną wybrzeże (−0,19…0,03); wyspy grzybowe < −1,05 | Środek lądu (0,1–0,3), żeby wybierały się biomy jaskiniowe |
 | `erosion` | Vanillowy szum; góry kontynentów i bryły Alleluja niska (szczyty), płaskie tereny wysoka | Vanillowy szum | Vanillowy szum |
 | `ridges` | Vanillowy znak, stała wielkość 0,35 (PV „mid”, bez dolin rzecznych i pasków), w górach kontynentów ku 2/3 (szczyty); `skyseas:climate_ridges` | Vanillowy szum | Vanillowy szum |
-| `temperature` | Vanillowy szum 2D, chłodzenie o 0,1 na każde 25 bloków powyżej Y 200, bias z układu | Ten sam szum 2D (spójny region) | Vanillowy szum 2D |
+| `temperature` | Vanillowy szum 2D +0,1, chłodzenie o 0,1 na każde 40 bloków powyżej Y 220, zimny koniec poniżej −0,25 ściśnięty ×0,6 (zmiana 2026-11-28: za dużo śniegu), bias z układu | Ten sam szum 2D (spójny region) | Vanillowy szum 2D |
 | `vegetation` | Vanillowy szum 2D, przesunięcie klastrów ku ich biomowi | Vanillowy szum 2D | Vanillowy szum 2D |
 | `depth` | 0 na powierzchni i w powietrzu | 0 | `(Y powierzchni − y) / depthScale` (domyślnie 100): biomy jaskiniowe od ok. 20 bloków, deep dark od ok. 110 bloków, czyli tylko pod grubą skałą |
 
@@ -379,7 +379,7 @@ Wszystkie liczby z dokumentu designowego są parametrami w configu COMMON (`conf
 | `caves.roofThickness` | 12 | Strop bez jaskiń pod powierzchnią dna i wysp |
 | `caves.thicknessScale` | 1,0 | Jak mocno grubość skały powiększa komory |
 | `climate.depthScale` | 100 | Skala parametru `depth` (deep dark tylko pod grubą skałą) |
-| `climate.altitudeCooling` | 0,1 na 25 bloków powyżej Y 200 | Chłodzenie z wysokością |
+| `climate.altitudeCooling` | 0,1 na 40 bloków powyżej Y 220 (było 0,1 na 25 powyżej Y 200; zmiana 2026-11-28) | Chłodzenie z wysokością |
 | `ores.zoneMaxMultiplier` | 2,0 | Bogactwo rud w Krańcu względem Przystani |
 | `diamonds.nestChance` | 0; 0,05; 0,15; 0,25 | Szansa na gniazdo w iglicy pod wyspą, per strefa |
 
