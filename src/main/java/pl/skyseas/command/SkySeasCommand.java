@@ -61,7 +61,13 @@ public final class SkySeasCommand {
                         .then(Commands.literal("structures")
                                 .then(Commands.argument("radius", IntegerArgumentType.integer(64, 32768))
                                         .executes(SkySeasCommand::auditStructures))))
+                .then(Commands.literal("flythrough")
+                        .then(Commands.argument("ships", IntegerArgumentType.integer(1, 16))
+                                .then(Commands.argument("speed", IntegerArgumentType.integer(1, 200))
+                                        .then(Commands.argument("seconds", IntegerArgumentType.integer(5, 3600))
+                                                .executes(SkySeasCommand::flyThrough)))))
                 .then(Commands.literal("bench")
+                        .then(Commands.literal("regions").executes(SkySeasCommand::benchRegions))
                         .then(Commands.argument("chunks", IntegerArgumentType.integer(1, MAX_BENCH_CHUNKS))
                                 .executes(ctx -> bench(ctx, false, false))
                                 .then(Commands.literal("vanilla").executes(ctx -> bench(ctx, true, false)))
@@ -358,9 +364,9 @@ public final class SkySeasCommand {
             ctx.getSource().sendFailure(Component.literal("[Sky Seas] not a Sky Seas world"));
             return 0;
         }
-        String msg = String.format(Locale.ROOT, "[Sky Seas] layout cache: %d/%d regions, %d computed, ~%.1f KB",
+        String msg = String.format(Locale.ROOT, "[Sky Seas] layout cache: %d/%d regions, %d computed (mean %.1f ms, slowest %.1f ms), ~%.1f KB",
                 layout.cache().size(), layout.params().layoutCacheRegions(), layout.cache().computed(),
-                layout.cache().bytes() / 1024.0);
+                layout.cache().meanMillis(), layout.cache().maxMillis(), layout.cache().bytes() / 1024.0);
         ctx.getSource().sendSuccess(() -> Component.literal(msg), false);
         return 1;
     }
@@ -401,6 +407,53 @@ public final class SkySeasCommand {
             return 0;
         }
         source.sendSuccess(() -> Component.literal("[Sky Seas] auditing structures: radius " + radius), false);
+        return 1;
+    }
+
+    private static int flyThrough(CommandContext<CommandSourceStack> ctx) {
+        CommandSourceStack source = ctx.getSource();
+        int ships = IntegerArgumentType.getInteger(ctx, "ships");
+        int speed = IntegerArgumentType.getInteger(ctx, "speed");
+        int seconds = IntegerArgumentType.getInteger(ctx, "seconds");
+        if (!FlyThrough.start(source.getLevel(), source.getPosition().x, source.getPosition().z, ships, speed, seconds,
+                msg -> source.sendSuccess(() -> Component.literal(msg), true))) {
+            source.sendFailure(Component.literal("[Sky Seas] a flythrough is already running"));
+            return 0;
+        }
+        source.sendSuccess(() -> Component.literal("[Sky Seas] flythrough started: " + ships + " ships at " + speed
+                + " blocks/s for " + seconds + " s"), false);
+        return 1;
+    }
+
+    /**
+     * Single-thread timing of the layout region computation (spec: at most 20 ms), with the
+     * world's real climate: 30 warm-up regions, then 100 measured, far from the spawn.
+     */
+    private static int benchRegions(CommandContext<CommandSourceStack> ctx) {
+        CommandSourceStack source = ctx.getSource();
+        Layout layout = LayoutAccess.get(source.getLevel().getChunkSource().randomState());
+        if (layout == null) {
+            source.sendFailure(Component.literal("[Sky Seas] not a Sky Seas world"));
+            return 0;
+        }
+        Thread thread = new Thread(() -> {
+            for (int i = 0; i < 30; i++) {
+                layout.cache().computeUncached(500 + i, -500);
+            }
+            long[] t = new long[100];
+            for (int i = 0; i < t.length; i++) {
+                long t0 = System.nanoTime();
+                layout.cache().computeUncached(-700 + 3 * i, 600 + 7 * i);
+                t[i] = System.nanoTime() - t0;
+            }
+            java.util.Arrays.sort(t);
+            String msg = String.format(Locale.ROOT, "[Sky Seas] region bench: 100 regions, median %.1f ms, p95 %.1f ms, max %.1f ms",
+                    t[50] / 1e6, t[95] / 1e6, t[99] / 1e6);
+            source.getServer().execute(() -> source.sendSuccess(() -> Component.literal(msg), true));
+        }, "skyseas-region-bench");
+        thread.setDaemon(true);
+        thread.start();
+        source.sendSuccess(() -> Component.literal("[Sky Seas] region bench started"), false);
         return 1;
     }
 
