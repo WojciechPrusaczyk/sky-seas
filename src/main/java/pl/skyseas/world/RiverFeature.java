@@ -104,8 +104,12 @@ public final class RiverFeature extends Feature<NoneFeatureConfiguration> {
                         level.setBlock(q.set(nx, y, nz), Cascades.FLOWING_1, 2);
                         Cascades.fall(level, nx, y - 1, nz);
                     } else {
+                        // Rare after the layout checks the banks: a bank block of soil, not a stone wall.
                         BlockState below = level.getBlockState(q.set(nx, y - 1, nz));
-                        level.setBlock(q.set(nx, y, nz), below.isSolid() ? below : Blocks.STONE.defaultBlockState(), 2);
+                        BlockState bank = below.is(Blocks.STONE) || below.is(Blocks.DEEPSLATE) ? below
+                                : level.getBlockState(q.set(nx, y + 1, nz)).isAir() ? Blocks.GRASS_BLOCK.defaultBlockState()
+                                : Blocks.DIRT.defaultBlockState();
+                        level.setBlock(q.set(nx, y, nz), bank, 2);
                     }
                 }
             }
