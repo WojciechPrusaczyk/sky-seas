@@ -14,7 +14,7 @@ Lista uwag użytkownika do zrobienia po pomiarach E7 (2026-11-28). Kolejność w
    - kamień przy brzegach (domurowane dziury) tworzy dziwne ściany, a przy zawijasach wygląda jeszcze gorzej: usunąć ten kamień;
    - na zakręcie przy zmianie wysokości terenu dzieją się dziwne rzeczy;
    - nie zawsze jedna nitka: czasem może się rozdzielić (rozwidlenie).
-   - Zrobione (generatorVersion 32): bez zawracania i pętli, dwie połowy rzeki uchodzą na różnych brzegach, poziom wody liczony też z brzegów (mniej dziur do łatania), łatanie ziemią zamiast kamienia, rozwidlenia w ok. 1/3 rzek. Do sprawdzenia w grze.
+   - Zrobione (generatorVersion 32): bez zawracania i pętli, dwie połowy rzeki uchodzą na różnych brzegach, poziom wody liczony też z brzegów (mniej dziur do łatania), łatanie ziemią zamiast kamienia, rozwidlenie w ok. 1 na 6 rzek. Do sprawdzenia w grze.
 3. **Cherry grove** generuje się zawsze bardzo mały: ma być nieco większy.
 4. **Za dużo zimowych biomów**, ogólnie i na wyższych partiach wysp: zmniejszyć szansę.
 5. **Aquamirae:** jego biom pojawia się bardzo często i jest zawsze bardzo duży.
