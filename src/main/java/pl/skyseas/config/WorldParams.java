@@ -5,8 +5,8 @@ package pl.skyseas.config;
  * them from here, never from local constants. Pure Java (no Minecraft classes), so the
  * layout and shape packages can use it in unit tests.
  *
- * <p>E1: only {@link #DEFAULTS}. E7 adds the COMMON config file and the per-world frozen
- * snapshot, which will produce instances of this record.
+ * <p>{@link #DEFAULTS} are the config defaults; the world uses {@link #current()}, its frozen
+ * snapshot (E7, {@code pl.skyseas.params}).
  *
  * @param worldMinY               bottom of the world (fixed by the design, Y -64)
  * @param worldMaxY               top of the world, exclusive (fixed by the design, Y 320)
@@ -246,6 +246,20 @@ public record WorldParams(
         double seaSpireTopMax,
         SkyForms skyForms,
         SeabedForms seabedForms) {
+
+    private static WorldParams current;
+
+    /**
+     * Parameters of the running world: the frozen snapshot, set before the levels load
+     * (single server per JVM); {@link #DEFAULTS} until then and in tests.
+     */
+    public static WorldParams current() {
+        return current == null ? DEFAULTS : current;
+    }
+
+    public static void setCurrent(WorldParams params) {
+        current = params;
+    }
 
     /** Bumped whenever a code change alters generated chunks (see CLAUDE.md). */
     public static final int GENERATOR_VERSION = 31;

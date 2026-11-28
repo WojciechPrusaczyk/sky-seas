@@ -40,13 +40,13 @@ public record SeabedHeightFunction(DensityFunction root, Layout layout, DensityF
 
     @Override
     public double compute(FunctionContext ctx) {
-        double base = SeabedShape.height(WorldParams.DEFAULTS, zone.compute(ctx), temperature.compute(ctx),
+        double base = SeabedShape.height(WorldParams.current(), zone.compute(ctx), temperature.compute(ctx),
                 relief.compute(ctx), roughness.compute(ctx), dunes.compute(ctx), canyon.compute(ctx),
                 trench.compute(ctx));
         if (layout == null) {
             return base;
         }
-        base = SeabedProvinces.height(WorldParams.DEFAULTS, layout.seabedSeed(), ctx.blockX(),
+        base = SeabedProvinces.height(WorldParams.current(), layout.seabedSeed(), ctx.blockX(),
                 ctx.blockZ(), base);
         return layout.oceanHeight(ctx.blockX(), ctx.blockZ(), base);
     }
@@ -65,12 +65,12 @@ public record SeabedHeightFunction(DensityFunction root, Layout layout, DensityF
 
     @Override
     public double minValue() {
-        return SeabedShape.minHeight(WorldParams.DEFAULTS);
+        return SeabedShape.minHeight(WorldParams.current());
     }
 
     @Override
     public double maxValue() {
-        return Math.max(SeabedShape.maxHeight(WorldParams.DEFAULTS), OceanShape.maxHeight(WorldParams.DEFAULTS));
+        return Math.max(SeabedShape.maxHeight(WorldParams.current()), OceanShape.maxHeight(WorldParams.current()));
     }
 
     @Override

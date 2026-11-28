@@ -16,7 +16,7 @@ public record ZoneFactorFunction(DensityFunction jitter) implements DensityFunct
 
     @Override
     public double compute(FunctionContext ctx) {
-        return ZoneField.factor(WorldParams.DEFAULTS, ctx.blockX(), ctx.blockZ(), jitter.compute(ctx));
+        return ZoneField.factor(WorldParams.current(), ctx.blockX(), ctx.blockZ(), jitter.compute(ctx));
     }
 
     @Override

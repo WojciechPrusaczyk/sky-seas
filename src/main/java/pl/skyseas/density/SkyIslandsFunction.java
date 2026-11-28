@@ -36,7 +36,7 @@ public record SkyIslandsFunction(DensityFunction root, DensityFunction edge, Den
         if (layout == null || e <= Layout.NO_EDGE) {
             return SkyColumn.MIN;
         }
-        return SkyColumn.density(WorldParams.DEFAULTS, layout.detailSeed(), ctx.blockX(), ctx.blockY(), ctx.blockZ(),
+        return SkyColumn.density(WorldParams.current(), layout.detailSeed(), ctx.blockX(), ctx.blockY(), ctx.blockZ(),
                 e, top.compute(ctx), bottom.compute(ctx), detail.compute(ctx));
     }
 

@@ -89,6 +89,8 @@ dependencies {
     // target modpacks; required at runtime (neoforge.mods.toml).
     compileOnly "maven.modrinth:lithostitched:${lithostitched_version}"
     localRuntime "maven.modrinth:lithostitched:${lithostitched_version}"
+    // Dev server only, for the pregeneration throughput measurement (E7); not shipped.
+    localRuntime "maven.modrinth:chunky:LuFhm4eU"
     testImplementation platform("org.junit:junit-bom:${junit_version}")
     testImplementation 'org.junit.jupiter:junit-jupiter'
     testRuntimeOnly 'org.junit.platform:junit-platform-launcher'

@@ -20,6 +20,8 @@ public final class LayoutCache {
     private final Map<Long, FutureTask<RegionLayout>> regions;
     private final ThreadLocal<RegionLayout> last = new ThreadLocal<>();
     private final AtomicLong computed = new AtomicLong();
+    private final AtomicLong totalNanos = new AtomicLong();
+    private final AtomicLong maxNanos = new AtomicLong();
 
     LayoutCache(long seed, WorldParams params, ClimateProbe climate) {
         this.seed = seed;
@@ -61,8 +63,12 @@ public final class LayoutCache {
             }
         }
         if (mine) {
+            long t0 = System.nanoTime();
             task.run();
+            long t = System.nanoTime() - t0;
             computed.incrementAndGet();
+            totalNanos.addAndGet(t);
+            maxNanos.accumulateAndGet(t, Math::max);
         }
         try {
             return task.get();
@@ -72,6 +78,11 @@ public final class LayoutCache {
         } catch (ExecutionException e) {
             throw new IllegalStateException("layout region " + rx + "," + rz + " failed", e.getCause());
         }
+    }
+
+    /** A region computed afresh, bypassing the cache (timing). */
+    public RegionLayout computeUncached(int rx, int rz) {
+        return LayoutGenerator.generate(seed, params, climate, rx, rz);
     }
 
     /** Regions currently cached. */
@@ -84,6 +95,16 @@ public final class LayoutCache {
     /** Regions computed since creation (misses). */
     public long computed() {
         return computed.get();
+    }
+
+    /** Wall time of computing regions (spec: at most 20 ms each): mean and slowest, ms. */
+    public double meanMillis() {
+        long n = computed.get();
+        return n == 0 ? 0.0 : totalNanos.get() / 1e6 / n;
+    }
+
+    public double maxMillis() {
+        return maxNanos.get() / 1e6;
     }
 
     /** Rough heap size of the finished cached regions. */

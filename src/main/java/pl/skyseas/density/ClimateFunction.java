@@ -59,10 +59,10 @@ public record ClimateFunction(Kind kind, DensityFunction input, DensityFunction 
         return switch (kind) {
             case CONTINENTS -> Climate.continents(is, b, top.compute(ctx), height.compute(ctx), y, input.compute(ctx));
             case EROSION -> Climate.erosion(is, b, top.compute(ctx), height.compute(ctx), y, point.compute(ctx),
-                    mountain.compute(ctx), input.compute(ctx), WorldParams.DEFAULTS.climateDepthScale());
+                    mountain.compute(ctx), input.compute(ctx), WorldParams.current().climateDepthScale());
             case TEMPERATURE -> Climate.temperature(is, b, y, point.compute(ctx), warm.compute(ctx), input.compute(ctx));
             case VEGETATION -> Climate.vegetation(is, b, y, point.compute(ctx), input.compute(ctx));
-            case DEPTH -> Climate.depth(is, b, top.compute(ctx), height.compute(ctx), y, WorldParams.DEFAULTS.climateDepthScale());
+            case DEPTH -> Climate.depth(is, b, top.compute(ctx), height.compute(ctx), y, WorldParams.current().climateDepthScale());
             case RIDGES -> Climate.ridges(is, b, y, mountain.compute(ctx), input.compute(ctx));
         };
     }

@@ -44,7 +44,7 @@ public final class LayoutRootFunction implements DensityFunction {
         this.temperature = temperature;
         this.vegetation = vegetation;
         this.erosion = erosion;
-        this.layout = noise.noise() == null ? null : new Layout(deriveSeed(noise), WorldParams.DEFAULTS, new ClimateProbe() {
+        this.layout = noise.noise() == null ? null : new Layout(deriveSeed(noise), WorldParams.current(), new ClimateProbe() {
             @Override
             public double temperature(int x, int z) {
                 return temperature.compute(new SinglePointContext(x, 0, z));

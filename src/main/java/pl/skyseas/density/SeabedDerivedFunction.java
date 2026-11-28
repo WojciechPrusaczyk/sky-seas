@@ -36,7 +36,7 @@ public record SeabedDerivedFunction(Kind kind, DensityFunction height) implement
 
     @Override
     public double compute(FunctionContext ctx) {
-        WorldParams p = WorldParams.DEFAULTS;
+        WorldParams p = WorldParams.current();
         double h = height.compute(ctx);
         return switch (kind) {
             case SEABED -> SeabedColumn.density(p, h, ctx.blockY());
@@ -60,7 +60,7 @@ public record SeabedDerivedFunction(Kind kind, DensityFunction height) implement
 
     @Override
     public double minValue() {
-        WorldParams p = WorldParams.DEFAULTS;
+        WorldParams p = WorldParams.current();
         return switch (kind) {
             case SEABED -> SeabedColumn.density(p, height.minValue(), p.worldMaxY());
             case ROCK_THICKNESS -> SeabedColumn.rockThickness(p, height.minValue());
@@ -71,7 +71,7 @@ public record SeabedDerivedFunction(Kind kind, DensityFunction height) implement
 
     @Override
     public double maxValue() {
-        WorldParams p = WorldParams.DEFAULTS;
+        WorldParams p = WorldParams.current();
         return switch (kind) {
             case SEABED -> SeabedColumn.density(p, height.maxValue(), p.worldMinY());
             case ROCK_THICKNESS -> SeabedColumn.rockThickness(p, height.maxValue());

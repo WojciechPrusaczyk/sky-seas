@@ -29,7 +29,7 @@ public record RoofGuardFunction(DensityFunction input, DensityFunction seabed) i
     @Override
     public double compute(FunctionContext ctx) {
         double v = input.compute(ctx);
-        if (v < ROCK && SeabedColumn.inRoof(WorldParams.DEFAULTS, seabed.compute(ctx))) {
+        if (v < ROCK && SeabedColumn.inRoof(WorldParams.current(), seabed.compute(ctx))) {
             return ROCK;
         }
         return v;
@@ -41,7 +41,7 @@ public record RoofGuardFunction(DensityFunction input, DensityFunction seabed) i
         for (int i = 0; i < array.length; i++) {
             if (array[i] < ROCK) {
                 FunctionContext ctx = provider.forIndex(i);
-                if (SeabedColumn.inRoof(WorldParams.DEFAULTS, seabed.compute(ctx))) {
+                if (SeabedColumn.inRoof(WorldParams.current(), seabed.compute(ctx))) {
                     array[i] = ROCK;
                 }
             }
