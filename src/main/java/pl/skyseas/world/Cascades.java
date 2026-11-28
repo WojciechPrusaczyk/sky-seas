@@ -20,9 +20,14 @@ final class Cascades {
     }
 
     /** Falling water from (x, y, z) down through air. */
+    /** Air or a dry block without collision (plants, snow layers): water replaces it instead of stopping on it. */
+    static boolean passable(BlockState state) {
+        return state.isAir() || !state.blocksMotion() && state.getFluidState().isEmpty();
+    }
+
     static void fall(WorldGenLevel level, int x, int y, int z) {
         BlockPos.MutableBlockPos p = new BlockPos.MutableBlockPos(x, y, z);
-        for (; y > level.getMinBuildHeight() && level.getBlockState(p.setY(y)).isAir(); y--) {
+        for (; y > level.getMinBuildHeight() && passable(level.getBlockState(p.setY(y))); y--) {
             level.setBlock(p, FALLING, 2);
         }
         // Where it lands on ground, no grass under the water.

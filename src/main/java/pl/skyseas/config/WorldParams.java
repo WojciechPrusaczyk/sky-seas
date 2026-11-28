@@ -262,7 +262,7 @@ public record WorldParams(
     }
 
     /** Bumped whenever a code change alters generated chunks (see CLAUDE.md). */
-    public static final int GENERATOR_VERSION = 36;
+    public static final int GENERATOR_VERSION = 37;
 
     public static final WorldParams DEFAULTS = new WorldParams(
             -64,

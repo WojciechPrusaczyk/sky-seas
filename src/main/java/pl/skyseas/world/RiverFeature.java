@@ -4,6 +4,8 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.world.level.WorldGenLevel;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.block.state.properties.BlockStateProperties;
+import net.minecraft.world.level.block.state.properties.DoubleBlockHalf;
 import net.minecraft.world.level.levelgen.feature.Feature;
 import net.minecraft.world.level.levelgen.feature.FeaturePlaceContext;
 import net.minecraft.world.level.levelgen.feature.configurations.NoneFeatureConfiguration;
@@ -72,6 +74,11 @@ public final class RiverFeature extends Feature<NoneFeatureConfiguration> {
                 level.setBlock(p.set(x, y, z), Cascades.SOURCE, 2);
                 placed = true;
             }
+            // The upper half of a tall plant whose lower half is now water.
+            if (level.getBlockState(p.set(x, top + 1, z)).hasProperty(BlockStateProperties.DOUBLE_BLOCK_HALF)
+                    && level.getBlockState(p).getValue(BlockStateProperties.DOUBLE_BLOCK_HALF) == DoubleBlockHalf.UPPER) {
+                level.setBlock(p, Blocks.AIR.defaultBlockState(), 2);
+            }
             // No grass under water: dirt, with patches of gravel.
             BlockState floor = level.getBlockState(p.set(x, bed, z));
             if (bed < top && (floor.is(Blocks.GRASS_BLOCK) || floor.is(Blocks.PODZOL) || floor.is(Blocks.MYCELIUM)
@@ -129,15 +136,20 @@ public final class RiverFeature extends Feature<NoneFeatureConfiguration> {
         return level;
     }
 
-    /** Highest solid block at or below {@code top} within {@link #MAX_DEPTH}, or MIN_VALUE when it hangs over air. */
+    /**
+     * Highest bed block at or below {@code top} within {@link #MAX_DEPTH}, or MIN_VALUE when it
+     * hangs over air. Plants are not bed: features of neighbour chunks can put flowers, ferns or
+     * mushrooms in the channel before its water, and the water then replaces them.
+     */
     private static int bed(WorldGenLevel level, BlockPos.MutableBlockPos p, int x, int top, int z) {
         for (int y = top; y > top - MAX_DEPTH; y--) {
-            if (!level.getBlockState(p.set(x, y, z)).isAir()) {
+            if (!Cascades.passable(level.getBlockState(p.set(x, y, z)))) {
                 return y;
             }
         }
         return Integer.MIN_VALUE;
     }
+
 
     private static boolean nearMouth(double[] prm, int[] offs, int n, int x, int z) {
         for (int c = 0; c < n; c++) {
