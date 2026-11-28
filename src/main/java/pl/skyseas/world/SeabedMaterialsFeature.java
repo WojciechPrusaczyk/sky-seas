@@ -68,7 +68,9 @@ public final class SeabedMaterialsFeature extends Feature<NoneFeatureConfigurati
                 if (hc >= SEA_LEVEL - 2) {
                     continue;
                 }
-                int top = SeabedPlacement.floor(level, x, z, hc) - 1;
+                int floor = SeabedPlacement.floor(level, x, z, hc);
+                // No floor found: MIN_VALUE - 1 would overflow to MAX_VALUE (Distant Horizons throws on it).
+                int top = floor == Integer.MIN_VALUE ? Integer.MIN_VALUE : floor - 1;
                 if (top < level.getMinBuildHeight()) {
                     continue;
                 }
