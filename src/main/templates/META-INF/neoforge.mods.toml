@@ -14,6 +14,9 @@ Server-side world generator: floating islands above a deep ocean.
 # so clients without it can join (NeoForge 21.1 has no displayTest; compatibility
 # is decided by network channel negotiation).
 
+[[mixins]]
+config="skyseas.mixins.json"
+
 [[dependencies.${mod_id}]]
     modId="neoforge"
     type="required"
@@ -27,3 +30,9 @@ Server-side world generator: floating islands above a deep ocean.
     versionRange="${minecraft_version_range}"
     ordering="NONE"
     side="BOTH"
+[[dependencies.${mod_id}]]
+    modId="lithostitched"
+    type="required"
+    versionRange="[1.7.7,)"
+    ordering="NONE"
+    side="SERVER"

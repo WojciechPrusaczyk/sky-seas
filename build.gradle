@@ -77,7 +77,18 @@ configurations {
     runtimeClasspath.extendsFrom localRuntime
 }
 
+repositories {
+    exclusiveContent {
+        forRepository { maven { url = 'https://api.modrinth.com/maven' } }
+        filter { includeGroup 'maven.modrinth' }
+    }
+}
+
 dependencies {
+    // Structure spawn conditions (spec "Struktury"). Compiled against the oldest version seen in
+    // target modpacks; required at runtime (neoforge.mods.toml).
+    compileOnly "maven.modrinth:lithostitched:${lithostitched_version}"
+    localRuntime "maven.modrinth:lithostitched:${lithostitched_version}"
     testImplementation platform("org.junit:junit-bom:${junit_version}")
     testImplementation 'org.junit.jupiter:junit-jupiter'
     testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
